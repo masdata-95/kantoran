@@ -307,7 +307,19 @@ html,body{height:100%;font-family:var(--fb);background:var(--bg);color:var(--tex
 .doc-action-secondary{background:transparent;border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 16px;font-size:14px;font-family:var(--fb);cursor:pointer;color:var(--muted);transition:all .15s}
 .doc-action-secondary:hover{border-color:var(--text);color:var(--text)}
 
-@media(max-width:640px){.sidebar{display:none}.tb-loc{max-width:150px;font-size:11px}}
+/* Tombol hamburger: hanya muncul di HP */
+.sb-toggle{display:none;background:none;border:none;cursor:pointer;padding:6px;margin-right:2px;color:var(--teal);align-items:center;justify-content:center}
+.sb-toggle svg{display:block}
+/* Overlay gelap saat sidebar terbuka di HP */
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+.sb-overlay.show{display:block}
+@media(max-width:640px){
+  .sb-toggle{display:flex}
+  .tb-loc{max-width:130px;font-size:11px}
+  /* Sidebar jadi drawer yang slide dari kiri */
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:100;width:80%;max-width:280px;transform:translateX(-100%);transition:transform .28s ease;box-shadow:2px 0 16px rgba(0,0,0,.15)}
+  .sidebar.open{transform:translateX(0)}
+}
 </style>
 </head>
 <body>
@@ -470,6 +482,9 @@ html,body{height:100%;font-family:var(--fb);background:var(--bg);color:var(--tex
 <!-- ═══ APP SHELL ═══ -->
 <div id="app">
   <div class="topbar">
+    <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" aria-label="Buka menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="tb-logo"><div class="tb-logo-dot"></div>Kantoran</div>
     <div class="tb-loc" id="tb-loc"><span id="loc-icon">📧</span>&nbsp;<span id="loc-text">Inbox</span></div>
     <div class="tb-right">
@@ -479,6 +494,9 @@ html,body{height:100%;font-family:var(--fb);background:var(--bg);color:var(--tex
   </div>
   <div class="prog-track" id="prog-track"></div>
   <div class="main">
+
+    <!-- Overlay gelap untuk HP -->
+    <div class="sb-overlay" id="sb-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR -->
     <div class="sidebar">
@@ -943,6 +961,20 @@ function buildSidebar() {
   buildRoomList();
 }
 
+// ── Drawer sidebar (mobile) ──
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sb-overlay');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('show', open);
+}
+function closeSidebar() {
+  const sb = document.querySelector('.sidebar');
+  if (sb) sb.classList.remove('open');
+  const ov = document.getElementById('sb-overlay');
+  if (ov) ov.classList.remove('show');
+}
+
 function buildNPCList() {
   const container = document.getElementById('npc-list');
   container.innerHTML = '';
@@ -1025,6 +1057,7 @@ function handleRoomClick(roomId) {
 // ══════════════════════════════════════════
 function switchView(viewId) {
   S.currentView = viewId;
+  closeSidebar(); // tutup drawer otomatis di HP
   buildNPCList();
   buildRoomList();
 
