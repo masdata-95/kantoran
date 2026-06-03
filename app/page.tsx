@@ -1,45 +1,33 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import type { User } from '@supabase/supabase-js'
-import LoginPage from '@/components/LoginPage'
-import SimulatorApp from '@/components/SimulatorApp'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
+    // Redirect to landing HTML
+    window.location.href = '/landing.html'
   }, [])
 
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-[#FAFAF7]">
-        <div className="flex gap-2">
-          <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce"></div>
-          <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce"></div>
-          <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce"></div>
-        </div>
+  return (
+    <div style={{ 
+      height: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: '#FAFAF7',
+      fontFamily: 'sans-serif'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ 
+          width: 8, height: 8, borderRadius: '50%', 
+          background: '#0F6E56', margin: '0 auto 12px',
+          animation: 'pulse 1s infinite'
+        }}></div>
+        <p style={{ color: '#888780', fontSize: 14 }}>Memuat Kantoran...</p>
       </div>
-    )
-  }
-
-  if (!user) {
-    return <LoginPage />
-  }
-
-  return <SimulatorApp user={user} />
+    </div>
+  )
 }
