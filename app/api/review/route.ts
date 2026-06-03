@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { callOpenRouter } from '@/lib/openrouter'
+import { callAI } from '@/lib/ai'
 import { getTaskReviewPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
+
+export const maxDuration = 30
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
       submission
     )
 
-    const review = await callOpenRouter(
+    const review = await callAI(
       [{ role: 'user', content: 'Review hasil kerja saya.' }],
       systemPrompt,
       'review',

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { callOpenRouter, ChatMessage } from '@/lib/openrouter'
-import { getSintaPrompt, getSupPrompt, getJnrPrompt } from '@/lib/prompts'
+import { callAI, type ChatMessage } from '@/lib/ai'
+import { getSintaPrompt, getSupPrompt, getJnrPrompt, getMgrPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
 
-export async function POST(req: NextRequest) {
-  console.log('=== CHAT API CALLED ===')
-  console.log('API Key:', process.env.OPENROUTER_API_KEY ? 'EXISTS' : 'MISSING')
-  console.log('API Key prefix:', process.env.OPENROUTER_API_KEY?.substring(0, 10))
+export const maxDuration = 30
+export const dynamic = 'force-dynamic'
 
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { npcId, messages, userContext, positionId } = body
@@ -33,24 +32,19 @@ export async function POST(req: NextRequest) {
         break
       case 'mgr':
         if (!position) return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
-        systemPrompt = `Kamu ${position.manager.name}, ${position.manager.role} di PT Vantara Nusantara. ${position.manager.bio}. Balas profesional Bahasa Indonesia.`
+        systemPrompt = getMgrPrompt(userContext, position.manager.name, position.manager.bio, position.manager.role)
         break
       default:
         systemPrompt = getSintaPrompt(userContext)
     }
 
-
-    const reply = await callOpenRouter(
-      messages as ChatMessage[],
-      systemPrompt,
-      npcId,
-      250
-    )
-
+    const reply = await callAI(messages as ChatMessage[], systemPrompt, npcId, 250)
     return NextResponse.json({ reply })
 
   } catch (error) {
     console.error('Chat API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ 
+      reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!' 
+    }, { status: 200 })
   }
 }
