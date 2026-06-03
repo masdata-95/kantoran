@@ -3,9 +3,9 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!
 
 // Model priority — free first, paid fallback
 const FREE_MODELS = [
-  'meta-llama/llama-3.1-70b-instruct:free',
   'google/gemini-flash-1.5:free',
-  'microsoft/phi-3-medium-128k-instruct:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
   'meta-llama/llama-3.1-8b-instruct:free',
 ]
 
