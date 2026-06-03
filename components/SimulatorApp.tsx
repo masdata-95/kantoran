@@ -233,31 +233,6 @@ export default function SimulatorApp({ user }: { user: User }) {
     await supabase.auth.signOut()
   }
 
-  const handleRestart = async () => {
-    const confirmed = window.confirm(
-      'Yakin mau mulai dari awal?\n\nSemua progress, chat, dan Kantor Coin akan hilang. Kamu bisa pilih posisi baru untuk eksplorasi role yang berbeda.'
-    )
-    if (!confirmed) return
-
-    try {
-      await fetch('/api/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      })
-      // Reset local state
-      setState(INITIAL_STATE)
-      setShowApp(false)
-      setOnboardStep(1)
-      setCurrentView('sinta')
-      setReviewResult(null)
-      setTaskSubmitText({ issues: '', impact: '', recommendation: '' })
-    } catch (e) {
-      console.error('Reset failed:', e)
-      alert('Gagal reset, coba lagi.')
-    }
-  }
-
   const pos = POSITIONS[state.position]
   const currentMessages = state.chatHistory[currentView] || []
 
@@ -319,9 +294,6 @@ export default function SimulatorApp({ user }: { user: User }) {
             🪙 {state.coins} Coin
           </div>
           <span className="text-xs text-[#888780]">Hari ke-{state.step >= 4 ? state.step - 3 : '-'}</span>
-          <button onClick={handleRestart} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Mulai ulang dari awal">
-            🔄 Restart
-          </button>
           <button onClick={handleLogout} className="text-xs text-[#888780] hover:text-[#111111] transition-colors">
             Keluar
           </button>
