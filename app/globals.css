@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --teal: #0F6E56;
+  --teal-mid: #1D9E75;
+  --teal-light: #E1F5EE;
+  --teal-dark: #085041;
+  --bg: #FAFAF7;
+  --border: #E5E3DC;
+  --muted: #888780;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; -webkit-font-smoothing: antialiased; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: #E5E3DC; border-radius: 2px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dotBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.animate-fadeUp { animation: fadeUp 0.3s ease; }
+.animate-messageIn { animation: messageIn 0.3s ease; }
+.dot-bounce { animation: dotBounce 1.2s ease infinite; }
+.dot-bounce:nth-child(2) { animation-delay: 0.15s; }
+.dot-bounce:nth-child(3) { animation-delay: 0.3s; }
+
+.btn-teal {
+  background-color: #0F6E56;
+  color: white;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-weight: 500;
+  transition: all 0.15s;
+  border: none;
+  cursor: pointer;
+}
+.btn-teal:hover { background-color: #085041; }
+.btn-teal:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-teal-outline {
+  border: 1.5px solid #0F6E56;
+  color: #0F6E56;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-weight: 500;
+  transition: all 0.15s;
+  background: transparent;
+  cursor: pointer;
+}
+.btn-teal-outline:hover { background-color: #0F6E56; color: white; }
+
+.av-teal { background-color: #E1F5EE; color: #0F6E56; }
+.av-blue { background-color: #E8F0FC; color: #1A4A8A; }
+.av-purple { background-color: #F0EAF9; color: #5B2D8E; }
+.av-amber { background-color: #FAEEDA; color: #854F0B; }
+.av-green { background-color: #DCFCE7; color: #166534; }
