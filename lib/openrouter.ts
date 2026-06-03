@@ -1,17 +1,13 @@
 // OpenRouter with auto-fallback to free models
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!
 
-// Model priority - free first, paid fallback
 const FREE_MODELS = [
-  'google/gemini-flash-1.5:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'qwen/qwen3-next-80b-a3b-instruct:free',
   'meta-llama/llama-3.3-70b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'meta-llama/llama-3.1-8b-instruct:free',
+  'meta-llama/llama-3.2-3b-instruct:free'
 ]
 
-const PAID_FALLBACK = 'anthropic/claude-haiku-4'
-
-// NPC-specific model assignment
 export const NPC_MODELS: Record<string, string[]> = {
   sinta: FREE_MODELS,
   sup: FREE_MODELS,
@@ -33,9 +29,13 @@ export async function callOpenRouter(
 ): Promise<string> {
   const models = NPC_MODELS[npcId] || FREE_MODELS
 
+  console.log('=== OPENROUTER START ===')
+  console.log('NPC:', npcId)
+  console.log('Models:', models)
+
   for (const model of models) {
     try {
-      console.log('Trying model:', model)
+      console.log(`Trying model: ${model}`)
 
       const res = await fetch(
         'https://openrouter.ai/api/v1/chat/completions',
@@ -65,78 +65,46 @@ export async function callOpenRouter(
       )
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        console.warn(
-          `Model ${model} failed:`,
-          err?.error?.message || res.status
-        )
+        const errorText = await res.text()
+
+        console.error('====================')
+        console.error('MODEL FAILED')
+        console.error('MODEL:', model)
+        console.error('STATUS:', res.status)
+        console.error('RESPONSE:', errorText)
+        console.error('====================')
+
         continue
       }
 
       const data = await res.json()
 
+      console.log('SUCCESS MODEL:', model)
+
       const reply = data?.choices?.[0]?.message?.content
 
       if (!reply) {
-        console.warn(`Model ${model} returned empty response`)
+        console.error('Empty response from:', model)
         continue
       }
 
-      console.log(`Used model: ${model}`)
       return reply
-
     } catch (err) {
-      console.error(`Model ${model} error:`, err)
+      console.error('====================')
+      console.error('MODEL ERROR')
+      console.error('MODEL:', model)
+      console.error(err)
+      console.error('====================')
+
       continue
     }
   }
 
-  // All free models failed - try paid fallback
-  try {
-    console.log('Trying paid fallback model')
+  console.error('ALL MODELS FAILED')
 
-    const res = await fetch(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer':
-            process.env.NEXT_PUBLIC_APP_URL ||
-            'https://kantoran.vercel.app',
-          'X-Title': 'Kantoran Simulasi Dunia Kerja'
-        },
-        body: JSON.stringify({
-          model: PAID_FALLBACK,
-          max_tokens: maxTokens,
-          temperature: 0.85,
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            ...messages
-          ]
-        })
-      }
-    )
+  return `
+Maaf, seluruh model AI sedang tidak tersedia.
 
-    if (!res.ok) {
-      const err = await res.text()
-      console.error('Paid fallback failed:', err)
-      return 'Maaf, AI sedang tidak tersedia saat ini.'
-    }
-
-    const data = await res.json()
-
-    return (
-      data?.choices?.[0]?.message?.content ||
-      'Maaf, ada gangguan sebentar. Coba lagi ya.'
-    )
-
-  } catch (error) {
-    console.error('Paid fallback error:', error)
-    return 'Maaf, ada gangguan koneksi. Coba lagi ya!'
-  }
+Silakan cek log Vercel untuk melihat error detail OpenRouter.
+`
 }
