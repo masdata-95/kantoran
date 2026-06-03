@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
         systemPrompt = getSintaPrompt(userContext)
     }
 
+console.log('SYSTEM PROMPT:')
+console.log(systemPrompt)
+
     const reply = await callOpenRouter(
       messages as ChatMessage[],
       systemPrompt,
