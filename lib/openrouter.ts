@@ -2,10 +2,10 @@
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!
 
 const FREE_MODELS = [
+  'openrouter/free',           // auto-select best free model
   'google/gemma-4-26b-a4b-it:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
+  'deepseek/deepseek-r1:free',
   'meta-llama/llama-3.3-70b-instruct:free',
-  'meta-llama/llama-3.2-3b-instruct:free'
 ]
 
 export const NPC_MODELS: Record<string, string[]> = {
