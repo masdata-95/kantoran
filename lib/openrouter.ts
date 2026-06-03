@@ -1,7 +1,7 @@
 // OpenRouter with auto-fallback to free models
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!
 
-// Model priority — free first, paid fallback
+// Model priority - free first, paid fallback
 const FREE_MODELS = [
   'google/gemini-flash-1.5:free',
   'meta-llama/llama-3.3-70b-instruct:free',
@@ -13,11 +13,11 @@ const PAID_FALLBACK = 'anthropic/claude-haiku-4'
 
 // NPC-specific model assignment
 export const NPC_MODELS: Record<string, string[]> = {
-  sinta:  FREE_MODELS,  // HR — most important, gets best available free
-  sup:    FREE_MODELS,  // Supervisor — needs smart reasoning
-  mgr:    FREE_MODELS,  // Manager — formal, needs consistency
-  jnr:    FREE_MODELS,  // Junior — casual, any model works
-  review: FREE_MODELS,  // Task review — needs accuracy
+  sinta: FREE_MODELS,
+  sup: FREE_MODELS,
+  mgr: FREE_MODELS,
+  jnr: FREE_MODELS,
+  review: FREE_MODELS,
 }
 
 export interface ChatMessage {
@@ -35,67 +35,108 @@ export async function callOpenRouter(
 
   for (const model of models) {
     try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      console.log('Trying model:', model)
+
+      const res = await fetch(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer':
+              process.env.NEXT_PUBLIC_APP_URL ||
+              'https://kantoran.vercel.app',
+            'X-Title': 'Kantoran Simulasi Dunia Kerja'
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: maxTokens,
+            temperature: 0.85,
+            messages: [
+              {
+                role: 'system',
+                content: systemPrompt
+              },
+              ...messages
+            ]
+          })
+        }
+      )
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.warn(
+          `Model ${model} failed:`,
+          err?.error?.message || res.status
+        )
+        continue
+      }
+
+      const data = await res.json()
+
+      const reply = data?.choices?.[0]?.message?.content
+
+      if (!reply) {
+        console.warn(`Model ${model} returned empty response`)
+        continue
+      }
+
+      console.log(`Used model: ${model}`)
+      return reply
+
+    } catch (err) {
+      console.error(`Model ${model} error:`, err)
+      continue
+    }
+  }
+
+  // All free models failed - try paid fallback
+  try {
+    console.log('Trying paid fallback model')
+
+    const res = await fetch(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://kantoran.vercel.app',
-          'X-Title': 'Kantoran — Simulasi Dunia Kerja',
+          'HTTP-Referer':
+            process.env.NEXT_PUBLIC_APP_URL ||
+            'https://kantoran.vercel.app',
+          'X-Title': 'Kantoran Simulasi Dunia Kerja'
         },
         body: JSON.stringify({
-          model,
+          model: PAID_FALLBACK,
           max_tokens: maxTokens,
           temperature: 0.85,
           messages: [
-            { role: 'system', content: systemPrompt },
+            {
+              role: 'system',
+              content: systemPrompt
+            },
             ...messages
           ]
         })
-      })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        console.warn(`Model ${model} failed:`, err?.error?.message || res.status)
-        continue // try next model
       }
+    )
 
-      const data = await res.json()
-      const reply = data.choices?.[0]?.message?.content
-      if (!reply) { continue }
-
-      console.log(`✓ Used model: ${model}`)
-      return reply
-
-    } catch (err) {
-      console.warn(`Model ${model} error:`, err)
-      continue // try next model
+    if (!res.ok) {
+      const err = await res.text()
+      console.error('Paid fallback failed:', err)
+      return 'Maaf, AI sedang tidak tersedia saat ini.'
     }
-  }
 
-  // All free models failed — try paid fallback
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://kantoran.vercel.app',
-        'X-Title': 'Kantoran — Simulasi Dunia Kerja',
-      },
-      body: JSON.stringify({
-        model: PAID_FALLBACK,
-        max_tokens: maxTokens,
-        temperature: 0.85,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages
-        ]
-      })
-    })
     const data = await res.json()
-    return data.choices?.[0]?.message?.content || 'Maaf, ada gangguan sebentar. Coba lagi ya.'
-  } catch {
+
+    return (
+      data?.choices?.[0]?.message?.content ||
+      'Maaf, ada gangguan sebentar. Coba lagi ya.'
+    )
+
+  } catch (error) {
+    console.error('Paid fallback error:', error)
     return 'Maaf, ada gangguan koneksi. Coba lagi ya!'
   }
 }
