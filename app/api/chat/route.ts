@@ -4,6 +4,10 @@ import { getSintaPrompt, getSupPrompt, getJnrPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
 
 export async function POST(req: NextRequest) {
+  console.log('=== CHAT API CALLED ===')
+  console.log('API Key:', process.env.OPENROUTER_API_KEY ? 'EXISTS' : 'MISSING')
+  console.log('API Key prefix:', process.env.OPENROUTER_API_KEY?.substring(0, 10))
+
   try {
     const body = await req.json()
     const { npcId, messages, userContext, positionId } = body
