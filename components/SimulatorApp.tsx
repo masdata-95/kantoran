@@ -77,7 +77,16 @@ const PANTRY_GOSSIP = {
 }
 
 // ── MAIN COMPONENT ────────────────────────────────
-export default function SimulatorApp({ user }: { user: User }) {
+import ProfileTab from '@/components/ProfileTab'
+import type { UserProfile } from '@/lib/profile'
+import type { Experience } from '@/lib/profile'
+
+export default function SimulatorApp({ user, userProfile, initialPosition, onWishlist }: {
+  user: User
+  userProfile?: UserProfile | null
+  initialPosition?: string
+  onWishlist?: (coins: number, tasksDone: number) => void
+}) {
   const [state, setState] = useState<SimState>(INITIAL)
   const [view, setView]   = useState('inbox')
   const [input, setInput] = useState('')
@@ -90,6 +99,9 @@ export default function SimulatorApp({ user }: { user: User }) {
   const [extractedData, setExtractedData] = useState<string>('')
   const [reviewResult, setReviewResult] = useState<{ review: string; isApproved: boolean } | null>(null)
   const [isSubmittingTask, setIsSubmittingTask] = useState(false)
+  const [profile, setProfile] = useState<UserProfile | null>(userProfile || null)
+  const [showProfile, setShowProfile] = useState(false)
+  const [canGoDay2, setCanGoDay2] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
 
@@ -379,15 +391,55 @@ export default function SimulatorApp({ user }: { user: User }) {
   }
 
   const handleNextStep = async (step: number, data?: Record<string, unknown>) => {
+    // Special case: go to day 2 / wishlist
+    if (step === 99) {
+      if (onWishlist) {
+        await saveProgress()
+        onWishlist(state.coins, state.tasksDone)
+      }
+      return
+    }
+
     setState(prev => ({ ...prev, step }))
 
     if (step === 2) {
-      // Show offering letter in inbox
       const pos = POSITIONS[state.position]
       const salRange = SALARY_RANGE[state.background]
-      setState(prev => ({ ...prev, step: 2, salaryOffered: salRange.offer }))
 
-      // Add email to inbox
+      // Extract salary from conversation — cari angka yang disebutkan user
+      // Pattern: angka dalam jutaan (misal "4.5 juta", "5juta", "5.000.000")
+      const hrMessages = state.chatHistory['hr_office'] || []
+      let agreedSalary = salRange.offer // default fallback
+
+      // Cari dari pesan user dulu (ekspektasi yang disebutkan)
+      for (const msg of hrMessages) {
+        if (msg.role === 'user' && msg.text) {
+          const text = msg.text.toLowerCase()
+          // Pattern: angka juta (4.5 juta, 5 juta, 4,5 juta)
+          const jutaMatch = text.match(/(\d+[.,]?\d*)\s*juta/)
+          if (jutaMatch) {
+            const val = parseFloat(jutaMatch[1].replace(',', '.')) * 1000000
+            if (val >= 1000000 && val <= 20000000) { // sanity check 1-20 juta
+              agreedSalary = Math.round(val)
+            }
+          }
+          // Pattern: angka langsung (4500000, 4.500.000)
+          const rawMatch = text.match(/(\d[\d.,]{4,})/)
+          if (rawMatch) {
+            const val = parseFloat(rawMatch[1].replace(/[.,]/g, ''))
+            if (val >= 1000000 && val <= 20000000) {
+              agreedSalary = Math.round(val)
+            }
+          }
+        }
+      }
+
+      // Pastikan tidak di bawah minimum range
+      const minSalary = salRange.min
+      const finalSalary = Math.max(agreedSalary, minSalary)
+
+      setState(prev => ({ ...prev, step: 2, salaryOffered: finalSalary }))
+
       setTimeout(() => {
         addMsg('inbox', {
           role: 'email',
@@ -396,7 +448,7 @@ export default function SimulatorApp({ user }: { user: User }) {
             subject: `Offering Letter — ${state.bgRole} ${pos?.title}`,
             preview: 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.',
             isOffering: true,
-            salary: salRange.offer,
+            salary: finalSalary,
             position: `${state.bgRole} ${pos?.title}`,
             dept: pos?.dept,
             supervisor: pos?.supervisor.name,
@@ -569,11 +621,58 @@ export default function SimulatorApp({ user }: { user: User }) {
 
       if (data.isApproved) {
         addCoins(30)
-        setState(prev => ({ ...prev, tasksDone: prev.tasksDone + 1, step: 10 }))
+        const newCoins = state.coins + 30
+        const newTasksDone = state.tasksDone + 1
+        setState(prev => ({ ...prev, tasksDone: newTasksDone, step: 10 }))
+        setCanGoDay2(true)
+
+        // Update simulation experience in profile
+        const pos = POSITIONS[state.position]
+        if (pos) {
+          const simExp: Experience = {
+            id: 'kantoran-sim',
+            company: 'PT Vantara Nusantara',
+            position: state.bgRole + ' ' + pos.title,
+            startMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
+            startYear: new Date().getFullYear().toString(),
+            endMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
+            endYear: new Date().getFullYear().toString(),
+            isCurrent: true,
+            description: `Simulasi kerja ${state.bgRole} ${pos.title} di PT Vantara Nusantara (Kantoran). Menyelesaikan ${newTasksDone} task termasuk analisis data, review dari supervisor AI.`,
+            isSimulation: true,
+          }
+          // Save updated profile with sim experience
+          if (user.id) {
+            fetch('/api/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: user.id,
+                profile: { ...profile, experience: [...(profile?.experience || []).filter(e => e.id !== 'kantoran-sim'), simExp] }
+              })
+            }).catch(console.error)
+          }
+        }
+
         setTimeout(() => {
           addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `${state.firstName}! Denger-denger task pertamamu approved ya — selamat! Aku dulu sampe minggu kedua baru approved wkwk` })
-          addMsg('jnr', { role: 'cliff', data: { coins: state.coins + 30 } })
-          showNotif('jnr', POSITIONS[state.position]?.junior.name || 'Junior', '🎉 Ada pesan dari rekan tim')
+          setTimeout(() => {
+            addMsg('sup_chat', {
+              role: 'npc', npcId: 'sup',
+              text: `Good work hari ini ${state.firstName}. Sudah jam 5, bisa pulang dulu. Besok standup jam 9 — ada task lanjutan yang perlu kita bahas.`
+            })
+            addMsg('sup_chat', {
+              role: 'action',
+              data: {
+                label: 'Selesai untuk hari ini — Lanjut ke Hari Kedua',
+                nextStep: 99,
+                type: 'day_done',
+                coins: newCoins,
+                tasksDone: newTasksDone,
+              }
+            })
+            showNotif('sup_chat', POSITIONS[state.position]?.supervisor.name || 'Supervisor', 'Hari pertama selesai! Ada pesan dari supervisor.')
+          }, 2000)
         }, 1500)
       }
     } catch (e) {
@@ -788,8 +887,27 @@ export default function SimulatorApp({ user }: { user: User }) {
             </div>
 
             {/* Stats */}
+            {/* Profile tab button */}
             <div className="mt-3 pt-3 border-t border-[#E5E3DC]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2">Statistik</p>
+              <button
+                onClick={() => setShowProfile(p => !p)}
+                style={{ cursor: 'pointer' }}
+                className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all text-left mb-2 ${
+                  showProfile ? 'bg-[#E1F5EE] border border-[#0F6E56]/20' : 'hover:bg-[#FAFAF7]'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-full av-teal flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+                  {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-[#111111] truncate">{profile?.full_name || 'Profil saya'}</p>
+                  <p className="text-[10px] text-[#888780]">Lihat CV saya</p>
+                </div>
+              </button>
+            </div>
+
+            <div className="border-t border-[#E5E3DC]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2 mt-3">Statistik</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { n: state.tasksDone, l: 'Task done' },
@@ -806,6 +924,35 @@ export default function SimulatorApp({ user }: { user: User }) {
             </div>
           </div>
         </div>
+
+        {/* Profile panel overlay */}
+        {showProfile && (
+          <div className="w-[280px] bg-white border-r border-[#E5E3DC] flex flex-col flex-shrink-0 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
+              <p className="text-sm font-semibold text-[#111111]">Profil Saya</p>
+              <button onClick={() => setShowProfile(false)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111]">✕ Tutup</button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ProfileTab
+                user={user}
+                profile={profile || { full_name: '', gender: '', city: '', education: [], experience: [], skills: [] }}
+                onUpdate={(p) => setProfile(p)}
+                simulationExperience={state.tasksDone > 0 && pos ? {
+                  id: 'kantoran-sim',
+                  company: 'PT Vantara Nusantara',
+                  position: state.bgRole + ' ' + pos.title,
+                  startMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
+                  startYear: new Date().getFullYear().toString(),
+                  endMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
+                  endYear: new Date().getFullYear().toString(),
+                  isCurrent: true,
+                  description: `Simulasi kerja di PT Vantara Nusantara via Kantoran. Menyelesaikan ${state.tasksDone} task.`,
+                  isSimulation: true,
+                } : undefined}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Main area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
