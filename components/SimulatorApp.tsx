@@ -438,37 +438,61 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       const pos = POSITIONS[state.position]
       const salRange = SALARY_RANGE[state.background]
 
-      // Extract salary from conversation — cari angka yang disebutkan user
-      // Pattern: angka dalam jutaan (misal "4.5 juta", "5juta", "5.000.000")
+         // Extract agreed salary — prioritas dari konfirmasi Sinta, bukan request user
       const hrMessages = state.chatHistory['hr_office'] || []
-      let agreedSalary = salRange.offer // default fallback
+      let agreedSalary = salRange.offer
 
-      // Cari dari pesan user dulu (ekspektasi yang disebutkan)
-      for (const msg of hrMessages) {
-        if (msg.role === 'user' && msg.text) {
+      const extractJuta = (text: string): number | null => {
+        const m = text.match(/(\d+[.,]?\d*)\s*juta/)
+        if (m) {
+          const val = parseFloat(m[1].replace(',', '.')) * 1000000
+          if (val >= 1000000 && val <= 15000000) return Math.round(val)
+        }
+        return null
+      }
+
+      // Prioritas 1: dari pesan Sinta yang konfirmasi/setuju angka
+      const confirmKw = ['masuk', 'bisa diakomodir', 'sesuai budget', 'acceptable',
+        'oke', 'deal', 'bisa kami', 'akan kami cantumkan', 'offering letter',
+        'bisa diterima', 'kita setuju', 'sepakat']
+      for (const msg of [...hrMessages].reverse()) {
+        if (msg.role === 'npc' && msg.npcId === 'sinta' && msg.text) {
           const text = msg.text.toLowerCase()
-          // Pattern: angka juta (4.5 juta, 5 juta, 4,5 juta)
-          const jutaMatch = text.match(/(\d+[.,]?\d*)\s*juta/)
-          if (jutaMatch) {
-            const val = parseFloat(jutaMatch[1].replace(',', '.')) * 1000000
-            if (val >= 1000000 && val <= 20000000) { // sanity check 1-20 juta
-              agreedSalary = Math.round(val)
-            }
+          if (confirmKw.some(kw => text.includes(kw))) {
+            const val = extractJuta(text)
+            if (val) { agreedSalary = val; break }
           }
-          // Pattern: angka langsung (4500000, 4.500.000)
-          const rawMatch = text.match(/(\d[\d.,]{4,})/)
-          if (rawMatch) {
-            const val = parseFloat(rawMatch[1].replace(/[.,]/g, ''))
-            if (val >= 1000000 && val <= 20000000) {
-              agreedSalary = Math.round(val)
+        }
+      }
+
+      // Prioritas 2: Sinta sebut angka maksimal
+      if (agreedSalary === salRange.offer) {
+        const maxKw = ['maksimal', 'maksimum', 'paling tinggi', 'sampai', 'bisa kami berikan']
+        for (const msg of [...hrMessages].reverse()) {
+          if (msg.role === 'npc' && msg.npcId === 'sinta' && msg.text) {
+            const text = msg.text.toLowerCase()
+            if (maxKw.some(kw => text.includes(kw))) {
+              const val = extractJuta(text)
+              if (val) { agreedSalary = val; break }
             }
           }
         }
       }
 
-      // Pastikan tidak di bawah minimum range
-      const minSalary = salRange.min
-      const finalSalary = Math.max(agreedSalary, minSalary)
+      // Prioritas 3: dari user HANYA kalau dalam range valid
+      if (agreedSalary === salRange.offer) {
+        for (const msg of [...hrMessages].reverse()) {
+          if (msg.role === 'user' && msg.text) {
+            const val = extractJuta(msg.text.toLowerCase())
+            if (val && val >= salRange.min && val <= salRange.max) {
+              agreedSalary = val; break
+            }
+          }
+        }
+      }
+
+      // Hard clamp: tidak boleh keluar dari range min-max
+      const finalSalary = Math.min(Math.max(agreedSalary, salRange.min), salRange.max)
 
       setState(prev => ({ ...prev, step: 2, salaryOffered: finalSalary }))
 
@@ -1305,31 +1329,37 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
             <p className="text-white font-semibold text-sm">PT Vantara Nusantara</p>
             <p className="text-white/80 text-xs">FMCG Personal Care · Jakarta Selatan</p>
           </div>
-          <div className="px-4 py-3" style={{ overflowY: 'auto' }}>
-            <p className="font-semibold text-sm mb-1 text-[#111111]">SURAT PENAWARAN KERJA</p>
-            <p className="text-xs text-[#888780] mb-3">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            {[
-              ['Posisi', d.position],
-              ['Departemen', d.dept],
-              ['Supervisor', d.supervisor],
-              ['Gaji Pokok', `Rp ${Number(d.salary || 0).toLocaleString('id-ID')} / bulan`, true],
-              ['Tunjangan Makan', `Rp ${Number(d.mealAllowance || 0).toLocaleString('id-ID')} / bulan`],
-              ['Tunjangan Transport', `Rp ${Number(d.transportAllowance || 0).toLocaleString('id-ID')} / bulan`],
-              ['Masa Probasi', d.probation],
-              ['Sistem Kerja', d.workSystem],
-            ].map(([k, v, hl]) => (
-              <div key={String(k)} className="flex justify-between py-1.5 border-b border-[#E5E3DC] last:border-0 text-xs">
-                <span className="text-[#888780]">{String(k)}</span>
-                <span className={`font-medium ${hl ? 'text-[#0F6E56] text-sm font-bold' : 'text-[#111111]'}`}>{String(v ?? '')}</span>
-              </div>
-            ))}
+          <div className="px-4 pt-3 pb-2">
+            <p className="font-semibold text-xs uppercase tracking-wider text-[#888780] mb-2">Surat Penawaran Kerja</p>
+            <div className="flex flex-col">
+              {([
+                ['Posisi', String(d.position ?? '')],
+                ['Departemen', String(d.dept ?? '')],
+                ['Supervisor', String(d.supervisor ?? '')],
+                ['Gaji Pokok', `Rp ${Number(d.salary || 0).toLocaleString('id-ID')} / bln`],
+                ['Tunjangan', 'Makan Rp 600rb + Transport Rp 400rb'],
+                ['Probasi', String(d.probation ?? '')],
+                ['Sistem Kerja', String(d.workSystem ?? '')],
+              ] as [string, string][]).map(([k, v]) => (
+                <div key={k} className="flex justify-between py-1.5 border-b border-[#F1EFE8] last:border-0 text-xs gap-2">
+                  <span className="text-[#888780] flex-shrink-0">{k}</span>
+                  <span className={`font-medium text-right ${k === 'Gaji Pokok' ? 'text-[#0F6E56] font-bold' : 'text-[#111111]'}`}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="px-4 pb-4 pt-2 border-t border-[#E5E3DC] bg-[#FAFAF7]">
             <button
               onClick={() => onNextStep(3)}
               style={{ cursor: 'pointer' }}
-              className="btn-teal w-full mt-3 text-sm"
+              className="btn-teal w-full py-3 text-sm font-semibold"
+              type="button"
             >
               Tanda Tangan & Terima Offer →
             </button>
+            <p className="text-center text-[10px] text-[#888780] mt-2">
+              Dengan menandatangani, kamu menyetujui semua ketentuan di atas.
+            </p>
           </div>
         </div>
       )
