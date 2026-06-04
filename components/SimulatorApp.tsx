@@ -612,29 +612,42 @@ PT Vantara Nusantara`
       // Hard clamp: tidak boleh keluar dari range min-max
       const finalSalary = Math.min(Math.max(agreedSalary, salRange.min), salRange.max)
 
-      setState(prev => ({ ...prev, step: 2, salaryOffered: finalSalary }))
+      // Add offering letter directly to state (avoid addMsg race condition)
+      const offeringMsg = {
+        id: `offering-${Date.now()}`,
+        role: 'email' as const,
+        data: {
+          from: 'sinta@vantara.co.id',
+          subject: `Offering Letter — ${state.bgRole}`,
+          preview: 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.',
+          isOffering: true,
+          salary: finalSalary,
+          position: state.bgRole,
+          dept: pos?.dept,
+          supervisor: pos?.supervisor.name,
+          mealAllowance: 600000,
+          transportAllowance: 400000,
+          probation: '3 bulan dengan evaluasi',
+          workSystem: 'Hybrid — WFO 3x/minggu',
+        }
+      }
 
-      setTimeout(() => {
-        addMsg('inbox', {
-          role: 'email',
-          data: {
-            from: 'sinta@vantara.co.id',
-            subject: `Offering Letter — ${state.bgRole}`,
-            preview: 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.',
-            isOffering: true,
-            salary: finalSalary,
-            position: `${state.bgRole}`,
-            dept: pos?.dept,
-            supervisor: pos?.supervisor.name,
-            mealAllowance: 600000,
-            transportAllowance: 400000,
-            probation: '3 bulan dengan evaluasi',
-            workSystem: 'Hybrid — WFO 3x/minggu',
-          }
-        })
-        showNotif('inbox', 'Inbox', '📧 Offering Letter dari Sinta Maharani masuk!')
-        setView('inbox')
-      }, 500)
+      setState(prev => ({
+        ...prev,
+        step: 2,
+        salaryOffered: finalSalary,
+        chatHistory: {
+          ...prev.chatHistory,
+          inbox: [...(prev.chatHistory['inbox'] || []), offeringMsg]
+        },
+        unreadCounts: {
+          ...prev.unreadCounts,
+          inbox: (prev.unreadCounts['inbox'] || 0) + 1
+        }
+      }))
+
+      setView('inbox')
+      setTimeout(() => showNotif('inbox', 'Inbox', 'Offering Letter dari Sinta Maharani masuk!'), 300)
     }
 
     if (step === 3) {
@@ -932,6 +945,19 @@ PT Vantara Nusantara`
 
   // If not loaded yet and we have initialPosition, auto-start
   // (user came from job listing, no need for internal onboarding)
+
+  // Guard: if app not ready yet, show loading
+  if (!showApp || !state.position) {
+    return (
+      <div style={{ height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#FAFAF7' }}>
+        <div className="flex gap-2">
+          <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
+          <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
+          <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
+        </div>
+      </div>
+    )
+  }
 
   const rooms = [
     { id: 'inbox',        icon: '📧', label: 'Inbox',        locked: false },
