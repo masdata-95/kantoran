@@ -106,9 +106,16 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
 
-  // Auto focus input after send
+  // Auto focus input after send - aggressive refocus
   const focusInput = useCallback(() => {
-    setTimeout(() => inputRef.current?.focus(), 50)
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+        // Move cursor to end
+        const len = inputRef.current.value.length
+        inputRef.current.setSelectionRange(len, len)
+      }
+    }, 100)
   }, [])
 
   // Auto scroll messages
@@ -177,6 +184,30 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       setProgLoading(false)
     }
   }
+
+  // Auto-start simulator when initialPosition is provided (from job listing)
+  useEffect(() => {
+    if (!progLoading && !showApp && initialPosition) {
+      const pos = POSITIONS[initialPosition]
+      if (!pos) return
+      const bg = (initialBackground || 'fresh_grad') as import('@/lib/positions').BackgroundType
+      const role = pos.getRole(bg)
+      const firstName = userProfile?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Kamu'
+      const initState: SimState = {
+        ...INITIAL,
+        firstName,
+        email: user.email || '',
+        background: bg,
+        bgRole: role,
+        position: initialPosition,
+        step: 0,
+      }
+      setState(initState)
+      setShowApp(true)
+      setView('inbox')
+      setTimeout(() => initStep0(initState), 400)
+    }
+  }, [progLoading, showApp, initialPosition])
 
   const saveProgress = useCallback(async () => {
     try {
@@ -741,26 +772,8 @@ PT Vantara Nusantara`
     </div>
   )
 
-  // Onboarding
-  if (!showApp) return (
-    <OnboardingFlow
-      user={user}
-      step={onboardStep}
-      setStep={setOnboardStep}
-      state={state}
-      setState={setState}
-      onComplete={(s) => {
-        // Use initialBackground if available
-        const finalState = initialBackground 
-          ? { ...s, background: initialBackground as import('@/lib/positions').BackgroundType }
-          : s
-        setState(finalState)
-        setShowApp(true)
-        setView('inbox')
-        setTimeout(() => initStep0(finalState), 300)
-      }}
-    />
-  )
+  // If not loaded yet and we have initialPosition, auto-start
+  // (user came from job listing, no need for internal onboarding)
 
   const rooms = [
     { id: 'inbox',        icon: '📧', label: 'Inbox',        locked: false },
@@ -1055,6 +1068,11 @@ PT Vantara Nusantara`
                   placeholder="Ketik pesan..."
                   rows={1}
                   style={{ cursor: 'text' }}
+                  autoComplete="off"
+                  onBlur={() => {
+                    // Re-focus after blur if not loading
+                    if (!loading) setTimeout(() => inputRef.current?.focus(), 100)
+                  }}
                   className="flex-1 resize-none px-3 py-2.5 border border-[#E5E3DC] rounded-lg text-sm text-[#111111] bg-[#FAFAF7] outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10 disabled:opacity-40 transition-all min-h-[42px] max-h-[120px]"
                 />
                 <button
@@ -1282,12 +1300,12 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
     const d = msg.data || {}
     if (d.isOffering) {
       return (
-        <div className="bg-white border border-[#E5E3DC] rounded-xl overflow-hidden animate-messageIn">
+        <div className="bg-white border border-[#E5E3DC] rounded-xl overflow-hidden animate-messageIn" style={{ maxWidth: '100%' }}>
           <div className="bg-gradient-to-r from-[#0F6E56] to-[#1D9E75] px-4 py-3">
             <p className="text-white font-semibold text-sm">PT Vantara Nusantara</p>
             <p className="text-white/80 text-xs">FMCG Personal Care · Jakarta Selatan</p>
           </div>
-          <div className="px-4 py-3">
+          <div className="px-4 py-3" style={{ overflowY: 'auto' }}>
             <p className="font-semibold text-sm mb-1 text-[#111111]">SURAT PENAWARAN KERJA</p>
             <p className="text-xs text-[#888780] mb-3">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             {[
