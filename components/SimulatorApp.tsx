@@ -106,17 +106,27 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
 
-  // Auto focus input after send - aggressive refocus
+  // Auto focus input after send
   const focusInput = useCallback(() => {
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus()
-        // Move cursor to end
-        const len = inputRef.current.value.length
-        inputRef.current.setSelectionRange(len, len)
-      }
-    }, 100)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (inputRef.current && !inputRef.current.disabled) {
+          inputRef.current.focus()
+        }
+      })
+    })
   }, [])
+
+  // Watch loading state — refocus when loading finishes
+  useEffect(() => {
+    if (!loading) {
+      requestAnimationFrame(() => {
+        if (inputRef.current && document.activeElement !== inputRef.current) {
+          inputRef.current.focus()
+        }
+      })
+    }
+  }, [loading])
 
   // Auto scroll messages
   useEffect(() => {
@@ -137,6 +147,54 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     const iv = setInterval(() => { if (state.step > 0) saveProgress() }, 30000)
     return () => clearInterval(iv)
   }, [state])
+
+  // Slack → Supervisor DM trigger
+  // After user sends 1 message in slack OR 90 seconds, supervisor sends DM
+  useEffect(() => {
+    if (state.step !== 3) return
+    const slackMsgs = (state.chatHistory['slack'] || []).filter(m => m.role === 'user')
+    const npcMsgs = (state.chatHistory['slack'] || []).filter(m => m.role === 'npc').length
+
+    // Trigger after user sends first message OR after 90s (handled by timeout in step 3)
+    if (slackMsgs.length >= 1 && npcMsgs >= 3) {
+      const supDmExists = (state.chatHistory['sup_chat'] || []).length > 0
+      if (!supDmExists) {
+        const pos = POSITIONS[state.position]
+        setTimeout(() => {
+          addMsg('sup_chat', {
+            role: 'npc', npcId: 'sup',
+            text: `${state.firstName}, yuk kita standup sebentar. Ada beberapa hal yang mau aku sampaikan untuk hari pertama kamu.`
+          })
+          showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
+          setState(prev => ({
+            ...prev,
+            unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
+          }))
+        }, 1500)
+      }
+    }
+  }, [state.chatHistory['slack']])
+
+  // Auto-trigger supervisor DM after 90 seconds in Slack (if user doesn't chat)
+  useEffect(() => {
+    if (state.step !== 3) return
+    const timer = setTimeout(() => {
+      const supDmExists = (state.chatHistory['sup_chat'] || []).length > 0
+      if (!supDmExists) {
+        const pos = POSITIONS[state.position]
+        addMsg('sup_chat', {
+          role: 'npc', npcId: 'sup',
+          text: `${state.firstName}, yuk standup sebentar. Banyak yang mau aku jelasin untuk hari pertama kamu di sini.`
+        })
+        showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
+        setState(prev => ({
+          ...prev,
+          unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
+        }))
+      }
+    }, 90000)
+    return () => clearTimeout(timer)
+  }, [state.step])
 
   // Clear unread when viewing a room
   useEffect(() => {
@@ -367,9 +425,22 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       setState(prev => {
         if (!prev.interviewDone) {
           const doneSignals = [
-            'sampai jumpa', 'sampai ketemu', 'tunggu kabar', 'akan kami hubungi',
-            'akan menghubungi', 'langkah selanjutnya', 'kabar dari kami',
-            'keputusan akhir', 'proses rekrutmen', 'kami tutup'
+            // Penutup interview
+            'sampai jumpa', 'sampai bertemu', 'sampai ketemu lagi',
+            'terima kasih sudah', 'senang berbicara', 'nice talking',
+            'tutup dulu', 'akhiri', 'semoga sukses', 'selamat ya',
+            // Proses selanjutnya
+            'langkah selanjutnya', 'proses selanjutnya', 'next step',
+            'akan kami hubungi', 'akan menghubungi', 'kami hubungi',
+            'kabar dari kami', 'keputusan dalam', 'beberapa hari',
+            'tim kami akan', '1-2 hari', '2-3 hari',
+            // Keputusan diterima
+            'kamu diterima', 'selamat bergabung', 'welcome to the team',
+            'offering', 'penawaran', 'kami terima', 'bergabung dengan kami',
+            'keputusan akhir', 'hasil wawancara', 'proses rekrutmen',
+            // Penutup natural
+            'kami tutup', 'bye', 'sampai nanti', 'selamat siang',
+            'selamat sore', 'hati-hati', 'sukses ya'
           ]
           const isDone = doneSignals.some(s => reply.toLowerCase().includes(s))
           if (isDone) {
@@ -501,11 +572,11 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           role: 'email',
           data: {
             from: 'sinta@vantara.co.id',
-            subject: `Offering Letter — ${state.bgRole} ${pos?.title}`,
+            subject: `Offering Letter — ${state.bgRole}`,
             preview: 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.',
             isOffering: true,
             salary: finalSalary,
-            position: `${state.bgRole} ${pos?.title}`,
+            position: `${state.bgRole}`,
             dept: pos?.dept,
             supervisor: pos?.supervisor.name,
             mealAllowance: 600000,
@@ -520,20 +591,21 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     }
 
     if (step === 3) {
-      // After signing contract — welcome to Slack
       setState(prev => ({ ...prev, step: 3, phaseUnlocked: 1 }))
       const pos = POSITIONS[state.position]
+      const channelName = pos?.dept.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/-$/g, '') || 'general'
 
       setTimeout(() => {
-        addMsg('slack', { role: 'system', text: `Kamu ditambahkan ke #${pos?.dept.toLowerCase().replace(/[^a-z]/g, '-')}` }, true)
+        addMsg('slack', { role: 'system', text: `Kamu ditambahkan ke #${channelName}` }, true)
         setTimeout(() => {
-          addMsg('slack', { role: 'npc', npcId: 'sinta', text: `Hai tim! Perkenalkan ${state.firstName}, ${state.bgRole} ${pos?.title} yang mulai hari ini. Disambut ya!` })
-          showNotif('slack', 'Slack', `💬 Sinta Maharani menyebut nama kamu di #${pos?.dept.toLowerCase().slice(0, 10)}`)
+          addMsg('slack', { role: 'npc', npcId: 'sinta', text: `Hai tim! Perkenalkan ${state.firstName}, ${state.bgRole} yang mulai hari ini. Disambut ya!` })
+          showNotif('slack', 'Slack', `Sinta Maharani menyebut nama kamu di #${channelName}`)
           setTimeout(() => {
-            addMsg('slack', { role: 'npc', npcId: 'sup', text: `Welcome ${state.firstName}. Saya ${pos?.supervisor.name}, supervisor langsungmu. Task pertama sudah saya siapkan. Standup besok jam 9.` })
+            addMsg('slack', { role: 'npc', npcId: 'sup', text: `Welcome ${state.firstName}. Saya ${pos?.supervisor.name}, supervisor langsungmu. Santai dulu, kenalan sama tim. Nanti kita standup.` })
             setTimeout(() => {
-              addMsg('slack', { role: 'npc', npcId: 'jnr', text: `Heyy welcome!! Saya ${pos?.junior.name}, masuk beberapa bulan lebih awal. Kalau mau tanya-tanya soal kehidupan di sini, DM aku ya!` })
-              addMsg('slack', { role: 'action', data: { label: 'Lanjut ke Hari ke-2 →', nextStep: 4 } })
+              addMsg('slack', { role: 'npc', npcId: 'jnr', text: `Heyy welcome!! Saya ${pos?.junior.name}, udah di sini beberapa bulan lebih awal. Kalau butuh apa-apa DM aku ya, santai aja!` })
+              // After 90 seconds OR after user sends 1 message in slack → supervisor DM
+              // Trigger is handled by useEffect watching slackMessageCount
             }, 1500)
           }, 1200)
         }, 1000)
@@ -542,20 +614,35 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     }
 
     if (step === 4) {
-      // Daily standup
       setState(prev => ({ ...prev, step: 4 }))
       const pos = POSITIONS[state.position]
       setTimeout(() => {
-        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Morning. Standup sebentar — hari ini rencananya apa ${state.firstName}?` })
-        addMsg('sup_chat', {
-          role: 'learn',
-          data: {
-            icon: '📢', title: 'Format Daily Standup',
-            body: 'Format standar: (1) Dikerjakan kemarin, (2) Rencana hari ini, (3) Ada hambatan? Jawab konkret dan singkat.',
-          }
-        })
-        addMsg('sup_chat', { role: 'action', data: { label: 'Lanjut ke Task Brief →', nextStep: 5 } })
-        showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', '📋 Ada standup baru dari supervisor')
+        // Supervisor explains company + position + SOP
+        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oke, sebelum mulai kerja aku mau orientasi singkat dulu. PT Vantara Nusantara itu FMCG personal care — ada 3 brand: Lumière (skincare), Roots&Co (haircare), sama Vanta Glow (body care). Kita distribute ke modern trade, GT, sama e-commerce.` })
+        setTimeout(() => {
+          addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Posisi kamu sebagai ${state.bgRole} di tim ${pos?.dept}. Tanggung jawab utamamu adalah ${pos?.itx}. Kamu lapor langsung ke aku, dan kalau ada hal strategis baru eskalasi ke ${pos?.manager.name}.` })
+          setTimeout(() => {
+            addMsg('sup_chat', {
+              role: 'learn',
+              data: {
+                icon: '📋', title: 'SOP Tim ' + pos?.dept,
+                body: 'Daily standup jam 9 pagi. Task masuk via chat supervisor. Deadline selalu dicantumkan. Submit hasil kerja di Workspace. Feedback langsung dari supervisor.',
+              }
+            })
+            setTimeout(() => {
+              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Nah itu overview-nya. Sekarang standup dulu — hari ini rencananya gimana ${state.firstName}?` })
+              addMsg('sup_chat', {
+                role: 'learn',
+                data: {
+                  icon: '📢', title: 'Format Daily Standup',
+                  body: '(1) Dikerjakan kemarin, (2) Rencana hari ini, (3) Ada hambatan? Untuk hari pertama, cukup bilang rencana hari ini saja.',
+                }
+              })
+              addMsg('sup_chat', { role: 'action', data: { label: 'Lanjut ke Task Brief →', nextStep: 5 } })
+              showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Orientasi hari pertama dari supervisor')
+            }, 1500)
+          }, 1200)
+        }, 1200)
       }, 800)
       setView('sup_chat')
     }
@@ -688,13 +775,13 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           const simExp: Experience = {
             id: 'kantoran-sim',
             company: 'PT Vantara Nusantara',
-            position: state.bgRole + ' ' + pos.title,
+            position: state.bgRole,
             startMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
             startYear: new Date().getFullYear().toString(),
             endMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
             endYear: new Date().getFullYear().toString(),
             isCurrent: true,
-            description: `Simulasi kerja ${state.bgRole} ${pos.title} di PT Vantara Nusantara (Kantoran). Menyelesaikan ${newTasksDone} task termasuk analisis data, review dari supervisor AI.`,
+            description: `Simulasi kerja ${state.bgRole} di PT Vantara Nusantara (Kantoran). Menyelesaikan ${newTasksDone} task termasuk analisis data, review dari supervisor AI.`,
             isSimulation: true,
           }
           // Save updated profile with sim experience
@@ -750,12 +837,12 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         role: 'email',
         data: {
           from: 'sinta@vantara.co.id',
-          subject: `Undangan Seleksi — ${s.bgRole} ${pos.title}`,
+          subject: `Undangan Seleksi — ${s.bgRole}`,
           preview: 'Kami mengundang kamu ke tahap seleksi untuk posisi ini.',
           isInvite: true,
           body: `Halo ${s.firstName},
 
-Terima kasih sudah melamar posisi ${s.bgRole} ${pos.title} di PT Vantara Nusantara.
+Terima kasih sudah melamar posisi ${s.bgRole} di PT Vantara Nusantara.
 
 Kami dengan senang hati mengundang kamu ke tahap seleksi awal berupa sesi interview singkat. Estimasi waktu: 15-20 menit.
 
@@ -995,7 +1082,7 @@ PT Vantara Nusantara`
                 simulationExperience={state.tasksDone > 0 && pos ? {
                   id: 'kantoran-sim',
                   company: 'PT Vantara Nusantara',
-                  position: state.bgRole + ' ' + pos.title,
+                  position: state.bgRole,
                   startMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
                   startYear: new Date().getFullYear().toString(),
                   endMonth: new Date().toLocaleString('id-ID', { month: 'long' }),
@@ -1042,7 +1129,7 @@ PT Vantara Nusantara`
             )}
 
             {/* Regular messages */}
-            {view !== 'workspace' && (state.chatHistory[view] || []).map(msg => (
+            {view !== 'workspace' && view !== 'inbox' && (state.chatHistory[view] || []).map(msg => (
               <MessageBubble
                 key={msg.id}
                 msg={msg}
@@ -1054,7 +1141,7 @@ PT Vantara Nusantara`
             ))}
 
             {/* Empty state */}
-            {view !== 'workspace' && (state.chatHistory[view] || []).length === 0 && (
+            {view !== 'workspace' && view !== 'inbox' && (state.chatHistory[view] || []).length === 0 && (
               <EmptyRoom view={view} state={state} />
             )}
 
@@ -1093,10 +1180,7 @@ PT Vantara Nusantara`
                   rows={1}
                   style={{ cursor: 'text' }}
                   autoComplete="off"
-                  onBlur={() => {
-                    // Re-focus after blur if not loading
-                    if (!loading) setTimeout(() => inputRef.current?.focus(), 100)
-                  }}
+                  autoFocus
                   className="flex-1 resize-none px-3 py-2.5 border border-[#E5E3DC] rounded-lg text-sm text-[#111111] bg-[#FAFAF7] outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10 disabled:opacity-40 transition-all min-h-[42px] max-h-[120px]"
                 />
                 <button
@@ -1301,6 +1385,39 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
   if (msg.role === 'action') {
     const d = msg.data || {}
     const isInterviewDone = d.type === 'interview_done'
+    const isDayDone = d.type === 'day_done'
+
+    if (isDayDone) {
+      return (
+        <div className="animate-messageIn bg-gradient-to-br from-[#E1F5EE] to-[#d4f5e9] border border-[#0F6E56]/20 rounded-xl p-4">
+          <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertama selesai!</p>
+          <p className="text-xs text-[#444441] mb-3 leading-relaxed">
+            Kamu sudah merasakan bagaimana kerja nyata di Kantoran — interview, nego gaji, onboarding, dan task pertama yang direview supervisor AI.
+          </p>
+          <div className="bg-white/70 rounded-lg p-3 mb-3">
+            <p className="text-xs font-semibold text-[#0F6E56] mb-1">Di Kantoran versi lengkap, kamu bisa:</p>
+            <div className="flex flex-col gap-1">
+              {['Lanjut ke hari ke-2, 3, hingga 90 hari', 'Task makin kompleks dan lintas departemen', 'Performance review dan kenaikan jabatan', 'Surat referensi kerja dari PT Vantara Nusantara'].map(item => (
+                <div key={item} className="flex gap-1.5 text-xs text-[#444441]">
+                  <span className="text-[#0F6E56]">→</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (d.nextStep !== undefined) onNextStep(Number(d.nextStep), d)
+            }}
+            style={{ cursor: 'pointer' }}
+            className="btn-teal text-sm w-full py-2.5"
+          >
+            Daftar Waitlist & Lanjutkan Karir →
+          </button>
+        </div>
+      )
+    }
+
     return (
       <div className={`animate-messageIn rounded-xl p-3 ${isInterviewDone ? 'bg-[#E1F5EE] border border-[#0F6E56]/20' : 'ml-10'}`}>
         {isInterviewDone && (
@@ -1434,6 +1551,166 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
   }
 
   return null
+}
+
+// ── INBOX GMAIL STYLE ────────────────────────────
+function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
+  messages: Message[]
+  onNextStep: (step: number, data?: Record<string, unknown>) => void
+  onViewChange: (view: string) => void
+  state: SimState
+  pos?: typeof POSITIONS[string]
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const emails = messages.filter(m => m.role === 'email')
+  const selected = emails.find(e => e.id === selectedId)
+
+  const getTimeLabel = (idx: number) => {
+    const now = new Date()
+    const times = ['08.00', '09.30', '10.15', '14.00', '15.30', '16.00']
+    return times[idx] || `${8 + idx}.00`
+  }
+
+  const getPreview = (d: Record<string, unknown>) => {
+    if (d.isOffering) return 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.'
+    if (d.isInvite) return 'Kami mengundang kamu ke tahap seleksi awal berupa sesi interview singkat.'
+    return String(d.preview || d.body || '').slice(0, 80) + '...'
+  }
+
+  if (emails.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center py-16">
+        <div className="text-center">
+          <div className="text-3xl mb-3">📭</div>
+          <p className="text-sm text-[#888780]">Inbox kosong. Email dari Sinta akan masuk setelah kamu melamar.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Split view: list kiri + detail kanan
+  return (
+    <div className="flex h-full min-h-0" style={{ height: '100%' }}>
+      {/* Email list */}
+      <div className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'w-72' : 'flex-1'}`}>
+        <div className="px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#888780]">
+            {emails.length} pesan
+          </p>
+        </div>
+        {emails.map((email, idx) => {
+          const d = email.data || {}
+          const isSelected = selectedId === email.id
+          const isUnread = idx === emails.length - 1 // latest always unread initially
+          return (
+            <button
+              key={email.id}
+              onClick={() => setSelectedId(email.id)}
+              style={{ cursor: 'pointer' }}
+              className={`w-full text-left px-4 py-3 border-b border-[#F1EFE8] transition-all ${
+                isSelected ? 'bg-[#E1F5EE] border-l-2 border-l-[#0F6E56]' : 'hover:bg-[#FAFAF7]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  {isUnread && !isSelected && <div className="w-2 h-2 rounded-full bg-[#0F6E56] flex-shrink-0" />}
+                  <span className={`text-xs ${isUnread && !isSelected ? 'font-bold text-[#111111]' : 'font-medium text-[#888780]'}`}>
+                    Sinta Maharani
+                  </span>
+                </div>
+                <span className="text-[10px] text-[#888780] flex-shrink-0">
+                  Hari ini, {getTimeLabel(idx)}
+                </span>
+              </div>
+              <p className={`text-xs mb-1 truncate ${isUnread && !isSelected ? 'font-semibold text-[#111111]' : 'text-[#444441]'}`}>
+                {String(d.subject || '')}
+              </p>
+              <p className="text-[10px] text-[#888780] truncate leading-relaxed">
+                {getPreview(d)}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Email detail */}
+      {selectedId && selected && (() => {
+        const d = selected.data || {}
+        return (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Detail header */}
+            <div className="px-5 py-4 border-b border-[#E5E3DC] flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-semibold text-sm text-[#111111]">{String(d.subject || '')}</p>
+                <button onClick={() => setSelectedId(null)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111]">✕</button>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[#888780]">
+                <div className="w-6 h-6 rounded-full av-teal flex items-center justify-center text-[9px] font-bold">SM</div>
+                <span>Sinta Maharani</span>
+                <span className="text-[#E5E3DC]">·</span>
+                <span>{String(d.from || 'sinta@vantara.co.id')}</span>
+              </div>
+            </div>
+
+            {/* Detail body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {d.isOffering ? (
+                <div>
+                  <div className="bg-gradient-to-r from-[#0F6E56] to-[#1D9E75] rounded-xl px-4 py-3 mb-4">
+                    <p className="text-white font-semibold text-sm">PT Vantara Nusantara</p>
+                    <p className="text-white/80 text-xs">FMCG Personal Care · Jakarta Selatan</p>
+                  </div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Surat Penawaran Kerja</p>
+                  {([
+                    ['Posisi', String(d.position ?? '')],
+                    ['Departemen', String(d.dept ?? '')],
+                    ['Supervisor', String(d.supervisor ?? '')],
+                    ['Gaji Pokok', `Rp ${Number(d.salary || 0).toLocaleString('id-ID')} / bulan`],
+                    ['Tunjangan Makan', `Rp 600.000 / bulan`],
+                    ['Tunjangan Transport', `Rp 400.000 / bulan`],
+                    ['Masa Probasi', String(d.probation ?? '')],
+                    ['Sistem Kerja', String(d.workSystem ?? '')],
+                  ] as [string, string][]).map(([k, v]) => (
+                    <div key={k} className="flex justify-between py-2 border-b border-[#F1EFE8] last:border-0 text-sm">
+                      <span className="text-[#888780]">{k}</span>
+                      <span className={`font-medium ${k === 'Gaji Pokok' ? 'text-[#0F6E56] font-bold' : 'text-[#111111]'}`}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed text-[#444441] whitespace-pre-line">
+                  {String(d.body || d.preview || '')}
+                </p>
+              )}
+            </div>
+
+            {/* CTA */}
+            <div className="border-t border-[#E5E3DC] px-5 py-4 bg-[#FAFAF7] flex-shrink-0">
+              {d.isOffering ? (
+                <button
+                  onClick={() => onNextStep(3)}
+                  style={{ cursor: 'pointer' }}
+                  className="btn-teal w-full py-3 text-sm font-semibold"
+                  type="button"
+                >
+                  Tanda Tangan & Terima Offer →
+                </button>
+              ) : d.isInvite ? (
+                <button
+                  onClick={() => onViewChange('hr_office')}
+                  style={{ cursor: 'pointer' }}
+                  className="btn-teal w-full py-3 text-sm font-semibold"
+                  type="button"
+                >
+                  Mulai Interview dengan Sinta →
+                </button>
+              ) : null}
+            </div>
+          </div>
+        )
+      })()}
+    </div>
+  )
 }
 
 function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, isSubmitting, onFileUpload, onSubmit, onClearUpload }: {
