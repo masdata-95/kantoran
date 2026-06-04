@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     switch (npcId) {
       case 'sinta':
-        systemPrompt = getSintaPrompt(userContext)
+        systemPrompt = getSintaPrompt(userContext, position?.reqs)
         break
       case 'sup':
         if (!position) return NextResponse.json({ error: 'Invalid position' }, { status: 400 })

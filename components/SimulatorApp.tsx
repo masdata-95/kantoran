@@ -106,6 +106,10 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const supDmSentRef = useRef(false)
+  const viewRef = useRef(view)
+
+  // Keep viewRef in sync with view state
+  useEffect(() => { viewRef.current = view }, [view])
 
   // Auto focus input after send
   const focusInput = useCallback(() => {
@@ -402,6 +406,7 @@ PT Vantara Nusantara`
             position: state.position,
             experience: state.experience,
             motivation: state.motivation,
+            step: state.step,
           },
           positionId: state.position,
         })
@@ -439,6 +444,23 @@ PT Vantara Nusantara`
 
     addMsg(room, { role: 'npc', npcId, text: reply }, true)
     addCoins(2)
+
+    // Notify if user navigated to a different room while waiting for reply
+    if (viewRef.current !== room) {
+      const roomLabels: Record<string, string> = {
+        hr_office: 'Sinta Maharani',
+        sup_chat: pos?.supervisor.name || 'Supervisor',
+        mgr_chat: pos?.manager.name || 'Manager',
+        pantry: pos?.junior.name || 'Pantry',
+        slack: 'Slack',
+        jnr: pos?.junior.name || 'Kolega',
+      }
+      showNotif(room, roomLabels[room] || room, 'Ada balasan baru — klik untuk buka')
+      setState(prev => ({
+        ...prev,
+        unreadCounts: { ...prev.unreadCounts, [room]: (prev.unreadCounts[room] || 0) + 1 }
+      }))
+    }
 
     // Check if interview is done — use functional setState to get latest state
     if (npcId === 'sinta') {
@@ -1578,6 +1600,7 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
   pos?: typeof POSITIONS[string]
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [signingState, setSigningState] = useState<'none' | 'signing' | 'signed'>('none')
   const emails = messages.filter(m => m.role === 'email')
   const selected = emails.find(e => e.id === selectedId)
 
@@ -1703,14 +1726,46 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
             {/* CTA */}
             <div className="border-t border-[#E5E3DC] px-5 py-4 bg-[#FAFAF7] flex-shrink-0">
               {d.isOffering ? (
-                <button
-                  onClick={() => onNextStep(3)}
-                  style={{ cursor: 'pointer' }}
-                  className="btn-teal w-full py-3 text-sm font-semibold"
-                  type="button"
-                >
-                  Tanda Tangan & Terima Offer →
-                </button>
+                signingState === 'none' ? (
+                  <button
+                    onClick={() => {
+                      setSigningState('signing')
+                      setTimeout(() => setSigningState('signed'), 1800)
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="btn-teal w-full py-3 text-sm font-semibold"
+                    type="button"
+                  >
+                    ✍️ Tanda Tangan & Terima Offer →
+                  </button>
+                ) : signingState === 'signing' ? (
+                  <div className="text-center py-3">
+                    <div className="flex gap-2 justify-center mb-2">
+                      <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
+                      <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
+                      <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
+                    </div>
+                    <p className="text-xs text-[#888780]">Memproses tanda tangan digital...</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="bg-[#DCFCE7] border border-[#166534]/20 rounded-xl p-3 mb-3 text-center">
+                      <p className="text-sm font-bold text-[#166534] mb-1">✅ Kontrak Berhasil Ditandatangani</p>
+                      <p className="text-xs text-[#166534]/80">Selamat bergabung di PT Vantara Nusantara!</p>
+                    </div>
+                    <p className="text-xs text-[#888780] mb-3 leading-relaxed">
+                      Salinan kontrak fisik akan dikirim via kurir dalam 3 hari kerja. Dokumen digital ini sudah berlaku resmi. Sampai jumpa di hari pertama, {state.firstName}!
+                    </p>
+                    <button
+                      onClick={() => onNextStep(3)}
+                      style={{ cursor: 'pointer' }}
+                      className="btn-teal w-full py-3 text-sm font-semibold"
+                      type="button"
+                    >
+                      Mulai Hari Pertama di PT Vantara →
+                    </button>
+                  </div>
+                )
               ) : d.isInvite ? (
                 <button
                   onClick={() => onViewChange('hr_office')}
