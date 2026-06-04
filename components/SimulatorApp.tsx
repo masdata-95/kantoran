@@ -251,6 +251,42 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       const bg = (initialBackground || 'fresh_grad') as import('@/lib/positions').BackgroundType
       const role = pos.getRole(bg)
       const firstName = userProfile?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Kamu'
+
+      // Build inbox email and HR Office message directly into initial state
+      const inviteEmailId = `invite-${Date.now()}`
+      const sintaMsgId = `sinta-${Date.now() + 1}`
+
+      const inviteEmail = {
+        id: inviteEmailId,
+        role: 'email' as const,
+        data: {
+          from: 'sinta@vantara.co.id',
+          subject: `Undangan Seleksi — ${role}`,
+          preview: 'Kami mengundang kamu ke tahap seleksi untuk posisi ini.',
+          isInvite: true,
+          body: `Halo ${firstName},
+
+Terima kasih sudah melamar posisi ${role} di PT Vantara Nusantara.
+
+Kami dengan senang hati mengundang kamu ke tahap seleksi awal berupa sesi interview singkat. Estimasi waktu: 15-20 menit.
+
+Silakan buka menu HR Office untuk memulai sesi interview dengan Sinta Maharani, HR Business Partner kami.
+
+Sampai jumpa!
+
+Sinta Maharani
+HR Business Partner
+PT Vantara Nusantara`
+        }
+      }
+
+      const sintaMsg = {
+        id: sintaMsgId,
+        role: 'npc' as const,
+        npcId: 'sinta',
+        text: `Halo ${firstName}! Saya Sinta, HR Business Partner Vantara. Santai aja ya, ini lebih ke ngobrol dan kenalan dulu. Cerita dong — siapa kamu dan kenapa tertarik sama posisi ${pos.title} di sini?`
+      }
+
       const initState: SimState = {
         ...INITIAL,
         firstName,
@@ -259,11 +295,22 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         bgRole: role,
         position: initialPosition,
         step: 0,
+        chatHistory: {
+          inbox: [inviteEmail],
+          hr_office: [sintaMsg],
+        },
+        unreadCounts: {
+          inbox: 1,
+        }
       }
+
       setState(initState)
       setShowApp(true)
       setView('inbox')
-      setTimeout(() => initStep0(initState), 400)
+      // Show notification after mount
+      setTimeout(() => {
+        showNotif('inbox', 'Inbox', 'Ada email undangan seleksi dari Sinta Maharani')
+      }, 800)
     }
   }, [progLoading, showApp, initialPosition])
 
