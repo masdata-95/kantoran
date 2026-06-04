@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         break
       case 'sup':
         if (!position) return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
-        systemPrompt = getSupPrompt(userContext, position.supervisor.name, position.supervisor.bio)
+        systemPrompt = getSupPrompt(userContext, position.supervisor.name, position.supervisor.bio, position.taskFile, position.taskTitle)
         break
       case 'jnr':
         if (!position) return NextResponse.json({ error: 'Invalid position' }, { status: 400 })

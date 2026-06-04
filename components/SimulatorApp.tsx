@@ -105,6 +105,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [canGoDay2, setCanGoDay2] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
+  const supDmSentRef = useRef(false)
 
   // Auto focus input after send
   const focusInput = useCallback(() => {
@@ -155,43 +156,41 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     const slackMsgs = (state.chatHistory['slack'] || []).filter(m => m.role === 'user')
     const npcMsgs = (state.chatHistory['slack'] || []).filter(m => m.role === 'npc').length
 
-    // Trigger after user sends first message OR after 90s (handled by timeout in step 3)
-    if (slackMsgs.length >= 1 && npcMsgs >= 3) {
-      const supDmExists = (state.chatHistory['sup_chat'] || []).length > 0
-      if (!supDmExists) {
-        const pos = POSITIONS[state.position]
-        setTimeout(() => {
-          addMsg('sup_chat', {
-            role: 'npc', npcId: 'sup',
-            text: `${state.firstName}, yuk kita standup sebentar. Ada beberapa hal yang mau aku sampaikan untuk hari pertama kamu.`
-          }, true)
-          showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
-          setState(prev => ({
-            ...prev,
-            unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
-          }))
-        }, 1500)
-      }
-    }
-  }, [state.chatHistory['slack']])
-
-  // Auto-trigger supervisor DM after 90 seconds in Slack (if user doesn't chat)
-  useEffect(() => {
-    if (state.step !== 3) return
-    const timer = setTimeout(() => {
-      const supDmExists = (state.chatHistory['sup_chat'] || []).length > 0
-      if (!supDmExists) {
-        const pos = POSITIONS[state.position]
+    // Trigger after user sends first message AND 3+ NPC responses in slack
+    if (slackMsgs.length >= 1 && npcMsgs >= 3 && !supDmSentRef.current) {
+      supDmSentRef.current = true
+      const pos = POSITIONS[state.position]
+      setTimeout(() => {
         addMsg('sup_chat', {
           role: 'npc', npcId: 'sup',
-          text: `${state.firstName}, yuk standup sebentar. Banyak yang mau aku jelasin untuk hari pertama kamu di sini.`
+          text: `${state.firstName}, yuk kita standup sebentar. Ada beberapa hal yang mau aku sampaikan untuk hari pertama kamu.`
         }, true)
         showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
         setState(prev => ({
           ...prev,
           unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
         }))
-      }
+      }, 1500)
+    }
+  }, [state.chatHistory['slack']])
+
+  // Auto-trigger supervisor DM after 90 seconds in Slack (if user doesn't chat)
+  useEffect(() => {
+    if (state.step !== 3) return
+    supDmSentRef.current = false
+    const timer = setTimeout(() => {
+      if (supDmSentRef.current) return
+      supDmSentRef.current = true
+      const pos = POSITIONS[state.position]
+      addMsg('sup_chat', {
+        role: 'npc', npcId: 'sup',
+        text: `${state.firstName}, yuk standup sebentar. Banyak yang mau aku jelasin untuk hari pertama kamu di sini.`
+      }, true)
+      showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
+      setState(prev => ({
+        ...prev,
+        unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
+      }))
     }, 90000)
     return () => clearTimeout(timer)
   }, [state.step])
