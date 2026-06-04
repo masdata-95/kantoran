@@ -14,10 +14,11 @@ interface Props {
 export default function ProfileSetup({ user, onComplete }: Props) {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
-  const [profile, setProfile] = useState<UserProfile>({
+  const [profile, setProfile] = useState<UserProfile & { category?: string }>({
     ...EMPTY_PROFILE,
     full_name: user.user_metadata?.full_name || '',
     avatar_url: user.user_metadata?.avatar_url || '',
+    category: '',
   })
 
   const up = (field: keyof UserProfile, val: unknown) =>
@@ -84,7 +85,7 @@ export default function ProfileSetup({ user, onComplete }: Props) {
   const isStep2Valid = profile.education.length > 0 &&
     profile.education.every(e => e.institution.trim() && e.major.trim())
 
-  const TOTAL = 4
+  const TOTAL = 5
 
   return (
     <div className="min-h-screen bg-[#FAFAF7] flex flex-col items-center justify-center p-4">
@@ -367,6 +368,42 @@ export default function ProfileSetup({ user, onComplete }: Props) {
                 </div>
               </div>
             )}
+
+            {/* Step 5 — Kategori */}
+            {step === 5 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-1">Langkah 5 dari {TOTAL}</p>
+                <h2 className="font-serif text-2xl font-bold text-[#111111] mb-1">Kamu saat ini...</h2>
+                <p className="text-sm text-[#888780] mb-5">Ini menentukan estimasi gaji dan level posisi yang ditawarkan kepadamu.</p>
+
+                <div className="flex flex-col gap-3">
+                  {[
+                    { key: 'fresh_grad', label: 'Fresh Graduate', icon: '🎓', desc: 'Baru lulus, belum punya pengalaman kerja kantoran', role: 'Intern' },
+                    { key: 'jobseeker', label: 'Job Seeker', icon: '🔍', desc: 'Aktif mencari kerja, sudah punya sedikit pengalaman', role: 'Junior' },
+                    { key: 'career_switch', label: 'Career Switcher', icon: '🔄', desc: 'Sudah kerja di bidang lain, ingin pindah karir', role: 'Mid-Level' },
+                    { key: 'student', label: 'Mahasiswa Tingkat Akhir', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal', role: 'Intern Magang' },
+                  ].map(cat => (
+                    <button
+                      key={cat.key}
+                      onClick={() => setProfile(prev => ({ ...prev, category: cat.key }))}
+                      style={{ cursor: 'pointer' }}
+                      className={`flex items-start gap-3 p-4 rounded-xl border transition-all text-left ${
+                        (profile as { category?: string }).category === cat.key
+                          ? 'border-[#0F6E56] bg-[#E1F5EE]'
+                          : 'border-[#E5E3DC] hover:border-[#0F6E56]'
+                      }`}
+                    >
+                      <span className="text-2xl flex-shrink-0">{cat.icon}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-[#111111]">{cat.label}</p>
+                        <p className="text-xs text-[#888780] mt-0.5">{cat.desc}</p>
+                        <p className="text-xs font-medium text-[#0F6E56] mt-1">Kamu akan melamar sebagai {cat.role}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer navigation */}
@@ -380,20 +417,20 @@ export default function ProfileSetup({ user, onComplete }: Props) {
             {step < TOTAL ? (
               <button
                 onClick={() => setStep(s => s + 1)}
-                disabled={step === 1 && !isStep1Valid || step === 2 && !isStep2Valid}
-                style={{ cursor: (step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid) ? 'not-allowed' : 'pointer' }}
+                disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid)}
+                style={{ cursor: ((step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid)) ? 'not-allowed' : 'pointer' }}
                 className="btn-teal text-sm disabled:opacity-40"
               >
-                {step === 3 ? (profile.experience.filter(e => !e.isSimulation).length === 0 ? 'Lewati →' : 'Lanjut →') : 'Lanjut →'}
+                {step === 3 && profile.experience.filter(e => !e.isSimulation).length === 0 ? 'Lewati →' : 'Lanjut →'}
               </button>
             ) : (
               <button
                 onClick={handleSave}
-                disabled={saving}
-                style={{ cursor: saving ? 'not-allowed' : 'pointer' }}
+                disabled={saving || !(profile as { category?: string }).category}
+                style={{ cursor: (saving || !(profile as { category?: string }).category) ? 'not-allowed' : 'pointer' }}
                 className="btn-teal text-sm disabled:opacity-40"
               >
-                {saving ? 'Menyimpan...' : 'Simpan & Mulai Melamar →'}
+                {saving ? 'Menyimpan...' : 'Simpan & Lihat Lowongan →'}
               </button>
             )}
           </div>

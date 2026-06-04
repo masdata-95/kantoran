@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import LoginPage from '@/components/LoginPage'
+import OnboardingSlides from '@/components/OnboardingSlides'
 import ProfileSetup from '@/components/ProfileSetup'
 import JobListing from '@/components/JobListing'
 import SimulatorApp from '@/components/SimulatorApp'
@@ -13,6 +14,7 @@ import type { BackgroundType } from '@/lib/positions'
 
 type AppStage =
   | 'loading'
+  | 'onboarding'   // slides before login
   | 'login'
   | 'profile_setup'
   | 'job_listing'
@@ -29,48 +31,76 @@ export default function SimulatorPage() {
   const [simTasksDone, setSimTasksDone] = useState(0)
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const u = session?.user ?? null
-      setUser(u)
-      if (!u) {
-        setStage('login')
-        return
-      }
-      // Check if user has a profile
-      try {
-        const res = await fetch(`/api/profile?userId=${u.id}`)
-        const { profile: existingProfile } = await res.json()
-        if (existingProfile && existingProfile.full_name) {
-          setProfile(existingProfile)
-          // Check if they have an ongoing simulation
-          const progressRes = await fetch(`/api/progress?userId=${u.id}`)
-          const { progress } = await progressRes.json()
-          if (progress && progress.step > 0 && progress.step < 10) {
-            setBackground(progress.background || '')
-            setSelectedPosition(progress.position || '')
-            setStage('simulator')
-          } else if (progress && progress.step >= 10) {
-            setStage('wishlist')
-          } else {
-            setStage('job_listing')
-          }
-        } else {
-          setStage('profile_setup')
-        }
-      } catch {
-        setStage('profile_setup')
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user ?? null
-      setUser(u)
-      if (!u) setStage('login')
-    })
-
-    return () => subscription.unsubscribe()
+    initApp()
   }, [])
 
+  const initApp = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const u = session?.user ?? null
+    setUser(u)
+
+    if (!u) {
+      // Check if user has seen onboarding slides
+      const seenOnboarding = localStorage.getItem('kantoran_onboarding_seen')
+      setStage(seenOnboarding ? 'login' : 'onboarding')
+      return
+    }
+
+    await checkUserState(u)
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      const newUser = session?.user ?? null
+      setUser(newUser)
+      if (!newUser) {
+        setStage('login')
+      } else if (newUser.id !== u?.id) {
+        // Different user logged in
+        await checkUserState(newUser)
+      }
+    })
+  }
+
+  const checkUserState = async (u: User) => {
+    try {
+      // Check profile
+      const profileRes = await fetch(`/api/profile?userId=${u.id}`)
+      const { profile: existingProfile } = await profileRes.json()
+
+      if (!existingProfile || !existingProfile.full_name) {
+        setStage('profile_setup')
+        return
+      }
+
+      setProfile(existingProfile)
+      const bg = existingProfile.category || ''
+      setBackground(bg as BackgroundType | '')
+
+      // Check progress
+      const progressRes = await fetch(`/api/progress?userId=${u.id}`)
+      const { progress } = await progressRes.json()
+
+      if (progress && progress.step > 0 && progress.step < 10) {
+        // Has active simulation — continue
+        setSelectedPosition(progress.position || '')
+        setBackground((progress.background || bg) as BackgroundType | '')
+        setStage('simulator')
+      } else if (progress && progress.step >= 10) {
+        // Simulation done — go to wishlist
+        setSimCoins(progress.coins || 0)
+        setSimTasksDone(progress.tasks_done || 0)
+        setStage('wishlist')
+      } else {
+        // No active simulation — go to job listing
+        setStage('job_listing')
+      }
+    } catch (e) {
+      console.error('Check state error:', e)
+      setStage('profile_setup')
+    }
+  }
+
+  // Loading
   if (stage === 'loading') return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAFAF7' }}>
       <div className="flex gap-2">
@@ -81,29 +111,44 @@ export default function SimulatorPage() {
     </div>
   )
 
+  // Onboarding slides
+  if (stage === 'onboarding') return (
+    <OnboardingSlides
+      onDone={() => {
+        localStorage.setItem('kantoran_onboarding_seen', '1')
+        setStage('login')
+      }}
+    />
+  )
+
+  // Login
   if (stage === 'login' || !user) return <LoginPage />
 
+  // Profile setup
   if (stage === 'profile_setup') return (
     <ProfileSetup
       user={user}
       onComplete={(p) => {
+        const profileWithCat = p as UserProfile & { category?: string }
         setProfile(p)
+        setBackground((profileWithCat.category || '') as BackgroundType | '')
         setStage('job_listing')
       }}
     />
   )
 
+  // Job listing
   if (stage === 'job_listing') return (
     <JobListing
       background={background}
       onApply={(positionId) => {
         setSelectedPosition(positionId)
-        // Background will be set in onboarding
         setStage('simulator')
       }}
     />
   )
 
+  // Wishlist
   if (stage === 'wishlist') return (
     <WishlistForm
       user={user}
@@ -114,12 +159,13 @@ export default function SimulatorPage() {
     />
   )
 
-  // simulator
+  // Simulator
   return (
     <SimulatorApp
       user={user}
       userProfile={profile}
       initialPosition={selectedPosition}
+      initialBackground={background}
       onWishlist={(coins, tasksDone) => {
         setSimCoins(coins)
         setSimTasksDone(tasksDone)

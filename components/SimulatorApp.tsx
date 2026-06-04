@@ -81,10 +81,11 @@ import ProfileTab from '@/components/ProfileTab'
 import type { UserProfile } from '@/lib/profile'
 import type { Experience } from '@/lib/profile'
 
-export default function SimulatorApp({ user, userProfile, initialPosition, onWishlist }: {
+export default function SimulatorApp({ user, userProfile, initialPosition, initialBackground, onWishlist }: {
   user: User
   userProfile?: UserProfile | null
   initialPosition?: string
+  initialBackground?: string
   onWishlist?: (coins: number, tasksDone: number) => void
 }) {
   const [state, setState] = useState<SimState>(INITIAL)
@@ -156,9 +157,9 @@ export default function SimulatorApp({ user, userProfile, initialPosition, onWis
           ...prev,
           firstName: progress.first_name || '',
           email: progress.email || '',
-          background: progress.background || '',
+          background: (progress.background || initialBackground || '') as import('@/lib/positions').BackgroundType | '',
           bgRole: progress.bg_role || '',
-          position: progress.position || '',
+          position: progress.position || initialPosition || '',
           step: progress.step || 0,
           coins: progress.coins || 0,
           tasksDone: progress.tasks_done || 0,
@@ -688,7 +689,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, onWis
     const pos = POSITIONS[s.position]
     if (!pos) return
 
-    // Add email to inbox
+    // Add ONLY interview invitation to inbox (NOT offering letter)
     setTimeout(() => {
       addMsg('inbox', {
         role: 'email',
@@ -696,7 +697,20 @@ export default function SimulatorApp({ user, userProfile, initialPosition, onWis
           from: 'sinta@vantara.co.id',
           subject: `Undangan Seleksi — ${s.bgRole} ${pos.title}`,
           preview: 'Kami mengundang kamu ke tahap seleksi untuk posisi ini.',
-          body: `Halo ${s.firstName}, terima kasih sudah melamar posisi ${s.bgRole} ${pos.title}. Kami mengundang kamu ke tahap seleksi. Format: interview + tes teknikal, estimasi 15-20 menit. Silakan masuk ke HR Office untuk memulai.`
+          isInvite: true,
+          body: `Halo ${s.firstName},
+
+Terima kasih sudah melamar posisi ${s.bgRole} ${pos.title} di PT Vantara Nusantara.
+
+Kami dengan senang hati mengundang kamu ke tahap seleksi awal berupa sesi interview singkat. Estimasi waktu: 15-20 menit.
+
+Silakan buka menu HR Office untuk memulai sesi interview dengan Sinta Maharani, HR Business Partner kami.
+
+Sampai jumpa!
+
+Sinta Maharani
+HR Business Partner
+PT Vantara Nusantara`
         }
       })
 
@@ -706,7 +720,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, onWis
           role: 'npc', npcId: 'sinta',
           text: `Halo ${s.firstName}! Saya Sinta, HR Business Partner Vantara. Santai aja ya, ini lebih ke ngobrol dan kenalan dulu. Cerita dong — siapa kamu dan kenapa tertarik sama posisi ${pos.title} di sini?`
         }, true)
-        showNotif('inbox', 'Inbox', `📧 Email undangan seleksi dari Sinta Maharani`)
+        showNotif('inbox', 'Inbox', `Ada email undangan seleksi dari Sinta Maharani`)
       }, 1000)
     }, 600)
   }, [addMsg, showNotif])
@@ -736,10 +750,14 @@ export default function SimulatorApp({ user, userProfile, initialPosition, onWis
       state={state}
       setState={setState}
       onComplete={(s) => {
-        setState(s)
+        // Use initialBackground if available
+        const finalState = initialBackground 
+          ? { ...s, background: initialBackground as import('@/lib/positions').BackgroundType }
+          : s
+        setState(finalState)
         setShowApp(true)
         setView('inbox')
-        setTimeout(() => initStep0(s), 300)
+        setTimeout(() => initStep0(finalState), 300)
       }}
     />
   )
