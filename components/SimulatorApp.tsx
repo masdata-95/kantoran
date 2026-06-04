@@ -164,7 +164,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           addMsg('sup_chat', {
             role: 'npc', npcId: 'sup',
             text: `${state.firstName}, yuk kita standup sebentar. Ada beberapa hal yang mau aku sampaikan untuk hari pertama kamu.`
-          })
+          }, true)
           showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
           setState(prev => ({
             ...prev,
@@ -185,7 +185,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         addMsg('sup_chat', {
           role: 'npc', npcId: 'sup',
           text: `${state.firstName}, yuk standup sebentar. Banyak yang mau aku jelasin untuk hari pertama kamu di sini.`
-        })
+        }, true)
         showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
         setState(prev => ({
           ...prev,
@@ -416,32 +416,6 @@ PT Vantara Nusantara`
     }
   }
 
-  // Check if interview is done based on Sinta's message
-  const checkInterviewDone = useCallback((replyText: string, currentState: SimState) => {
-    if (currentState.interviewDone) return
-    const doneSignals = [
-      'sampai jumpa', 'sampai ketemu', 'tunggu kabar', 'akan kami hubungi',
-      'akan menghubungi', 'proses selanjutnya', 'hasil interview', 'kabar dari kami',
-      'diinformasikan', 'langkah selanjutnya', '1-2 hari', 'semoga hari'
-    ]
-    const isDone = doneSignals.some(s => replyText.toLowerCase().includes(s))
-    if (isDone) {
-      setState(prev => ({ ...prev, interviewDone: true }))
-      // Show banner after 2 seconds
-      setTimeout(() => {
-        addMsg('hr_office', {
-          role: 'action',
-          data: {
-            label: '🎉 Interview selesai! Kamu diterima di PT Vantara Nusantara.',
-            subLabel: 'Lanjut ke Offering Letter',
-            nextStep: 2,
-            type: 'interview_done'
-          }
-        })
-      }, 2000)
-    }
-  }, [addMsg])
-
   const handleSend = async () => {
     if (!input.trim() || loading) return
     const msg = input.trim()
@@ -554,7 +528,7 @@ PT Vantara Nusantara`
 
     if (step === 2) {
       const pos = POSITIONS[state.position]
-      const salRange = SALARY_RANGE[state.background]
+      const salRange = SALARY_RANGE[state.background as string] || SALARY_RANGE['fresh_grad']
 
          // Extract agreed salary — prioritas dari konfirmasi Sinta, bukan request user
       const hrMessages = state.chatHistory['hr_office'] || []
@@ -886,47 +860,6 @@ PT Vantara Nusantara`
     }
   }
 
-  // ── STEP 0: Init chat after onboarding ──────────
-  const initStep0 = useCallback((s: SimState) => {
-    const pos = POSITIONS[s.position]
-    if (!pos) return
-
-    // Add ONLY interview invitation to inbox (NOT offering letter)
-    setTimeout(() => {
-      addMsg('inbox', {
-        role: 'email',
-        data: {
-          from: 'sinta@vantara.co.id',
-          subject: `Undangan Seleksi — ${s.bgRole}`,
-          preview: 'Kami mengundang kamu ke tahap seleksi untuk posisi ini.',
-          isInvite: true,
-          body: `Halo ${s.firstName},
-
-Terima kasih sudah melamar posisi ${s.bgRole} di PT Vantara Nusantara.
-
-Kami dengan senang hati mengundang kamu ke tahap seleksi awal berupa sesi interview singkat. Estimasi waktu: 15-20 menit.
-
-Silakan buka menu HR Office untuk memulai sesi interview dengan Sinta Maharani, HR Business Partner kami.
-
-Sampai jumpa!
-
-Sinta Maharani
-HR Business Partner
-PT Vantara Nusantara`
-        }
-      })
-
-      // Add first message from Sinta in HR Office
-      setTimeout(() => {
-        addMsg('hr_office', {
-          role: 'npc', npcId: 'sinta',
-          text: `Halo ${s.firstName}! Saya Sinta, HR Business Partner Vantara. Santai aja ya, ini lebih ke ngobrol dan kenalan dulu. Cerita dong — siapa kamu dan kenapa tertarik sama posisi ${pos.title} di sini?`
-        }, true)
-        showNotif('inbox', 'Inbox', `Ada email undangan seleksi dari Sinta Maharani`)
-      }, 1000)
-    }, 600)
-  }, [addMsg, showNotif])
-
   const pos = POSITIONS[state.position]
 
   // Loading screen
@@ -1183,57 +1116,68 @@ PT Vantara Nusantara`
             }}
           />
 
+          {/* Inbox view — rendered outside the scroll container so it controls its own layout */}
+          {view === 'inbox' && (
+            <InboxView
+              messages={state.chatHistory['inbox'] || []}
+              onNextStep={handleNextStep}
+              onViewChange={setView}
+              state={state}
+              pos={pos}
+            />
+          )}
+
           {/* Messages / Content */}
-          <div ref={msgsRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+          {view !== 'inbox' && (
+            <div ref={msgsRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 
-            {/* Workspace special view */}
-            {view === 'workspace' && (
-              <WorkspaceView
-                state={state}
-                pos={pos}
-                uploadedFile={uploadedFile}
-                extractedData={extractedData}
-                reviewResult={reviewResult}
-                isSubmitting={isSubmittingTask}
-                onFileUpload={handleFileUpload}
-                onSubmit={handleSubmitTask}
-                onClearUpload={() => { setUploadedFile(null); setExtractedData('') }}
-              />
-            )}
+              {/* Workspace special view */}
+              {view === 'workspace' && (
+                <WorkspaceView
+                  state={state}
+                  pos={pos}
+                  uploadedFile={uploadedFile}
+                  extractedData={extractedData}
+                  reviewResult={reviewResult}
+                  isSubmitting={isSubmittingTask}
+                  onFileUpload={handleFileUpload}
+                  onSubmit={handleSubmitTask}
+                  onClearUpload={() => { setUploadedFile(null); setExtractedData('') }}
+                />
+              )}
 
-            {/* Regular messages */}
-            {view !== 'workspace' && view !== 'inbox' && (state.chatHistory[view] || []).map(msg => (
-              <MessageBubble
-                key={msg.id}
-                msg={msg}
-                state={state}
-                pos={pos}
-                onNextStep={handleNextStep}
-                onViewChange={setView}
-              />
-            ))}
+              {/* Regular messages */}
+              {view !== 'workspace' && (state.chatHistory[view] || []).map(msg => (
+                <MessageBubble
+                  key={msg.id}
+                  msg={msg}
+                  state={state}
+                  pos={pos}
+                  onNextStep={handleNextStep}
+                  onViewChange={setView}
+                />
+              ))}
 
-            {/* Empty state */}
-            {view !== 'workspace' && view !== 'inbox' && (state.chatHistory[view] || []).length === 0 && (
-              <EmptyRoom view={view} state={state} />
-            )}
+              {/* Empty state */}
+              {view !== 'workspace' && (state.chatHistory[view] || []).length === 0 && (
+                <EmptyRoom view={view} state={state} />
+              )}
 
-
-
-            {/* Typing indicator */}
-            {loading && canChat && (
-              <div className="flex gap-2 animate-messageIn">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${view === 'hr_office' ? 'av-teal' : view === 'sup_chat' ? 'av-blue' : view === 'mgr_chat' ? 'av-purple' : 'av-amber'}`}>
-                  {view === 'hr_office' ? 'SM' : NPC_INITIALS[state.position]?.[view === 'sup_chat' ? 'sup' : view === 'mgr_chat' ? 'mgr' : 'jnr'] || '?'}
+              {/* Typing indicator */}
+              {loading && canChat && (
+                <div className="flex gap-2 animate-messageIn">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${view === 'hr_office' ? 'av-teal' : view === 'sup_chat' ? 'av-blue' : view === 'mgr_chat' ? 'av-purple' : 'av-amber'}`}>
+                    {view === 'hr_office' ? 'SM' : NPC_INITIALS[state.position]?.[view === 'sup_chat' ? 'sup' : view === 'mgr_chat' ? 'mgr' : 'jnr'] || '?'}
+                  </div>
+                  <div className="bg-white border border-[#E5E3DC] rounded-[0_8px_8px_8px] px-3 py-2.5 flex gap-1 items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
+                  </div>
                 </div>
-                <div className="bg-white border border-[#E5E3DC] rounded-[0_8px_8px_8px] px-3 py-2.5 flex gap-1 items-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Input */}
           {canChat && (
@@ -1663,7 +1607,7 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
 
   // Split view: list kiri + detail kanan
   return (
-    <div className="flex h-full min-h-0" style={{ height: '100%' }}>
+    <div className="flex flex-1 overflow-hidden min-h-0">
       {/* Email list */}
       <div className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'w-72' : 'flex-1'}`}>
         <div className="px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
