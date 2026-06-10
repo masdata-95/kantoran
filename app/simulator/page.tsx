@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, authFetch } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import LoginPage from '@/components/LoginPage'
 import OnboardingSlides from '@/components/OnboardingSlides'
@@ -64,7 +64,7 @@ export default function SimulatorPage() {
   const checkUserState = async (u: User) => {
     try {
       // Check profile
-      const profileRes = await fetch(`/api/profile?userId=${u.id}`)
+      const profileRes = await authFetch('/api/profile')
       const { profile: existingProfile } = await profileRes.json()
 
       if (!existingProfile || !existingProfile.full_name) {
@@ -77,7 +77,7 @@ export default function SimulatorPage() {
       setBackground(bg as BackgroundType | '')
 
       // Check progress
-      const progressRes = await fetch(`/api/progress?userId=${u.id}`)
+      const progressRes = await authFetch('/api/progress')
       const { progress } = await progressRes.json()
 
       if (progress && progress.step > 0 && progress.step < 10) {

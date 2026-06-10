@@ -1,24 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { userId, progress } = body
+    const user = await getAuthUser(req)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const supabase = getServiceClient()
 
-    if (!userId || !progress) {
+    const body = await req.json()
+    const { progress } = body
+
+    if (!progress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const { data, error } = await supabase
       .from('user_progress')
       .upsert({
-        user_id: userId,
+        user_id: user.id,
         first_name: progress.firstName,
         email: progress.email,
         background: progress.background,
@@ -50,17 +49,13 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId')
+    const user = await getAuthUser(req)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
-    }
-
-    const { data, error } = await supabase
+    const { data, error } = await getServiceClient()
       .from('user_progress')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single()
 
     if (error && error.code !== 'PGRST116') {

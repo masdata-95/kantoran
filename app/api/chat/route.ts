@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, type ChatMessage } from '@/lib/ai'
 import { getSintaPrompt, getSupPrompt, getJnrPrompt, getMgrPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
+import { getAuthUser } from '@/lib/serverAuth'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthUser(req)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await req.json()
     const { npcId, messages, userContext, positionId } = body
 

@@ -5,6 +5,15 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// fetch dengan Authorization header (Supabase access token) — wajib untuk semua /api/*
+export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers = new Headers(init.headers)
+  if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`)
+  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  return fetch(input, { ...init, headers })
+}
+
 export type Database = {
   public: {
     Tables: {

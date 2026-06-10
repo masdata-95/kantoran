@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, authFetch } from '@/lib/supabase'
 import { POSITIONS, SALARY_RANGE, type BackgroundType } from '@/lib/positions'
 import * as XLSX from 'xlsx'
 
@@ -38,7 +38,6 @@ interface SimState {
   salaryExpected: number
   salaryOffered: number
   chatHistory: Record<string, Message[]>
-  aiHistory: Record<string, { role: string; content: string }[]>
   unreadCounts: Record<string, number>
   interviewDone: boolean
 }
@@ -47,7 +46,7 @@ const INITIAL: SimState = {
   firstName: '', email: '', background: '', bgRole: '', position: '',
   experience: '', motivation: '', step: 0, coins: 0, tasksDone: 0,
   streak: 0, phaseUnlocked: 0, salaryExpected: 0, salaryOffered: 0,
-  chatHistory: {}, aiHistory: {}, unreadCounts: {}, interviewDone: false,
+  chatHistory: {}, unreadCounts: {}, interviewDone: false,
 }
 
 // ── NPC CONFIG ────────────────────────────────────
@@ -61,19 +60,6 @@ const NPC_INITIALS: Record<string, Record<string, string>> = {
 
 const NPC_AV: Record<string, string> = {
   sinta: 'av-teal', sup: 'av-blue', mgr: 'av-purple', jnr: 'av-amber'
-}
-
-// Pantry gossip topics per NPC
-const PANTRY_GOSSIP = {
-  data_analyst: {
-    jnrName: 'Galih',
-    topics: [
-      'eh tau nggak, kemarin Pak Rizky sampe jam 9 malem di kantor gara-gara dashboard-nya error pas mau dipresentasiin ke client',
-      'btw aku denger-denger sih, bulan depan katanya ada restrukturisasi tim Analytics... tapi belum resmi ya, jangan disebarin dulu',
-      'si Diana tuh perfectionist banget, proposal aku direvisi 6 kali bro. 6 KALI. aku udah hampir nangis di toilet',
-      'warteg sebelah enak banget, ayam gorengnya. kemarin aku makan siang sama Sinta, doi cerita soal kandidat yang aneh-aneh waktu interview wkwk',
-    ]
-  }
 }
 
 // ── MAIN COMPONENT ────────────────────────────────
@@ -94,7 +80,6 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [loading, setLoading] = useState(false)
   const [progLoading, setProgLoading] = useState(true)
   const [showApp, setShowApp] = useState(false)
-  const [onboardStep, setOnboardStep] = useState(1)
   const [notification, setNotification] = useState<Notification | null>(null)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [extractedData, setExtractedData] = useState<string>('')
@@ -102,10 +87,10 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [isSubmittingTask, setIsSubmittingTask] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(userProfile || null)
   const [showProfile, setShowProfile] = useState(false)
-  const [canGoDay2, setCanGoDay2] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const supDmSentRef = useRef(false)
+  const orientationStartedRef = useRef(false)
   const viewRef = useRef(view)
 
   // Keep viewRef in sync with view state
@@ -153,6 +138,12 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     return () => clearInterval(iv)
   }, [state])
 
+  // Save langsung tiap step berubah — transisi penting (offering, kontrak, task) tidak boleh hilang
+  useEffect(() => {
+    if (state.step > 0) saveProgress()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step])
+
   // Slack → Supervisor DM trigger
   // After user sends 1 message in slack OR 90 seconds, supervisor sends DM
   useEffect(() => {
@@ -181,6 +172,11 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   // Auto-trigger supervisor DM after 90 seconds in Slack (if user doesn't chat)
   useEffect(() => {
     if (state.step !== 3) return
+    // Kalau DM supervisor sudah ada di history (mis. habis reload), jangan kirim ulang
+    if ((state.chatHistory['sup_chat'] || []).length > 0) {
+      supDmSentRef.current = true
+      return
+    }
     supDmSentRef.current = false
     const timer = setTimeout(() => {
       if (supDmSentRef.current) return
@@ -198,6 +194,16 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     }, 90000)
     return () => clearTimeout(timer)
   }, [state.step])
+
+  // Step 3 → 4: saat user membuka DM supervisor setelah diajak standup, mulai orientasi
+  useEffect(() => {
+    if (orientationStartedRef.current) return
+    if (state.step !== 3 || view !== 'sup_chat') return
+    if ((state.chatHistory['sup_chat'] || []).length === 0) return
+    orientationStartedRef.current = true
+    handleNextStep(4)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, state.step, state.chatHistory])
 
   // Clear unread when viewing a room
   useEffect(() => {
@@ -218,7 +224,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
 
   const loadProgress = async () => {
     try {
-      const res = await fetch(`/api/progress?userId=${user.id}`)
+      const res = await authFetch('/api/progress')
       const { progress } = await res.json()
       if (progress && progress.step > 0) {
         setState(prev => ({
@@ -232,11 +238,11 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           coins: progress.coins || 0,
           tasksDone: progress.tasks_done || 0,
           streak: progress.streak || 0,
-          phaseUnlocked: progress.step >= 4 ? 1 : 0,
+          phaseUnlocked: progress.step >= 3 ? 1 : 0,
           chatHistory: (progress.chat_history as Record<string, Message[]>) || {},
           interviewDone: progress.step >= 2,
         }))
-        setView(progress.step >= 4 ? 'slack' : 'inbox')
+        setView(progress.step >= 3 ? 'slack' : 'inbox')
         setShowApp(true)
       }
     } catch (e) {
@@ -319,11 +325,9 @@ PT Vantara Nusantara`
 
   const saveProgress = useCallback(async () => {
     try {
-      await fetch('/api/progress', {
+      await authFetch('/api/progress', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
           progress: {
             firstName: state.firstName,
             email: state.email || user.email,
@@ -364,15 +368,6 @@ PT Vantara Nusantara`
     setState(prev => ({ ...prev, coins: prev.coins + n }))
   }, [])
 
-  const updateAiHistory = useCallback((npcId: string, role: 'user' | 'assistant', content: string) => {
-    setState(prev => {
-      const hist = prev.aiHistory[npcId] || []
-      const updated = [...hist, { role, content }]
-      const trimmed = updated.length > 20 ? updated.slice(-16) : updated
-      return { ...prev, aiHistory: { ...prev.aiHistory, [npcId]: trimmed } }
-    })
-  }, [])
-
   // Build full conversation history from chat messages for AI memory
   const buildHistory = useCallback((room: string, npcId: string) => {
     const messages = state.chatHistory[room] || []
@@ -392,9 +387,8 @@ PT Vantara Nusantara`
     try {
       const history = buildHistory(room, npcId)
       const messages = [...history, { role: 'user' as const, content: userMsg }]
-      const res = await fetch('/api/chat', {
+      const res = await authFetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           npcId,
           messages,
@@ -433,6 +427,7 @@ PT Vantara Nusantara`
       mgr_chat: 'mgr',
       pantry: 'jnr',
       slack: 'jnr',
+      jnr: 'jnr',
     }
     const npcId = npcMap[view] || 'sinta'
     const room = view
@@ -520,14 +515,9 @@ PT Vantara Nusantara`
   const handleRestart = async () => {
     if (!confirm('Yakin mau mulai dari awal?\n\nSemua progress dan chat akan hilang. Kamu bisa pilih posisi baru.')) return
     try {
-      await fetch('/api/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      })
+      await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({}) })
       setState(INITIAL)
       setShowApp(false)
-      setOnboardStep(1)
       setView('inbox')
       setReviewResult(null)
       setUploadedFile(null)
@@ -739,8 +729,9 @@ PT Vantara Nusantara`
     }
 
     if (step === 6) {
+      // Jangan paksa pindah ke workspace — tombol "Buka File Manager" harus benar-benar
+      // membawa user ke File Manager untuk download file task (navigasi via goTo)
       setState(prev => ({ ...prev, step: 6 }))
-      setView('workspace')
       const pos = POSITIONS[state.position]
       setTimeout(() => {
         addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `Psst ${state.firstName} — dari pengalaman aku, baca dulu semua data sebelum mulai. Kak ${pos?.supervisor.name.split(' ')[0]} lumayan strict soal detail hehe` })
@@ -783,9 +774,8 @@ PT Vantara Nusantara`
     }
     setIsSubmittingTask(true)
     try {
-      const res = await fetch('/api/review', {
+      const res = await authFetch('/api/review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           positionId: state.position,
           userContext: {
@@ -798,6 +788,9 @@ PT Vantara Nusantara`
         })
       })
       const data = await res.json()
+      if (!res.ok || !data?.review) {
+        throw new Error(data?.error || 'Review gagal')
+      }
       setReviewResult({ review: data.review, isApproved: data.isApproved })
 
       // Add feedback to supervisor chat
@@ -822,7 +815,6 @@ PT Vantara Nusantara`
         const newCoins = state.coins + 30
         const newTasksDone = state.tasksDone + 1
         setState(prev => ({ ...prev, tasksDone: newTasksDone, step: 10 }))
-        setCanGoDay2(true)
 
         // Update simulation experience in profile
         const pos = POSITIONS[state.position]
@@ -841,11 +833,9 @@ PT Vantara Nusantara`
           }
           // Save updated profile with sim experience
           if (user.id) {
-            fetch('/api/profile', {
+            authFetch('/api/profile', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                userId: user.id,
                 profile: { ...profile, experience: [...(profile?.experience || []).filter(e => e.id !== 'kantoran-sim'), simExp] }
               })
             }).catch(console.error)
@@ -924,7 +914,7 @@ PT Vantara Nusantara`
     { id: 'pantry',      icon: '☕', label: 'Pantry',       locked: state.phaseUnlocked < 1 },
   ]
 
-  const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack'].includes(view)
+  const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack', 'jnr'].includes(view)
 
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden">
@@ -1897,172 +1887,3 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
   )
 }
 
-// ── ONBOARDING ────────────────────────────────────
-function OnboardingFlow({ user, step, setStep, state, setState, onComplete }: {
-  user: User; step: number; setStep: (n: number) => void;
-  state: SimState; setState: (s: SimState) => void;
-  onComplete: (s: SimState) => void;
-}) {
-  const [name, setName] = useState(user.user_metadata?.full_name?.split(' ')[0] || '')
-  const [bg, setBg] = useState<BackgroundType | ''>('')
-  const [pos, setPos] = useState('')
-  const [exp, setExp] = useState('')
-  const [mot, setMot] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const BACKGROUNDS_LIST = [
-    { key: 'fresh_grad' as BackgroundType, label: 'Fresh Graduate', icon: '🎓', desc: 'Baru lulus, belum punya pengalaman kerja kantoran', role: 'Intern' },
-    { key: 'jobseeker' as BackgroundType, label: 'Job Seeker', icon: '🔍', desc: 'Aktif mencari kerja, sudah punya sedikit pengalaman', role: 'Junior' },
-    { key: 'career_switch' as BackgroundType, label: 'Career Switcher', icon: '🔄', desc: 'Sudah kerja di bidang lain, ingin pindah karir', role: 'Mid-Level' },
-    { key: 'student' as BackgroundType, label: 'Mahasiswa Tingkat Akhir', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal', role: 'Intern Magang' },
-  ]
-
-  const handleSubmit = async () => {
-    setSubmitting(true)
-    const position = POSITIONS[pos]
-    const bgRole = position?.getRole(bg) || ''
-    const finalState: SimState = {
-      ...INITIAL,
-      firstName: name,
-      email: user.email || '',
-      background: bg,
-      bgRole,
-      position: pos,
-      experience: exp,
-      motivation: mot,
-      step: 0,
-    }
-    setState(finalState)
-    setStep(5)
-    setTimeout(() => {
-      setSubmitting(false)
-      onComplete(finalState)
-    }, 2000)
-  }
-
-  if (step === 5) return (
-    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center p-6">
-      <div className="text-center animate-fadeUp">
-        <div className="text-5xl mb-4">📬</div>
-        <h2 className="font-serif text-xl font-bold text-[#111111] mb-2">Lamaran terkirim!</h2>
-        <p className="text-sm text-[#888780] mb-4">Sinta sedang mereview lamaranmu...</p>
-        <div className="flex gap-2 justify-center">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
-          <div className="w-2.5 h-2.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
-          <div className="w-2.5 h-2.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
-        </div>
-      </div>
-    </div>
-  )
-
-  return (
-    <div className="min-h-screen bg-[#FAFAF7] flex flex-col items-center justify-center p-6">
-      <div className="fixed top-0 left-0 right-0 h-1 bg-[#0F6E56]"></div>
-      <div className="w-full max-w-md animate-fadeUp">
-        <div className="flex items-center gap-2 mb-8 justify-center">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#0F6E56]"></div>
-          <span className="font-serif text-2xl font-bold text-[#111111]">Kantoran</span>
-        </div>
-
-        {/* Progress */}
-        <div className="flex gap-1.5 mb-8">
-          {[1,2,3,4].map(i => (
-            <div key={i} className={`flex-1 h-1 rounded-full transition-all ${i < step ? 'bg-[#1D9E75]' : i === step ? 'bg-[#0F6E56]' : 'bg-[#E5E3DC]'}`} />
-          ))}
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E3DC]">
-
-          {/* Step 1 */}
-          {step === 1 && (
-            <div>
-              <h2 className="font-serif text-2xl font-bold text-[#111111] mb-1">Selamat datang 👋</h2>
-              <p className="text-sm text-[#888780] mb-6">Kamu akan melamar kerja di perusahaan fiktif dan merasakan prosesnya dari awal.</p>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">Nama lengkap</label>
-              <input
-                type="text" value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Contoh: Budi Santoso"
-                className="w-full px-4 py-3 border border-[#E5E3DC] rounded-xl text-sm outline-none focus:border-[#0F6E56] mb-4"
-                onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(2)}
-              />
-              <button onClick={() => name.trim() && setStep(2)} disabled={!name.trim()} style={{ cursor: name.trim() ? 'pointer' : 'not-allowed' }} className="btn-teal w-full">Lanjut →</button>
-            </div>
-          )}
-
-          {/* Step 2 */}
-          {step === 2 && (
-            <div>
-              <button onClick={() => setStep(1)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] mb-4 flex items-center gap-1">← Kembali</button>
-              <h2 className="font-serif text-2xl font-bold text-[#111111] mb-1">Kamu saat ini...</h2>
-              <p className="text-sm text-[#888780] mb-4">Ini menentukan posisi yang kamu lamar dan cara NPC berinteraksi.</p>
-              <div className="flex flex-col gap-2 mb-4">
-                {BACKGROUNDS_LIST.map(b => (
-                  <button key={b.key} onClick={() => setBg(b.key)} style={{ cursor: 'pointer' }}
-                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${bg === b.key ? 'border-[#0F6E56] bg-[#E1F5EE]' : 'border-[#E5E3DC] hover:border-[#0F6E56]'}`}
-                  >
-                    <span className="text-xl flex-shrink-0 mt-0.5">{b.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium text-[#111111]">{b.label}</p>
-                      <p className="text-xs text-[#888780] mt-0.5">{b.desc}</p>
-                      <p className="text-xs font-medium text-[#0F6E56] mt-1">→ Melamar sebagai {b.role}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => bg && setStep(3)} disabled={!bg} style={{ cursor: bg ? 'pointer' : 'not-allowed' }} className="btn-teal w-full">Lanjut →</button>
-            </div>
-          )}
-
-          {/* Step 3 */}
-          {step === 3 && (
-            <div>
-              <button onClick={() => setStep(2)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] mb-4 flex items-center gap-1">← Kembali</button>
-              <h2 className="font-serif text-2xl font-bold text-[#111111] mb-1">Mau lamar posisi apa?</h2>
-              <p className="text-sm text-[#888780] mb-4">Setiap posisi punya tim NPC, interview, dan task yang berbeda.</p>
-              <div className="flex flex-col gap-2 mb-4">
-                {Object.entries(POSITIONS).map(([key, p]) => (
-                  <button key={key} onClick={() => setPos(key)} style={{ cursor: 'pointer' }}
-                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${pos === key ? 'border-[#0F6E56] bg-[#E1F5EE]' : 'border-[#E5E3DC] hover:border-[#0F6E56]'}`}
-                  >
-                    <span className="text-xl flex-shrink-0">{p.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium text-[#111111]">{p.title}</p>
-                      <p className="text-xs text-[#888780] mt-0.5">{p.dept}</p>
-                      <p className="text-xs font-medium text-[#0F6E56] mt-1">→ {p.getRole(bg)}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => pos && setStep(4)} disabled={!pos} style={{ cursor: pos ? 'pointer' : 'not-allowed' }} className="btn-teal w-full">Lanjut →</button>
-            </div>
-          )}
-
-          {/* Step 4 */}
-          {step === 4 && (
-            <div>
-              <button onClick={() => setStep(3)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] mb-4 flex items-center gap-1">← Kembali</button>
-              <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">
-                Apply: {POSITIONS[pos]?.getRole(bg)} {POSITIONS[pos]?.title}
-              </h2>
-              <p className="text-sm text-[#888780] mb-4">PT Vantara Nusantara membuka lowongan. Lengkapi lamaranmu.</p>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">Pengalaman terkait (opsional)</label>
-              <textarea value={exp} onChange={e => setExp(e.target.value)}
-                placeholder="Pernah buat laporan di kampus, project, kursus online, magang..."
-                className="w-full px-3 py-2.5 border border-[#E5E3DC] rounded-xl text-sm outline-none focus:border-[#0F6E56] resize-none min-h-[70px] mb-3"
-              />
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">Kenapa melamar posisi ini?</label>
-              <textarea value={mot} onChange={e => setMot(e.target.value)}
-                placeholder="Ceritakan motivasimu secara singkat..."
-                className="w-full px-3 py-2.5 border border-[#E5E3DC] rounded-xl text-sm outline-none focus:border-[#0F6E56] resize-none min-h-[70px] mb-4"
-              />
-              <button onClick={handleSubmit} disabled={submitting} style={{ cursor: submitting ? 'not-allowed' : 'pointer' }} className="btn-teal w-full">
-                {submitting ? 'Mengirim...' : 'Kirim Lamaran →'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}

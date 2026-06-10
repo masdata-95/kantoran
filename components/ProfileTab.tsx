@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js'
 import type { UserProfile, Education, Experience } from '@/lib/profile'
 import { MONTHS, YEARS } from '@/lib/profile'
 import { SKILLS_PRESET } from '@/lib/skills'
+import { authFetch } from '@/lib/supabase'
 
 interface Props {
   user: User
@@ -30,10 +31,9 @@ export default function ProfileTab({ user, profile, onUpdate, simulationExperien
   const handleSave = async () => {
     setSaving(true)
     try {
-      await fetch('/api/profile', {
+      await authFetch('/api/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, profile: draft })
+        body: JSON.stringify({ profile: draft })
       })
       onUpdate(draft)
       setEditing(false)

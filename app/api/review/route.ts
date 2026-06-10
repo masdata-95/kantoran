@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI } from '@/lib/ai'
 import { getTaskReviewPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
+import { getAuthUser } from '@/lib/serverAuth'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthUser(req)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await req.json()
     const { positionId, userContext, submission } = body
 

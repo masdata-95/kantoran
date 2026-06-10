@@ -132,7 +132,8 @@ async function callGemini(
   }))
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`
+    // gemini-2.0-flash-exp & seluruh keluarga 2.0 sudah di-shutdown per 1 Juni 2026 — pakai 2.5-flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`
 
     const res = await fetch(url, {
       method: 'POST',
@@ -143,6 +144,8 @@ async function callGemini(
         generationConfig: {
           maxOutputTokens: maxTokens,
           temperature: 0.85,
+          // 2.5-flash default-nya "thinking" — matikan agar token output tidak habis untuk reasoning
+          thinkingConfig: { thinkingBudget: 0 },
         },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -196,7 +199,13 @@ async function callOpenRouter(
         'X-Title': 'Kantoran',
       },
       body: JSON.stringify({
-        model: 'openrouter/free',
+        // 'openrouter/free' bukan model ID valid — pakai model :free konkret + fallback berantai
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        models: [
+          'meta-llama/llama-3.3-70b-instruct:free',
+          'deepseek/deepseek-chat-v3-0324:free',
+          'qwen/qwen3-235b-a22b:free',
+        ],
         max_tokens: maxTokens,
         temperature: 0.85,
         messages: [

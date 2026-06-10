@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { User } from '@supabase/supabase-js'
+import { authFetch } from '@/lib/supabase'
 
 interface Props {
   user: User
@@ -41,11 +42,9 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-      await fetch('/api/waitlist', {
+      await authFetch('/api/waitlist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
           email,
           name: firstName,
           rating,
