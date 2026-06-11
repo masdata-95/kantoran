@@ -88,6 +88,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [profile, setProfile] = useState<UserProfile | null>(userProfile || null)
   const [showProfile, setShowProfile] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false) // drawer di mobile
+  const [viewportH, setViewportH] = useState<number | null>(null) // tinggi area terlihat (di atas keyboard)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const supDmSentRef = useRef(false)
@@ -126,7 +127,43 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         msgsRef.current?.scrollTo({ top: msgsRef.current.scrollHeight, behavior: 'smooth' })
       }, 100)
     }
-  }, [state.chatHistory, view])
+  }, [state.chatHistory, view, viewportH])
+
+  // Fix keyboard mobile: ukur area terlihat (di atas keyboard) via VisualViewport.
+  // h-dvh saja tidak cukup di iOS Safari, keyboard menutupi input + chat.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const apply = () => {
+      setViewportH(vv.height)
+      // pin window ke atas supaya layout tidak ter-scroll ke balik keyboard
+      window.scrollTo(0, 0)
+    }
+    apply()
+    vv.addEventListener('resize', apply)
+    vv.addEventListener('scroll', apply)
+    return () => {
+      vv.removeEventListener('resize', apply)
+      vv.removeEventListener('scroll', apply)
+    }
+  }, [])
+
+  // Kunci scroll body selama di simulator (cegah halaman geser saat keyboard muncul)
+  useEffect(() => {
+    const prev = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      width: document.body.style.width,
+    }
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
+    return () => {
+      document.body.style.overflow = prev.overflow
+      document.body.style.position = prev.position
+      document.body.style.width = prev.width
+    }
+  }, [])
 
   // Load progress on mount
   useEffect(() => {
@@ -929,7 +966,10 @@ PT Vantara Nusantara`
   const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack', 'jnr'].includes(view)
 
   return (
-    <div className="h-dvh flex flex-col bg-white overflow-hidden">
+    <div
+      className="h-dvh flex flex-col bg-white overflow-hidden"
+      style={viewportH ? { height: `${viewportH}px` } : undefined}
+    >
 
       {/* Notification Banner */}
       {notification && (
