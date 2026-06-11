@@ -87,6 +87,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [isSubmittingTask, setIsSubmittingTask] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(userProfile || null)
   const [showProfile, setShowProfile] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // drawer di mobile
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const supDmSentRef = useRef(false)
@@ -204,6 +205,9 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     handleNextStep(4)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, state.step, state.chatHistory])
+
+  // Tutup drawer mobile tiap kali pindah ruangan
+  useEffect(() => { setSidebarOpen(false) }, [view])
 
   // Clear unread when viewing a room
   useEffect(() => {
@@ -940,23 +944,34 @@ PT Vantara Nusantara`
       )}
 
       {/* Topbar */}
-      <div className="flex items-center justify-between px-4 h-[52px] border-b border-[#E5E3DC] bg-white flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[#0F6E56]"></div>
-          <span className="font-serif font-bold text-[#0F6E56]">Kantoran</span>
+      <div className="flex items-center justify-between px-3 sm:px-4 h-[52px] border-b border-[#E5E3DC] bg-white flex-shrink-0 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            aria-label="Menu"
+            style={{ cursor: 'pointer' }}
+            className="md:hidden flex flex-col justify-center gap-[3px] w-7 h-7 flex-shrink-0"
+          >
+            <span className="block h-[2px] w-5 bg-[#0F6E56] rounded" />
+            <span className="block h-[2px] w-5 bg-[#0F6E56] rounded" />
+            <span className="block h-[2px] w-5 bg-[#0F6E56] rounded" />
+          </button>
+          <div className="w-2 h-2 rounded-full bg-[#0F6E56] flex-shrink-0"></div>
+          <span className="font-serif font-bold text-[#0F6E56] truncate">Kantoran</span>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-full px-3 py-1 text-xs font-medium text-[#0F6E56]">
+        <div className="hidden sm:flex items-center gap-2 bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-full px-3 py-1 text-xs font-medium text-[#0F6E56]">
           <span>📍</span>
           <span>{rooms.find(r => r.id === view)?.label || 'Kantoran'}</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-[#FAEEDA] border border-[#854F0B]/15 rounded-full px-3 py-1 text-xs font-semibold text-[#854F0B]">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-1.5 bg-[#FAEEDA] border border-[#854F0B]/15 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#854F0B]">
             🪙 {state.coins}
           </div>
-          <button onClick={handleRestart} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors">
-            🔄 Restart
+          <button onClick={handleRestart} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Mulai dari awal">
+            🔄<span className="hidden sm:inline"> Restart</span>
           </button>
           <button onClick={handleLogout} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111] transition-colors">
             Keluar
@@ -971,12 +986,27 @@ PT Vantara Nusantara`
         ))}
       </div>
 
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-1 overflow-hidden min-h-0 relative">
 
-        {/* Sidebar */}
-        <div className="w-[210px] bg-white border-r border-[#E5E3DC] flex flex-col flex-shrink-0 overflow-hidden">
+        {/* Backdrop drawer — mobile only */}
+        {sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            aria-hidden
+          />
+        )}
+
+        {/* Sidebar — drawer di mobile, statis di desktop */}
+        <div className={`bg-white border-r border-[#E5E3DC] flex flex-col flex-shrink-0 overflow-hidden
+          fixed md:static top-0 bottom-0 left-0 z-40 w-[260px] md:w-[210px]
+          transition-transform duration-200 md:!translate-x-0
+          ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
           <div className="p-3 pb-2 border-b border-[#E5E3DC] flex-shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2">Tim Kamu</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780]">Tim Kamu</p>
+              <button onClick={() => setSidebarOpen(false)} className="md:hidden text-[#888780] text-sm" aria-label="Tutup menu" style={{ cursor: 'pointer' }}>✕</button>
+            </div>
 
             {/* Sinta */}
             <SidebarNPC
@@ -1092,9 +1122,12 @@ PT Vantara Nusantara`
           </div>
         </div>
 
-        {/* Profile panel overlay */}
+        {/* Profile panel — full screen di mobile, panel samping di desktop */}
         {showProfile && (
-          <div className="w-[280px] bg-white border-r border-[#E5E3DC] flex flex-col flex-shrink-0 overflow-hidden">
+          <>
+            <div onClick={() => setShowProfile(false)} className="fixed inset-0 bg-black/40 z-40 md:hidden" aria-hidden />
+            <div className="bg-white border-r border-[#E5E3DC] flex flex-col overflow-hidden
+              fixed md:static inset-0 md:inset-auto z-50 md:z-auto w-full md:w-[280px] flex-shrink-0">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
               <p className="text-sm font-semibold text-[#111111]">Profil Saya</p>
               <button onClick={() => setShowProfile(false)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111]">✕ Tutup</button>
@@ -1118,7 +1151,8 @@ PT Vantara Nusantara`
                 } : undefined}
               />
             </div>
-          </div>
+            </div>
+          </>
         )}
 
         {/* Main area */}
@@ -1655,8 +1689,8 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
   // Split view: list kiri + detail kanan
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
-      {/* Email list */}
-      <div className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'w-72' : 'flex-1'}`}>
+      {/* Email list — di mobile disembunyikan saat satu email dibuka */}
+      <div className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'hidden md:flex md:w-72' : 'flex-1'}`}>
         <div className="px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
           <p className="text-xs font-bold uppercase tracking-wider text-[#888780]">
             {emails.length} pesan
