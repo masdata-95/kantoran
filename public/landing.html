@@ -159,6 +159,15 @@ nav{
 .btn-hero:active{transform:translateY(0)}
 .btn-hero .arrow{transition:transform 0.2s}
 .btn-hero:hover .arrow{transform:translateX(3px)}
+.hero-btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn-hero-outline{
+  background:transparent;color:var(--teal);
+  border:1.5px solid var(--teal);border-radius:var(--radius-sm);
+  padding:14px 30px;font-size:15px;font-weight:500;
+  font-family:var(--font-body);cursor:pointer;text-decoration:none;
+  transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-hero-outline:hover{background:var(--teal-light);transform:translateY(-1px)}
 .hero-note{font-size:12.5px;color:var(--text-muted)}
 
 /* Stats row */
@@ -865,8 +874,8 @@ footer{
   </a>
   <div class="nav-right">
     <a href="#how" class="nav-link">Cara kerja</a>
-    <a href="#office" class="nav-link">Kantor</a>
     <a href="#npc" class="nav-link">Tim NPC</a>
+    <a href="/cv" class="nav-link">Cek CV</a>
     <a href="#waitlist" class="btn-nav">Daftar Waitlist</a>
   </div>
 </nav>
@@ -891,10 +900,15 @@ footer{
     </p>
 
     <div class="hero-cta">
-      <button class="btn-hero" onclick="startDemo()">
-        Coba Simulasi Gratis
-        <span class="arrow">→</span>
-      </button>
+      <div class="hero-btn-row">
+        <button class="btn-hero" onclick="startDemo()">
+          Coba Simulasi Gratis
+          <span class="arrow">→</span>
+        </button>
+        <a class="btn-hero-outline" href="/cv">
+          📄 Cek Skor CV Gratis
+        </a>
+      </div>
       <span class="hero-note">Tidak perlu daftar dulu &nbsp;·&nbsp; ~10 menit</span>
     </div>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase, authFetch } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import type { UserProfile } from '@/lib/profile'
@@ -52,6 +52,9 @@ export default function CVPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<CVResult | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadedName, setUploadedName] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     (async () => {
@@ -72,7 +75,25 @@ export default function CVPage() {
   const handleLogin = () =>
     supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/cv` } })
 
-  const autofill = () => { if (profile) setCvText(buildCVText(profile)) }
+  const autofill = () => { if (profile) { setCvText(buildCVText(profile)); setUploadedName('') } }
+
+  const handleFile = async (file: File) => {
+    setError(''); setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await authFetch('/api/cv-extract', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok || !data.text) { setError(data.error || 'Gagal membaca file.'); return }
+      setCvText(data.text)
+      setUploadedName(file.name)
+    } catch {
+      setError('Gagal upload. Coba lagi atau tempel manual.')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const handleScan = async () => {
     if (cvText.trim().length < 40) { setError('Tempel CV lengkapmu dulu ya (minimal beberapa baris).'); return }
@@ -165,6 +186,49 @@ export default function CVPage() {
                 placeholder="Contoh: Data Analyst, Staff Finance, Digital Marketing"
                 className="w-full px-3 py-2.5 border border-[#E5E3DC] rounded-xl text-sm outline-none focus:border-[#0F6E56] bg-white"
               />
+            </div>
+
+            {/* Upload CV */}
+            <div
+              onClick={() => !uploading && fileRef.current?.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
+              style={{ cursor: uploading ? 'wait' : 'pointer' }}
+              className="border-2 border-dashed border-[#E5E3DC] rounded-xl p-5 text-center hover:border-[#0F6E56] hover:bg-white transition-all"
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.docx,.txt"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+              />
+              {uploading ? (
+                <div className="flex items-center justify-center gap-2 py-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce" />
+                  <span className="text-xs text-[#888780] ml-1">Membaca file...</span>
+                </div>
+              ) : uploadedName ? (
+                <div>
+                  <div className="text-2xl mb-1">📄</div>
+                  <p className="text-sm font-medium text-[#0F6E56]">{uploadedName}</p>
+                  <p className="text-[10px] text-[#888780] mt-0.5">Terbaca. Cek hasilnya di bawah, klik untuk ganti file.</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-2xl mb-1">⬆️</div>
+                  <p className="text-sm font-medium text-[#111111]">Upload CV kamu</p>
+                  <p className="text-[10px] text-[#888780] mt-0.5">PDF, DOCX, atau TXT. Atau tarik file ke sini.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-[#E5E3DC]" />
+              <span className="text-[10px] text-[#888780] uppercase tracking-wider">atau tulis manual</span>
+              <div className="flex-1 h-px bg-[#E5E3DC]" />
             </div>
 
             {/* CV text */}
