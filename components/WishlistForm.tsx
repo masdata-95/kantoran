@@ -209,9 +209,10 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
             {/* Step 3 — Email */}
             {step === 3 && (
               <div>
-                <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Daftar waitlist Kantoran</h2>
+                <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Jangan berhenti di hari pertama</h2>
                 <p className="text-sm text-[#888780] mb-6">
-                  Kami akan kasih tahu kamu lebih awal saat Kantoran penuh diluncurkan — dengan simulasi 3 bulan, promosi jabatan, dan surat referensi kerja nyata.
+                  Manager-mu sudah menunggumu besok pagi — dan task minggu ini sudah ada di mejamu.
+                  Daftar waitlist: kamu yang pertama dapat akses hari kedua, plus harga early-bird saat Kantoran penuh diluncurkan.
                 </p>
 
                 {/* Preview what they'll get */}

@@ -27,6 +27,8 @@ export interface Position {
   taskTitle: string
   taskBody: string
   taskContext: string
+  // Task hari berikutnya — ditampilkan terkunci (teaser premium), tidak bisa diklik
+  upcomingTasks: { day: number; title: string; teaser: string }[]
 }
 
 export const POSITIONS: Record<string, Position> = {
@@ -59,7 +61,13 @@ Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus
     },
     taskTitle: 'Cek Kualitas Data Penjualan Lumière Jan 2026',
     taskBody: 'File <strong>task_data_analyst.xlsx</strong> ada di Notion. Temukan semua issue kualitas data dan buat summary singkat.',
-    taskContext: 'Tim Marketing butuh data ini untuk planning campaign Q2. Pastikan datanya bisa dipercaya sebelum dipakai.'
+    taskContext: 'Tim Marketing butuh data ini untuk planning campaign Q2. Pastikan datanya bisa dipercaya sebelum dipakai.',
+    upcomingTasks: [
+      { day: 2, title: 'Dashboard Penjualan untuk Rapat Direksi', teaser: 'Diana butuh dashboard dari data yang kamu bersihkan kemarin — dipresentasikan langsung ke jajaran direksi.' },
+      { day: 3, title: 'Investigasi Anomali Region Timur', teaser: 'Penjualan Jawa Timur tiba-tiba anjlok 38%. Rizky minta kamu cari tahu kenapa, sebelum direksi yang bertanya duluan.' },
+      { day: 5, title: 'Forecast Penjualan Q3', teaser: 'Budget semua tim bergantung pada angka forecast-mu. Salah sedikit, satu kantor merasakan akibatnya.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Rizky dan Diana menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+    ]
   },
 
   marketing_analyst: {
@@ -90,7 +98,13 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
     },
     taskTitle: 'Analisis Performa Campaign Lumière Q4 2025',
     taskBody: 'File <strong>task_marketing_analyst.xlsx</strong> ada di Notion. Hitung CTR dan conversion rate tiap campaign, identifikasi yang terbaik dan terburuk.',
-    taskContext: 'Budget Q1 akan diputuskan berdasarkan performa Q4 ini. Analisismu dipakai di rapat besok pagi.'
+    taskContext: 'Budget Q1 akan diputuskan berdasarkan performa Q4 ini. Analisismu dipakai di rapat besok pagi.',
+    upcomingTasks: [
+      { day: 2, title: 'Brief Campaign Lebaran Lumière', teaser: 'Budget Rp 2 miliar. Campaign terbesar tahun ini — dan Dinda mengajakmu masuk tim intinya.' },
+      { day: 3, title: 'Krisis: Video Komplain Viral di TikTok', teaser: 'Sebuah video komplain menembus 800 ribu views semalam. Seluruh tim menunggu rekomendasi penanganan darimu.' },
+      { day: 5, title: 'A/B Test Landing Page Roots&Co', teaser: 'Dua versi, satu pemenang. Datamu yang menentukan ke mana budget mengalir.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Dinda dan Pak Budi menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+    ]
   },
 
   finance_analyst: {
@@ -121,7 +135,13 @@ Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spes
     },
     taskTitle: 'Review Budget Variance Q4 2025',
     taskBody: 'File <strong>task_finance_analyst.xlsx</strong> ada di Notion. Temukan departemen dengan overspending terbesar dan buat ringkasan untuk CFO.',
-    taskContext: 'CFO minta laporan variance sebelum budget meeting minggu depan. Ini urgent.'
+    taskContext: 'CFO minta laporan variance sebelum budget meeting minggu depan. Ini urgent.',
+    upcomingTasks: [
+      { day: 2, title: 'Closing Akhir Bulan — Rekonsiliasi Kas', teaser: 'Hari paling menegangkan di Finance. Semua angka harus balance sebelum tengah malam.' },
+      { day: 3, title: 'Selisih Rp 80 Juta — Temukan Sumbernya', teaser: 'Angka tidak balance dan CFO sudah bertanya dua kali. Andi menyerahkan investigasinya ke kamu.' },
+      { day: 5, title: 'Proyeksi Cashflow 6 Bulan', teaser: 'Manajemen mau ekspansi. Proyeksimu yang menentukan apakah perusahaan sanggup atau tidak.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Andi dan Pak Hendra menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+    ]
   },
 
   hr_generalist: {
@@ -152,7 +172,13 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
     },
     taskTitle: 'CV Screening Junior Data Analyst — Batch 1',
     taskBody: 'File <strong>task_hr_generalist.xlsx</strong> ada di Notion. Screen 5 kandidat dan shortlist 2 terbaik untuk interview tahap berikutnya.',
-    taskContext: 'Tim butuh shortlist ini sebelum akhir minggu. Interview tahap berikutnya sudah dijadwalkan minggu depan.'
+    taskContext: 'Tim butuh shortlist ini sebelum akhir minggu. Interview tahap berikutnya sudah dijadwalkan minggu depan.',
+    upcomingTasks: [
+      { day: 2, title: 'Interview Kandidat Pertamamu', teaser: 'Kali ini kamu yang duduk di kursi pewawancara — kandidatnya dari shortlist yang kamu buat sendiri.' },
+      { day: 3, title: 'Exit Interview Mendadak', teaser: 'Salah satu performer terbaik tim mengajukan resign pagi ini. Bu Ratna minta kamu yang menangani.' },
+      { day: 5, title: 'Susun Program Onboarding Batch Baru', teaser: '8 karyawan baru masuk bulan depan. Pengalaman hari pertama mereka ada di tanganmu.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Bu Ratna dan Pak Tono menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+    ]
   },
 
   bizdev: {
@@ -183,7 +209,13 @@ Cara bicara: energetik, big-picture thinker. Direct tapi charming. Honest soal f
     },
     taskTitle: 'Evaluasi Peluang Partnership Distributor Regional',
     taskBody: 'File <strong>task_bizdev.xlsx</strong> ada di Notion. Evaluasi 6 calon partner dan shortlist 3 terbaik dengan justifikasi.',
-    taskContext: 'Direktur Komersial butuh shortlist ini untuk roadshow partnership bulan depan. Jangan sampai rekomendasikan partner yang bermasalah.'
+    taskContext: 'Direktur Komersial butuh shortlist ini untuk roadshow partnership bulan depan. Jangan sampai rekomendasikan partner yang bermasalah.',
+    upcomingTasks: [
+      { day: 2, title: 'Meeting Follow-up PT Maju Bersama', teaser: 'Shortlist-mu dipakai. Sekarang kamu ikut meeting pertamanya — dan Reza memintamu yang membuka presentasi.' },
+      { day: 3, title: 'Negosiasi: Partner Minta Diskon 25%', teaser: 'Term sheet hampir deal, lalu mereka menekan di menit terakhir. Mundur, atau cari jalan tengah?' },
+      { day: 5, title: 'Riset Ekspansi Indonesia Timur', teaser: 'Pasar baru, data minim, potensi besar. Pak Anton menunggu rekomendasi go / no-go darimu.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Reza dan Pak Anton menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+    ]
   }
 }
 

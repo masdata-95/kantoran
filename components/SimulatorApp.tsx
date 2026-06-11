@@ -860,6 +860,14 @@ PT Vantara Nusantara`
               }
             })
             showNotif('sup_chat', POSITIONS[state.position]?.supervisor.name || 'Supervisor', 'Hari pertama selesai! Ada pesan dari supervisor.')
+            // Cliffhanger: DM dari manager — bikin penasaran tepat sebelum gate waitlist
+            setTimeout(() => {
+              addMsg('mgr_chat', {
+                role: 'npc', npcId: 'mgr',
+                text: `${state.firstName}, ${pos?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya — ada hal yang mau aku diskusikan soal kamu.`
+              })
+              showNotif('mgr_chat', pos?.manager.name || 'Manager', '👀 Manager mengirim DM untukmu')
+            }, 3500)
           }, 2000)
         }, 1500)
       }
@@ -1169,6 +1177,20 @@ PT Vantara Nusantara`
                 />
               ))}
 
+              {/* File Manager: file task mendatang — terlihat tapi terkunci */}
+              {view === 'file_manager' && state.step >= 5 && (pos?.upcomingTasks.length || 0) > 0 && (
+                <div className="bg-white border border-[#E5E3DC] rounded-xl p-3 opacity-60 select-none" style={{ cursor: 'not-allowed' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">📁 Masuk minggu ini</p>
+                  {pos!.upcomingTasks.map(t => (
+                    <div key={t.day} className="flex items-center gap-2 py-1.5 border-b border-[#F1EFE8] last:border-0">
+                      <span className="text-sm">🔒</span>
+                      <p className="text-xs font-medium text-[#444441] truncate">task_hari{t.day}.xlsx — {t.title}</p>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-[#888780] mt-2">File terkunci — terbuka di Kantoran versi penuh.</p>
+                </div>
+              )}
+
               {/* Empty state */}
               {view !== 'workspace' && (state.chatHistory[view] || []).length === 0 && (
                 <EmptyRoom view={view} state={state} />
@@ -1418,17 +1440,27 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
     if (isDayDone) {
       return (
         <div className="animate-messageIn bg-gradient-to-br from-[#E1F5EE] to-[#d4f5e9] border border-[#0F6E56]/20 rounded-xl p-4">
-          <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertama selesai!</p>
+          <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertamamu selesai — dan kamu membuktikan kamu bisa.</p>
           <p className="text-xs text-[#444441] mb-3 leading-relaxed">
-            Kamu sudah merasakan bagaimana kerja nyata di Kantoran — interview, nego gaji, onboarding, dan task pertama yang direview supervisor AI.
+            Interview dilalui. Gaji dinegosiasikan. Task pertama: APPROVED.
+            Banyak orang menunggu berbulan-bulan untuk merasakan semua ini — kamu menjalaninya dalam satu hari.
+            Tapi ceritamu di Vantara baru saja dimulai.
           </p>
           <div className="bg-white/70 rounded-lg p-3 mb-3">
-            <p className="text-xs font-semibold text-[#0F6E56] mb-1">Di Kantoran versi lengkap, kamu bisa:</p>
-            <div className="flex flex-col gap-1">
-              {['Lanjut ke hari ke-2, 3, hingga 90 hari', 'Task makin kompleks dan lintas departemen', 'Performance review dan kenaikan jabatan', 'Surat referensi kerja dari PT Vantara Nusantara'].map(item => (
-                <div key={item} className="flex gap-1.5 text-xs text-[#444441]">
-                  <span className="text-[#0F6E56]">→</span>
-                  <span>{item}</span>
+            <p className="text-xs font-semibold text-[#0F6E56] mb-2">Yang sudah menunggumu minggu ini:</p>
+            <div className="flex flex-col">
+              {(pos?.upcomingTasks || []).map(t => (
+                <div
+                  key={t.day}
+                  className="flex items-start gap-2 py-1.5 border-b border-[#E5E3DC]/60 last:border-0 opacity-55 select-none"
+                  style={{ cursor: 'not-allowed' }}
+                  title="Terbuka di Kantoran versi penuh"
+                >
+                  <span className="text-xs mt-0.5">🔒</span>
+                  <div>
+                    <p className="text-xs font-semibold text-[#444441]">Hari {t.day} — {t.title}</p>
+                    <p className="text-[10px] text-[#888780] leading-relaxed">{t.teaser}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1440,8 +1472,11 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
             style={{ cursor: 'pointer' }}
             className="btn-teal text-sm w-full py-2.5"
           >
-            Daftar Waitlist & Lanjutkan Karir →
+            Daftar Waitlist — Lanjutkan ke Hari Kedua →
           </button>
+          <p className="text-center text-[10px] text-[#888780] mt-2">
+            Gratis. Kamu jadi yang pertama tahu saat hari kedua dibuka — beserta harga early-bird.
+          </p>
         </div>
       )
     }
@@ -1793,6 +1828,37 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] mb-1">Task Aktif</p>
           <p className="text-sm font-semibold text-[#111111]">{pos.taskTitle}</p>
           <p className="text-xs text-[#888780] mt-1">⏰ Deadline: Besok jam 09.00</p>
+        </div>
+      )}
+
+      {/* Roadmap minggu pertama — task mendatang terkunci (teaser premium) */}
+      {pos && pos.upcomingTasks.length > 0 && (
+        <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Minggu pertamamu di Vantara</p>
+          <div className="flex flex-col">
+            <div className="flex items-start gap-2.5 py-2 border-b border-[#F1EFE8]">
+              <span className="text-sm mt-0.5">✅</span>
+              <div>
+                <p className="text-xs font-semibold text-[#0F6E56]">Hari 1 — {pos.taskTitle}</p>
+                <p className="text-[10px] text-[#888780]">Sedang kamu kerjakan sekarang</p>
+              </div>
+            </div>
+            {pos.upcomingTasks.map(t => (
+              <div
+                key={t.day}
+                className="flex items-start gap-2.5 py-2 border-b border-[#F1EFE8] last:border-0 opacity-50 select-none"
+                style={{ cursor: 'not-allowed' }}
+                title="Terbuka di Kantoran versi penuh"
+              >
+                <span className="text-sm mt-0.5">🔒</span>
+                <div>
+                  <p className="text-xs font-semibold text-[#444441]">Hari {t.day} — {t.title}</p>
+                  <p className="text-[10px] text-[#888780] leading-relaxed">{t.teaser}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-[#888780] mt-2">🔒 Terbuka di Kantoran versi penuh — selesaikan hari pertamamu dulu.</p>
         </div>
       )}
 
