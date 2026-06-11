@@ -315,7 +315,7 @@ export default function ProfileTab({ user, profile, onUpdate, simulationExperien
                   <p className="text-xs font-semibold text-[#111111]">{exp.position}</p>
                   <p className="text-[10px] text-[#888780]">{exp.company}</p>
                   <p className="text-[10px] text-[#AAAAAA]">
-                    {exp.startMonth} {exp.startYear} — {exp.isCurrent ? 'Sekarang' : `${exp.endMonth} ${exp.endYear}`}
+                    {exp.startMonth} {exp.startYear}, {exp.isCurrent ? 'Sekarang' : `${exp.endMonth} ${exp.endYear}`}
                   </p>
                   {exp.description && <p className="text-[10px] text-[#888780] mt-1 leading-relaxed">{exp.description}</p>}
                 </div>

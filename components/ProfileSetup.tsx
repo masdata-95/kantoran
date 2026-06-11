@@ -110,7 +110,7 @@ export default function ProfileSetup({ user, onComplete }: Props) {
         <div className="bg-white rounded-2xl border border-[#E5E3DC] shadow-sm overflow-hidden">
           <div className="p-6">
 
-            {/* Step 1 — Data Diri */}
+            {/* Step 1, Data Diri */}
             {step === 1 && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-1">Langkah 1 dari {TOTAL}</p>
@@ -171,7 +171,7 @@ export default function ProfileSetup({ user, onComplete }: Props) {
               </div>
             )}
 
-            {/* Step 2 — Pendidikan */}
+            {/* Step 2, Pendidikan */}
             {step === 2 && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-1">Langkah 2 dari {TOTAL}</p>
@@ -238,7 +238,7 @@ export default function ProfileSetup({ user, onComplete }: Props) {
               </div>
             )}
 
-            {/* Step 3 — Pengalaman */}
+            {/* Step 3, Pengalaman */}
             {step === 3 && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-1">Langkah 3 dari {TOTAL}</p>
@@ -319,12 +319,12 @@ export default function ProfileSetup({ user, onComplete }: Props) {
                 </button>
 
                 <p className="text-xs text-[#888780] text-center mt-3">
-                  Belum punya pengalaman? Tidak apa-apa — langsung skip ke langkah berikutnya.
+                  Belum punya pengalaman? Tidak apa-apa, langsung skip ke langkah berikutnya.
                 </p>
               </div>
             )}
 
-            {/* Step 4 — Skills */}
+            {/* Step 4, Skills */}
             {step === 4 && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-1">Langkah 4 dari {TOTAL}</p>
@@ -369,7 +369,7 @@ export default function ProfileSetup({ user, onComplete }: Props) {
               </div>
             )}
 
-            {/* Step 5 — Kategori */}
+            {/* Step 5, Kategori */}
             {step === 5 && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-1">Langkah 5 dari {TOTAL}</p>

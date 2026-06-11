@@ -253,15 +253,22 @@ export async function callAI(
   return 'Maaf, ada gangguan koneksi sebentar. Coba kirim pesan lagi ya!'
 }
 
-// Clean markdown artifacts from response
+// Clean markdown artifacts + buang tanda dash (terlihat seperti tulisan AI)
 function cleanResponse(text: string): string {
   return text
-    .replace(/\*\*(.+?)\*\*/g, '$1')      // **bold** → bold
-    .replace(/\*(.+?)\*/g, '$1')           // *italic* → italic
-    .replace(/^#{1,6}\s+/gm, '')           // remove # headers
-    .replace(/^[-*]\s+/gm, '• ')           // bullets to dot
-    .replace(/```[\s\S]*?```/g, '')        // remove code blocks
-    .replace(/`(.+?)`/g, '$1')             // remove inline code
+    .replace(/\*\*(.+?)\*\*/g, '$1')       // **bold** → bold
+    .replace(/\*(.+?)\*/g, '$1')            // *italic* → italic
+    .replace(/^#{1,6}\s+/gm, '')            // remove # headers
+    .replace(/^\s*[-*]\s+/gm, '')           // buang bullet dash di awal baris
+    .replace(/```[\s\S]*?```/g, '')         // remove code blocks
+    .replace(/`(.+?)`/g, '$1')              // remove inline code
+    // ── Hapus dash sebagai tanda baca, JANGAN sentuh kata majemuk (sehari-hari) ──
+    .replace(/\s+[—–]\s+/g, ', ')           // spasi em/en dash spasi → koma
+    .replace(/[—–]/g, ', ')                 // sisa em/en dash → koma
+    .replace(/\s+-\s+/g, ', ')              // spasi hyphen spasi (dipakai sbg dash) → koma
+    .replace(/\s*,\s*,/g, ',')              // bereskan koma dobel
+    .replace(/,\s*([.!?])/g, '$1')          // koma sebelum titik/tanya → buang
+    .replace(/[ \t]{2,}/g, ' ')             // rapikan spasi ganda
     .trim()
 }
 

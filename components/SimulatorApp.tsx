@@ -108,7 +108,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     })
   }, [])
 
-  // Watch loading state — refocus when loading finishes
+  // Watch loading state, refocus when loading finishes
   useEffect(() => {
     if (!loading) {
       requestAnimationFrame(() => {
@@ -139,7 +139,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     return () => clearInterval(iv)
   }, [state])
 
-  // Save langsung tiap step berubah — transisi penting (offering, kontrak, task) tidak boleh hilang
+  // Save langsung tiap step berubah, transisi penting (offering, kontrak, task) tidak boleh hilang
   useEffect(() => {
     if (state.step > 0) saveProgress()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -274,7 +274,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         role: 'email' as const,
         data: {
           from: 'sinta@vantara.co.id',
-          subject: `Undangan Seleksi — ${role}`,
+          subject: `Undangan Seleksi, ${role}`,
           preview: 'Kami mengundang kamu ke tahap seleksi untuk posisi ini.',
           isInvite: true,
           body: `Halo ${firstName},
@@ -297,7 +297,7 @@ PT Vantara Nusantara`
         id: sintaMsgId,
         role: 'npc' as const,
         npcId: 'sinta',
-        text: `Halo ${firstName}! Saya Sinta, HR Business Partner Vantara. Santai aja ya, ini lebih ke ngobrol dan kenalan dulu. Cerita dong — siapa kamu dan kenapa tertarik sama posisi ${pos.title} di sini?`
+        text: `Halo ${firstName}! Saya Sinta, HR Business Partner Vantara. Santai aja ya, ini lebih ke ngobrol dan kenalan dulu. Cerita dong, siapa kamu dan kenapa tertarik sama posisi ${pos.title} di sini?`
       }
 
       const initState: SimState = {
@@ -454,14 +454,14 @@ PT Vantara Nusantara`
         slack: 'Slack',
         jnr: pos?.junior.name || 'Kolega',
       }
-      showNotif(room, roomLabels[room] || room, 'Ada balasan baru — klik untuk buka')
+      showNotif(room, roomLabels[room] || room, 'Ada balasan baru, klik untuk buka')
       setState(prev => ({
         ...prev,
         unreadCounts: { ...prev.unreadCounts, [room]: (prev.unreadCounts[room] || 0) + 1 }
       }))
     }
 
-    // Check if interview is done — use functional setState to get latest state
+    // Check if interview is done, use functional setState to get latest state
     if (npcId === 'sinta') {
       setState(prev => {
         if (!prev.interviewDone) {
@@ -545,7 +545,7 @@ PT Vantara Nusantara`
       const pos = POSITIONS[state.position]
       const salRange = SALARY_RANGE[state.background as string] || SALARY_RANGE['fresh_grad']
 
-         // Extract agreed salary — prioritas dari konfirmasi Sinta, bukan request user
+         // Extract agreed salary, prioritas dari konfirmasi Sinta, bukan request user
       const hrMessages = state.chatHistory['hr_office'] || []
       let agreedSalary = salRange.offer
 
@@ -607,7 +607,7 @@ PT Vantara Nusantara`
         role: 'email' as const,
         data: {
           from: 'sinta@vantara.co.id',
-          subject: `Offering Letter — ${state.bgRole}`,
+          subject: `Offering Letter, ${state.bgRole}`,
           preview: 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.',
           isOffering: true,
           salary: finalSalary,
@@ -617,7 +617,7 @@ PT Vantara Nusantara`
           mealAllowance: 600000,
           transportAllowance: 400000,
           probation: '3 bulan dengan evaluasi',
-          workSystem: 'Hybrid — WFO 3x/minggu',
+          workSystem: 'Hybrid, WFO 3x/minggu',
         }
       }
 
@@ -667,7 +667,7 @@ PT Vantara Nusantara`
       const pos = POSITIONS[state.position]
       setTimeout(() => {
         // Supervisor explains company + position + SOP
-        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oke, sebelum mulai kerja aku mau orientasi singkat dulu. PT Vantara Nusantara itu FMCG personal care — ada 3 brand: Lumière (skincare), Roots&Co (haircare), sama Vanta Glow (body care). Kita distribute ke modern trade, GT, sama e-commerce.` })
+        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oke, sebelum mulai kerja aku mau orientasi singkat dulu. PT Vantara Nusantara itu FMCG personal care, ada 3 brand: Lumière (skincare), Roots&Co (haircare), sama Vanta Glow (body care). Kita distribute ke modern trade, GT, sama e-commerce.` })
         setTimeout(() => {
           addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Posisi kamu sebagai ${state.bgRole} di tim ${pos?.dept}. Tanggung jawab utamamu adalah ${pos?.itx}. Kamu lapor langsung ke aku, dan kalau ada hal strategis baru eskalasi ke ${pos?.manager.name}.` })
           setTimeout(() => {
@@ -679,7 +679,7 @@ PT Vantara Nusantara`
               }
             })
             setTimeout(() => {
-              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Nah itu overview-nya. Sekarang standup dulu — hari ini rencananya gimana ${state.firstName}?` })
+              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Nah itu overview-nya. Sekarang standup dulu, hari ini rencananya gimana ${state.firstName}?` })
               addMsg('sup_chat', {
                 role: 'learn',
                 data: {
@@ -733,12 +733,12 @@ PT Vantara Nusantara`
     }
 
     if (step === 6) {
-      // Jangan paksa pindah ke workspace — tombol "Buka File Manager" harus benar-benar
+      // Jangan paksa pindah ke workspace, tombol "Buka File Manager" harus benar-benar
       // membawa user ke File Manager untuk download file task (navigasi via goTo)
       setState(prev => ({ ...prev, step: 6 }))
       const pos = POSITIONS[state.position]
       setTimeout(() => {
-        addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `Psst ${state.firstName} — dari pengalaman aku, baca dulu semua data sebelum mulai. Kak ${pos?.supervisor.name.split(' ')[0]} lumayan strict soal detail hehe` })
+        addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `Psst ${state.firstName}, dari pengalaman aku, baca dulu semua data sebelum mulai. Kak ${pos?.supervisor.name.split(' ')[0]} lumayan strict soal detail hehe` })
         showNotif('jnr', POSITIONS[state.position]?.junior.name || 'Junior', '💬 Ada pesan dari rekan tim')
       }, 3000)
     }
@@ -767,7 +767,7 @@ PT Vantara Nusantara`
       setExtractedData(extracted)
     } catch (e) {
       console.error('Excel read error:', e)
-      setExtractedData(`File: ${file.name}\n[Tidak bisa membaca file — pastikan format .xlsx atau .xls]`)
+      setExtractedData(`File: ${file.name}\n[Tidak bisa membaca file, pastikan format .xlsx atau .xls]`)
     }
   }
 
@@ -847,16 +847,16 @@ PT Vantara Nusantara`
         }
 
         setTimeout(() => {
-          addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `${state.firstName}! Denger-denger task pertamamu approved ya — selamat! Aku dulu sampe minggu kedua baru approved wkwk` })
+          addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `${state.firstName}! Denger-denger task pertamamu approved ya, selamat! Aku dulu sampe minggu kedua baru approved wkwk` })
           setTimeout(() => {
             addMsg('sup_chat', {
               role: 'npc', npcId: 'sup',
-              text: `Good work hari ini ${state.firstName}. Sudah jam 5, bisa pulang dulu. Besok standup jam 9 — ada task lanjutan yang perlu kita bahas.`
+              text: `Good work hari ini ${state.firstName}. Sudah jam 5, bisa pulang dulu. Besok standup jam 9, ada task lanjutan yang perlu kita bahas.`
             })
             addMsg('sup_chat', {
               role: 'action',
               data: {
-                label: 'Selesai untuk hari ini — Lanjut ke Hari Kedua',
+                label: 'Selesai untuk hari ini, Lanjut ke Hari Kedua',
                 nextStep: 99,
                 type: 'day_done',
                 coins: newCoins,
@@ -864,11 +864,11 @@ PT Vantara Nusantara`
               }
             })
             showNotif('sup_chat', POSITIONS[state.position]?.supervisor.name || 'Supervisor', 'Hari pertama selesai! Ada pesan dari supervisor.')
-            // Cliffhanger: DM dari manager — bikin penasaran tepat sebelum gate waitlist
+            // Cliffhanger: DM dari manager, bikin penasaran tepat sebelum gate waitlist
             setTimeout(() => {
               addMsg('mgr_chat', {
                 role: 'npc', npcId: 'mgr',
-                text: `${state.firstName}, ${pos?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya — ada hal yang mau aku diskusikan soal kamu.`
+                text: `${state.firstName}, ${pos?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya, ada hal yang mau aku diskusikan soal kamu.`
               })
               showNotif('mgr_chat', pos?.manager.name || 'Manager', '👀 Manager mengirim DM untukmu')
             }, 3500)
@@ -929,7 +929,7 @@ PT Vantara Nusantara`
   const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack', 'jnr'].includes(view)
 
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden">
+    <div className="h-dvh flex flex-col bg-white overflow-hidden">
 
       {/* Notification Banner */}
       {notification && (
@@ -946,7 +946,7 @@ PT Vantara Nusantara`
       {/* Topbar */}
       <div className="flex items-center justify-between px-3 sm:px-4 h-[52px] border-b border-[#E5E3DC] bg-white flex-shrink-0 gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {/* Hamburger — mobile only */}
+          {/* Hamburger, mobile only */}
           <button
             onClick={() => setSidebarOpen(o => !o)}
             aria-label="Menu"
@@ -988,7 +988,7 @@ PT Vantara Nusantara`
 
       <div className="flex flex-1 overflow-hidden min-h-0 relative">
 
-        {/* Backdrop drawer — mobile only */}
+        {/* Backdrop drawer, mobile only */}
         {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
@@ -997,7 +997,7 @@ PT Vantara Nusantara`
           />
         )}
 
-        {/* Sidebar — drawer di mobile, statis di desktop */}
+        {/* Sidebar, drawer di mobile, statis di desktop */}
         <div className={`bg-white border-r border-[#E5E3DC] flex flex-col flex-shrink-0 overflow-hidden
           fixed md:static top-0 bottom-0 left-0 z-40 w-[260px] md:w-[210px]
           transition-transform duration-200 md:!translate-x-0
@@ -1108,8 +1108,8 @@ PT Vantara Nusantara`
               <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { n: state.tasksDone, l: 'Task done' },
-                  { n: state.step >= 4 ? state.step - 3 : '—', l: 'Hari kerja' },
-                  { n: state.bgRole || '—', l: 'Posisi', small: true },
+                  { n: state.step >= 4 ? state.step - 3 : ', ', l: 'Hari kerja' },
+                  { n: state.bgRole || ', ', l: 'Posisi', small: true },
                   { n: state.coins, l: 'Coin' },
                 ].map((s, i) => (
                   <div key={i} className="bg-[#FAFAF7] rounded-lg p-2 text-center">
@@ -1122,7 +1122,7 @@ PT Vantara Nusantara`
           </div>
         </div>
 
-        {/* Profile panel — full screen di mobile, panel samping di desktop */}
+        {/* Profile panel, full screen di mobile, panel samping di desktop */}
         {showProfile && (
           <>
             <div onClick={() => setShowProfile(false)} className="fixed inset-0 bg-black/40 z-40 md:hidden" aria-hidden />
@@ -1169,7 +1169,7 @@ PT Vantara Nusantara`
             }}
           />
 
-          {/* Inbox view — rendered outside the scroll container so it controls its own layout */}
+          {/* Inbox view, rendered outside the scroll container so it controls its own layout */}
           {view === 'inbox' && (
             <InboxView
               messages={state.chatHistory['inbox'] || []}
@@ -1211,17 +1211,17 @@ PT Vantara Nusantara`
                 />
               ))}
 
-              {/* File Manager: file task mendatang — terlihat tapi terkunci */}
+              {/* File Manager: file task mendatang, terlihat tapi terkunci */}
               {view === 'file_manager' && state.step >= 5 && (pos?.upcomingTasks.length || 0) > 0 && (
                 <div className="bg-white border border-[#E5E3DC] rounded-xl p-3 opacity-60 select-none" style={{ cursor: 'not-allowed' }}>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">📁 Masuk minggu ini</p>
                   {pos!.upcomingTasks.map(t => (
                     <div key={t.day} className="flex items-center gap-2 py-1.5 border-b border-[#F1EFE8] last:border-0">
                       <span className="text-sm">🔒</span>
-                      <p className="text-xs font-medium text-[#444441] truncate">task_hari{t.day}.xlsx — {t.title}</p>
+                      <p className="text-xs font-medium text-[#444441] truncate">task_hari{t.day}.xlsx, {t.title}</p>
                     </div>
                   ))}
-                  <p className="text-[10px] text-[#888780] mt-2">File terkunci — terbuka di Kantoran versi penuh.</p>
+                  <p className="text-[10px] text-[#888780] mt-2">File terkunci, terbuka di Kantoran versi penuh.</p>
                 </div>
               )}
 
@@ -1277,7 +1277,7 @@ PT Vantara Nusantara`
                 </button>
               </div>
               <p className="text-xs text-[#888780] mt-1.5 ml-1">
-                {view === 'pantry' ? '☕ Pantry — tempat gosip dan ngobrol santai' : '💬 Ketik bebas — NPC merespons dengan AI'}
+                {view === 'pantry' ? '☕ Pantry, tempat gosip dan ngobrol santai' : '💬 Ketik bebas, NPC merespons dengan AI'}
               </p>
             </div>
           )}
@@ -1363,7 +1363,7 @@ function EmptyRoom({ view, state }: { view: string; state: SimState }) {
   const hints: Record<string, string> = {
     inbox: 'Email dari Sinta akan masuk di sini setelah kamu mendaftar.',
     hr_office: 'Mulai percakapan dengan Sinta untuk sesi interview.',
-    pantry: 'Datang ke pantry dan mulai ngobrol — bisa gosip soal kantor juga!',
+    pantry: 'Datang ke pantry dan mulai ngobrol, bisa gosip soal kantor juga!',
     slack: 'Group channel tim akan aktif setelah kamu diterima.',
     meeting: 'Meeting room akan digunakan untuk standup harian.',
     sup_chat: 'Chat dengan supervisormu akan dimulai setelah onboarding.',
@@ -1474,10 +1474,10 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
     if (isDayDone) {
       return (
         <div className="animate-messageIn bg-gradient-to-br from-[#E1F5EE] to-[#d4f5e9] border border-[#0F6E56]/20 rounded-xl p-4">
-          <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertamamu selesai — dan kamu membuktikan kamu bisa.</p>
+          <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertamamu selesai, dan kamu membuktikan kamu bisa.</p>
           <p className="text-xs text-[#444441] mb-3 leading-relaxed">
             Interview dilalui. Gaji dinegosiasikan. Task pertama: APPROVED.
-            Banyak orang menunggu berbulan-bulan untuk merasakan semua ini — kamu menjalaninya dalam satu hari.
+            Banyak orang menunggu berbulan-bulan untuk merasakan semua ini, kamu menjalaninya dalam satu hari.
             Tapi ceritamu di Vantara baru saja dimulai.
           </p>
           <div className="bg-white/70 rounded-lg p-3 mb-3">
@@ -1492,7 +1492,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
                 >
                   <span className="text-xs mt-0.5">🔒</span>
                   <div>
-                    <p className="text-xs font-semibold text-[#444441]">Hari {t.day} — {t.title}</p>
+                    <p className="text-xs font-semibold text-[#444441]">Hari {t.day}, {t.title}</p>
                     <p className="text-[10px] text-[#888780] leading-relaxed">{t.teaser}</p>
                   </div>
                 </div>
@@ -1506,10 +1506,10 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
             style={{ cursor: 'pointer' }}
             className="btn-teal text-sm w-full py-2.5"
           >
-            Daftar Waitlist — Lanjutkan ke Hari Kedua →
+            Daftar Waitlist, Lanjutkan ke Hari Kedua →
           </button>
           <p className="text-center text-[10px] text-[#888780] mt-2">
-            Gratis. Kamu jadi yang pertama tahu saat hari kedua dibuka — beserta harga early-bird.
+            Gratis. Kamu jadi yang pertama tahu saat hari kedua dibuka, beserta harga early-bird.
           </p>
         </div>
       )
@@ -1633,7 +1633,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
         <div className="text-4xl mb-3">⏸️</div>
         <h3 className="font-serif text-xl font-bold text-[#111111] mb-2">Hari pertama selesai, {state.firstName}.</h3>
         <p className="text-sm text-[#888780] leading-relaxed max-w-xs mx-auto mb-5">
-          Di Kantoran penuh, kamu jalani 3 bulan simulasi — task makin kompleks, situasi tak terduga, promosi, dan surat referensi kerja nyata.
+          Di Kantoran penuh, kamu jalani 3 bulan simulasi, task makin kompleks, situasi tak terduga, promosi, dan surat referensi kerja nyata.
           <br /><br />Kamu sudah kumpulkan <strong>{coins} Kantor Coin</strong> hari ini 🪙
         </p>
         <button
@@ -1641,7 +1641,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
           style={{ cursor: 'pointer' }}
           className="btn-teal text-sm"
         >
-          Daftar Waitlist — Lanjutkan Karir →
+          Daftar Waitlist, Lanjutkan Karir →
         </button>
       </div>
     )
@@ -1689,7 +1689,7 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
   // Split view: list kiri + detail kanan
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
-      {/* Email list — di mobile disembunyikan saat satu email dibuka */}
+      {/* Email list, di mobile disembunyikan saat satu email dibuka */}
       <div className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'hidden md:flex md:w-72' : 'flex-1'}`}>
         <div className="px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
           <p className="text-xs font-bold uppercase tracking-wider text-[#888780]">
@@ -1865,7 +1865,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
         </div>
       )}
 
-      {/* Roadmap minggu pertama — task mendatang terkunci (teaser premium) */}
+      {/* Roadmap minggu pertama, task mendatang terkunci (teaser premium) */}
       {pos && pos.upcomingTasks.length > 0 && (
         <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Minggu pertamamu di Vantara</p>
@@ -1873,7 +1873,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
             <div className="flex items-start gap-2.5 py-2 border-b border-[#F1EFE8]">
               <span className="text-sm mt-0.5">✅</span>
               <div>
-                <p className="text-xs font-semibold text-[#0F6E56]">Hari 1 — {pos.taskTitle}</p>
+                <p className="text-xs font-semibold text-[#0F6E56]">Hari 1, {pos.taskTitle}</p>
                 <p className="text-[10px] text-[#888780]">Sedang kamu kerjakan sekarang</p>
               </div>
             </div>
@@ -1886,13 +1886,13 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
               >
                 <span className="text-sm mt-0.5">🔒</span>
                 <div>
-                  <p className="text-xs font-semibold text-[#444441]">Hari {t.day} — {t.title}</p>
+                  <p className="text-xs font-semibold text-[#444441]">Hari {t.day}, {t.title}</p>
                   <p className="text-[10px] text-[#888780] leading-relaxed">{t.teaser}</p>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-[#888780] mt-2">🔒 Terbuka di Kantoran versi penuh — selesaikan hari pertamamu dulu.</p>
+          <p className="text-[10px] text-[#888780] mt-2">🔒 Terbuka di Kantoran versi penuh, selesaikan hari pertamamu dulu.</p>
         </div>
       )}
 
@@ -1936,7 +1936,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
               </button>
             </div>
             {extractedData && (
-              <p className="text-xs text-[#0F6E56] font-medium">✅ File berhasil dibaca — siap direview AI</p>
+              <p className="text-xs text-[#0F6E56] font-medium">✅ File berhasil dibaca, siap direview AI</p>
             )}
           </div>
         )}

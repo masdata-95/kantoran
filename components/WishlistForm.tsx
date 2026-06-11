@@ -16,7 +16,7 @@ const WISHLIST_OPTIONS = [
   'Lanjut ke task hari ke-2 dan seterusnya',
   'Simulasi 3 bulan penuh dengan promosi',
   'Coba posisi yang berbeda',
-  'Mode multiplayer — kerja bareng orang lain',
+  'Mode multiplayer, kerja bareng orang lain',
   'Sertifikat dan surat referensi digital',
   'Fitur coaching dari mentor nyata',
   'Leaderboard dan kompetisi antar user',
@@ -75,18 +75,18 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
             <strong className="text-[#0F6E56]">{coins} Kantor Coin</strong> dan menyelesaikan{' '}
             <strong className="text-[#0F6E56]">{tasksDone} task</strong>.
             <br /><br />
-            Kami akan hubungi kamu di <strong>{email}</strong> saat Kantoran penuh diluncurkan — dengan simulasi 3 bulan, task yang makin kompleks, dan surat referensi kerja nyata.
+            Kami akan hubungi kamu di <strong>{email}</strong> saat Kantoran penuh diluncurkan, dengan simulasi 3 bulan, task yang makin kompleks, dan surat referensi kerja nyata.
           </p>
 
           {/* Share card */}
           <div className="bg-white border border-[#E5E3DC] rounded-2xl p-5 mb-6 text-left">
             <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Bagikan pengalaman kamu</p>
             <p className="text-sm text-[#444441] leading-relaxed mb-4">
-              "Baru coba Kantoran — platform simulasi kerja pertama di Indonesia yang terasa nyata banget. Diinterview AI, nego gaji, langsung dapat task dari supervisor. Recommended banget buat yang mau prepare diri sebelum kerja."
+              "Baru coba Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata banget. Diinterview AI, nego gaji, langsung dapat task dari supervisor. Recommended banget buat yang mau prepare diri sebelum kerja."
             </p>
             <button
               onClick={() => {
-                const text = `Baru coba @Kantoran — platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview AI, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.vercel.app`
+                const text = `Baru coba @Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview AI, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.vercel.app`
                 navigator.clipboard.writeText(text).catch(() => {})
                 alert('Teks sudah dicopy! Tempel di Twitter/LinkedIn kamu.')
               }}
@@ -134,11 +134,11 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
         <div className="bg-white rounded-2xl border border-[#E5E3DC] shadow-sm">
           <div className="p-6">
 
-            {/* Step 1 — Rating & Feedback */}
+            {/* Step 1, Rating & Feedback */}
             {step === 1 && (
               <div>
                 <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Gimana pengalamannya?</h2>
-                <p className="text-sm text-[#888780] mb-6">Jujur aja — ini sangat membantu kami untuk berkembang.</p>
+                <p className="text-sm text-[#888780] mb-6">Jujur aja, ini sangat membantu kami untuk berkembang.</p>
 
                 {/* Star rating */}
                 <div className="flex justify-center gap-3 mb-6">
@@ -161,7 +161,7 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
                     {rating === 5 ? 'Luar biasa! Senang sekali mendengar itu.' :
                      rating === 4 ? 'Bagus! Ada yang bisa kami tingkatkan?' :
                      rating === 3 ? 'Cukup. Apa yang kurang menurutmu?' :
-                     rating === 2 ? 'Kamu tidak puas — apa yang salah?' :
+                     rating === 2 ? 'Kamu tidak puas, apa yang salah?' :
                      'Waduh. Tolong ceritakan apa yang mengecewakan.'}
                   </p>
                 )}
@@ -180,7 +180,7 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
               </div>
             )}
 
-            {/* Step 2 — Wishlist */}
+            {/* Step 2, Wishlist */}
             {step === 2 && (
               <div>
                 <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Fitur apa yang paling kamu mau?</h2>
@@ -206,12 +206,12 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
               </div>
             )}
 
-            {/* Step 3 — Email */}
+            {/* Step 3, Email */}
             {step === 3 && (
               <div>
                 <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Jangan berhenti di hari pertama</h2>
                 <p className="text-sm text-[#888780] mb-6">
-                  Manager-mu sudah menunggumu besok pagi — dan task minggu ini sudah ada di mejamu.
+                  Manager-mu sudah menunggumu besok pagi, dan task minggu ini sudah ada di mejamu.
                   Daftar waitlist: kamu yang pertama dapat akses hari kedua, plus harga early-bird saat Kantoran penuh diluncurkan.
                 </p>
 

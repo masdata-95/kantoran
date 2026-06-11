@@ -115,10 +115,10 @@ export default function JobListing({ background, onApply }: Props) {
 
   const getCategoryLabel = (bg: BackgroundType | '') => {
     const map: Record<string, string> = {
-      fresh_grad: 'Fresh Graduate — Intern',
-      student: 'Mahasiswa — Intern Magang',
-      jobseeker: 'Job Seeker — Junior',
-      career_switch: 'Career Switcher — Mid-Level',
+      fresh_grad: 'Fresh Graduate, Intern',
+      student: 'Mahasiswa, Intern Magang',
+      jobseeker: 'Job Seeker, Junior',
+      career_switch: 'Career Switcher, Mid-Level',
     }
     return bg ? map[bg] || '' : ''
   }
@@ -177,7 +177,7 @@ export default function JobListing({ background, onApply }: Props) {
 
                 <div className="flex items-center gap-1 mb-3">
                   <span className="text-xs font-semibold text-[#0F6E56]">
-                    Rp {formatSalary(salRange.min)}–{formatSalary(salRange.max)}/bln
+                    Rp {formatSalary(salRange.min)}, {formatSalary(salRange.max)}/bln
                   </span>
                 </div>
 
@@ -235,7 +235,7 @@ export default function JobListing({ background, onApply }: Props) {
                 <div className="flex gap-4 mt-4 text-white/85 text-xs">
                   <span>📍 Jakarta Selatan</span>
                   <span>🏠 Hybrid 3x/minggu</span>
-                  <span>💰 Rp {formatSalary(salRange.min)}–{formatSalary(salRange.max)}/bln</span>
+                  <span>💰 Rp {formatSalary(salRange.min)}, {formatSalary(salRange.max)}/bln</span>
                 </div>
               </div>
 

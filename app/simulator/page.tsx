@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase, authFetch } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import LoginPage from '@/components/LoginPage'
-import OnboardingSlides from '@/components/OnboardingSlides'
 import ProfileSetup from '@/components/ProfileSetup'
 import JobListing from '@/components/JobListing'
 import SimulatorApp from '@/components/SimulatorApp'
@@ -14,7 +13,6 @@ import type { BackgroundType } from '@/lib/positions'
 
 type AppStage =
   | 'loading'
-  | 'onboarding'   // slides before login
   | 'login'
   | 'profile_setup'
   | 'job_listing'
@@ -40,9 +38,8 @@ export default function SimulatorPage() {
     setUser(u)
 
     if (!u) {
-      // Check if user has seen onboarding slides
-      const seenOnboarding = localStorage.getItem('kantoran_onboarding_seen')
-      setStage(seenOnboarding ? 'login' : 'onboarding')
+      // Langsung ke login Google — onboarding slides dihilangkan
+      setStage('login')
       return
     }
 
@@ -109,16 +106,6 @@ export default function SimulatorPage() {
         <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
       </div>
     </div>
-  )
-
-  // Onboarding slides
-  if (stage === 'onboarding') return (
-    <OnboardingSlides
-      onDone={() => {
-        localStorage.setItem('kantoran_onboarding_seen', '1')
-        setStage('login')
-      }}
-    />
   )
 
   // Login

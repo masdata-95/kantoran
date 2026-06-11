@@ -1,0 +1,179 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Dokumentasi Kantoran — Audit, Perbaikan, Strategi AI & Komersialisasi</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; line-height: 1.5; margin: 40px; }
+  h1 { font-size: 22pt; color: #0F6E56; border-bottom: 3px solid #0F6E56; padding-bottom: 8px; }
+  h2 { font-size: 16pt; color: #0F6E56; margin-top: 28px; border-bottom: 1px solid #E5E3DC; padding-bottom: 4px; }
+  h3 { font-size: 13pt; color: #085041; margin-top: 18px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }
+  th { background: #0F6E56; color: white; padding: 8px 10px; text-align: left; }
+  td { border: 1px solid #E5E3DC; padding: 7px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #FAFAF7; }
+  .tag-fixed { color: #166534; font-weight: bold; }
+  .tag-warn { color: #854F0B; font-weight: bold; }
+  .tag-crit { color: #B91C1C; font-weight: bold; }
+  .box { background: #E1F5EE; border-left: 4px solid #0F6E56; padding: 12px 16px; margin: 14px 0; }
+  .warnbox { background: #FAEEDA; border-left: 4px solid #854F0B; padding: 12px 16px; margin: 14px 0; }
+  code { font-family: Consolas, monospace; background: #F1EFE8; padding: 1px 5px; font-size: 10pt; }
+  .meta { color: #888780; font-size: 10pt; }
+</style>
+</head>
+<body>
+
+<h1>📋 Dokumentasi Kantoran</h1>
+<p class="meta">Audit Teknis, Perbaikan Bug, Strategi Model AI, dan Rencana Komersialisasi<br>
+Disusun: 10 Juni 2026 · Versi aplikasi: kantoran-app (Next.js 16.2.7) · Commit perbaikan: <code>1911066</code></p>
+
+<div class="box">
+<b>Ringkasan Eksekutif</b><br>
+Kantoran secara konsep sudah sangat kuat — simulasi kerja end-to-end pertama di Indonesia dengan diferensiasi jelas. Audit menemukan <b>1 bug kritis yang membuat semua user stuck</b> (tidak bisa lanjut setelah tanda tangan kontrak), <b>celah keamanan serius</b> (semua API tanpa autentikasi), dan <b>2 dari 3 provider AI sudah mati</b> (Gemini di-shutdown 1 Juni 2026, OpenRouter salah model ID). <b>Semua sudah diperbaiki dan build hijau.</b> Stack AI gratis saat ini (Groq + Gemini 2.5 Flash + OpenRouter free) sudah optimal untuk fase beta, sanggup ±150 user/hari dengan biaya Rp 0. Untuk komersialisasi, jalur paling realistis: freemium B2C (hari-1 gratis → langganan simulasi 90 hari) + B2B kampus/bootcamp, dengan distribusi dari 190K followers @masdata sebagai unfair advantage.
+</div>
+
+<h2>1. Alur Bisnis Kantoran</h2>
+
+<h3>1.1 Konsep Produk</h3>
+<p>Kantoran adalah LMS berbasis simulasi dunia kerja (office roleplay): user "melamar kerja" di perusahaan fiktif <b>PT Vantara Nusantara</b> (FMCG personal care), menjalani interview AI, negosiasi gaji, onboarding, menerima task nyata (file Excel), dan direview oleh supervisor AI. Tagline: <i>"Belajar kerja, sambil kerja beneran."</i></p>
+
+<h3>1.2 Alur User (Funnel)</h3>
+<table>
+<tr><th>Tahap</th><th>Apa yang terjadi</th><th>Fungsi bisnis</th></tr>
+<tr><td>1. Landing page</td><td><code>public/landing.html</code> — penjelasan produk</td><td>Akuisisi (traffic dari konten @masdata)</td></tr>
+<tr><td>2. Onboarding slides</td><td>4 slide: apply → interview → kerja → feedback</td><td>Set ekspektasi, kurangi drop-off</td></tr>
+<tr><td>3. Login Google</td><td>Supabase OAuth</td><td>Identitas + data email (aset CRM)</td></tr>
+<tr><td>4. Profile Setup (5 step)</td><td>Nama/gender/kota, pendidikan, pengalaman, skills, kategori background</td><td>Personalisasi NPC + data CV user</td></tr>
+<tr><td>5. Job Listing</td><td>5 posisi (Data Analyst, Marketing, Finance, HR, BizDev), klik Apply</td><td>Aktivasi</td></tr>
+<tr><td>6. Simulator (step 0–10)</td><td>Email undangan → interview + nego gaji dengan Sinta (AI) → offering letter → tanda tangan → Slack welcome → orientasi supervisor → task brief → download Excel → kerjakan → upload → review AI → "jam 5 sore"</td><td>Core experience ("aha moment")</td></tr>
+<tr><td>7. Premium gate</td><td>"Hari pertama selesai" → ajakan lanjut hari ke-2 (versi penuh)</td><td>Konversi ke monetisasi</td></tr>
+<tr><td>8. Wishlist Form</td><td>Rating, feedback, pilih fitur yang diinginkan, daftar waitlist</td><td>Validasi pasar + leads launch</td></tr>
+</table>
+
+<h3>1.3 Arsitektur Teknis</h3>
+<table>
+<tr><th>Lapisan</th><th>Teknologi</th><th>Catatan</th></tr>
+<tr><td>Frontend</td><td>Next.js 16 + TypeScript + Tailwind v4</td><td>1 komponen utama <code>SimulatorApp.tsx</code> (~1.890 baris setelah pembersihan)</td></tr>
+<tr><td>Auth + DB</td><td>Supabase (Google OAuth, PostgreSQL)</td><td>3 tabel: <code>user_progress</code>, <code>user_profiles</code>, <code>waitlist</code></td></tr>
+<tr><td>AI</td><td>Multi-provider: Groq → Gemini → OpenRouter</td><td>Key rotation 5 key/provider, cooldown 60 detik</td></tr>
+<tr><td>Deploy</td><td>Vercel</td><td>Push ke <code>main</code> = auto deploy</td></tr>
+</table>
+<p>Endpoint API: <code>/api/chat</code> (NPC), <code>/api/review</code> (penilaian task), <code>/api/progress</code> (save/load), <code>/api/profile</code>, <code>/api/reset</code>, <code>/api/waitlist</code>. Penilaian task memakai rubrik per posisi (<code>mustFind</code> / <code>goodToMention</code>) yang disuntikkan ke prompt supervisor — desain yang bagus karena kualitas review konsisten dan murah.</p>
+
+<h2>2. Hasil Audit Bug — Semua Sudah Diperbaiki ✅</h2>
+
+<table>
+<tr><th>#</th><th>Tingkat</th><th>Bug</th><th>Dampak</th><th>Perbaikan</th></tr>
+<tr><td>1</td><td class="tag-crit">KRITIS</td><td><b>User stuck selamanya di step 3.</b> Fungsi orientasi <code>handleNextStep(4)</code> tidak pernah dipanggil dari kode mana pun.</td><td>Setelah tanda tangan kontrak + DM supervisor, alur mati total. Tidak ada user yang bisa mencapai task/review → funnel putus sebelum "aha moment".</td><td class="tag-fixed">Orientasi otomatis dimulai saat user membuka DM supervisor (dengan guard anti dobel untuk React StrictMode).</td></tr>
+<tr><td>2</td><td class="tag-crit">KRITIS</td><td><b>Semua API tanpa autentikasi.</b> <code>userId</code> dipercaya begitu saja dari request body/query.</td><td>Siapa pun bisa: membaca progress + seluruh riwayat chat user lain, menimpa/menghapus data user lain (<code>/api/reset</code>), dan memakai <code>/api/chat</code> sebagai proxy AI gratis — menguras kuota API key kamu.</td><td class="tag-fixed">Semua route kini wajib <code>Authorization: Bearer &lt;Supabase access token&gt;</code>, diverifikasi server-side (<code>lib/serverAuth.ts</code>); <code>userId</code> selalu diambil dari token, tidak pernah dari client. Client memakai helper <code>authFetch()</code>.</td></tr>
+<tr><td>3</td><td class="tag-crit">KRITIS</td><td><b>Fallback Gemini mati di production.</b> Model <code>gemini-2.0-flash-exp</code> (dan seluruh keluarga 2.0) di-shutdown Google per 1 Juni 2026.</td><td>Saat Groq limit/down, fallback selalu gagal → user dapat pesan "gangguan koneksi".</td><td class="tag-fixed">Migrasi ke <code>gemini-2.5-flash</code> + <code>thinkingBudget: 0</code> (tanpa ini, mode thinking default menghabiskan jatah 250 token output dan balasan bisa kosong).</td></tr>
+<tr><td>4</td><td class="tag-warn">TINGGI</td><td><b>OpenRouter last-resort tidak valid.</b> <code>openrouter/free</code> bukan model ID yang ada.</td><td>Lapisan fallback terakhir tidak pernah berfungsi.</td><td class="tag-fixed">Ganti ke <code>meta-llama/llama-3.3-70b-instruct:free</code> + fallback chain DeepSeek V3 / Qwen3 via parameter <code>models</code>.</td></tr>
+<tr><td>5</td><td class="tag-warn">TINGGI</td><td><b>Reload di step 3 mengunci ulang aplikasi.</b> <code>phaseUnlocked</code> dihitung dari <code>step >= 4</code>.</td><td>User yang sudah tanda tangan kontrak lalu refresh halaman menemukan Slack/Supervisor terkunci lagi.</td><td class="tag-fixed">Threshold jadi <code>step >= 3</code>, view awal juga ikut diperbaiki.</td></tr>
+<tr><td>6</td><td class="tag-warn">TINGGI</td><td><b>DM supervisor dobel setelah reload</b> di step 3 (timer 90 detik jalan lagi tanpa cek riwayat).</td><td>NPC terlihat "halusinasi" mengulang ajakan standup.</td><td class="tag-fixed">Timer dilewati jika DM sudah ada di riwayat chat.</td></tr>
+<tr><td>7</td><td class="tag-warn">SEDANG</td><td><b>Room Junior (DM) tidak punya kolom chat.</b> <code>jnr</code> tidak terdaftar di <code>canChat</code>/<code>npcMap</code>.</td><td>Junior mengirim DM ("Psst, baca dulu semua data...") tapi user tidak bisa membalas sama sekali.</td><td class="tag-fixed">Room <code>jnr</code> kini bisa chat dengan NPC junior.</td></tr>
+<tr><td>8</td><td class="tag-warn">SEDANG</td><td><b>Tombol "Buka File Manager →" malah membuka Workspace.</b> Step 6 memaksa <code>setView('workspace')</code> menimpa navigasi <code>goTo</code>.</td><td>User bingung mencari file task yang harus didownload.</td><td class="tag-fixed">Override view dihapus; tombol benar-benar membuka File Manager.</td></tr>
+<tr><td>9</td><td class="tag-warn">SEDANG</td><td><b>Progress hanya tersimpan tiap 30 detik.</b></td><td>Tutup tab sesaat setelah offering/kontrak/task = progress hilang.</td><td class="tag-fixed">Save langsung dipicu setiap kali step berubah.</td></tr>
+<tr><td>10</td><td>RENDAH</td><td><b>Review API gagal tidak di-handle</b> (<code>data.review</code> undefined → bubble kosong).</td><td>UX membingungkan saat AI down.</td><td class="tag-fixed">Guard + pesan error yang jelas.</td></tr>
+<tr><td>11</td><td>RENDAH</td><td><b>±200 baris dead code</b>: <code>OnboardingFlow</code>, <code>PANTRY_GOSSIP</code>, <code>updateAiHistory</code>, <code>canGoDay2</code>, <code>onboardStep</code>, field <code>aiHistory</code>.</td><td>Beban maintenance.</td><td class="tag-fixed">Dihapus. SimulatorApp: 2.068 → 1.889 baris.</td></tr>
+<tr><td>12</td><td>RENDAH</td><td><b><code>next build</code> lokal selalu gagal</b> — Supabase client dibuat di module scope padahal <code>SUPABASE_SERVICE_ROLE_KEY</code> hanya ada di Vercel.</td><td>Tidak bisa verifikasi build sebelum deploy.</td><td class="tag-fixed">Service client kini lazy-init (<code>getServiceClient()</code>).</td></tr>
+</table>
+
+<div class="warnbox">
+<b>⚠️ Yang perlu kamu lakukan setelah ini (5 menit):</b>
+<ol>
+<li><b>Test lokal / preview deploy dulu</b> — perubahan auth menyentuh semua endpoint. Jalankan <code>npm run dev</code>, login, dan jalani alur dari apply sampai submit task.</li>
+<li><b>Push ke GitHub</b> (<code>git push</code>) → Vercel auto-deploy. Commit sudah siap di <code>main</code> lokal.</li>
+<li><b>Lengkapi <code>.env.local</code> lokal</b> — saat ini tidak ada <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>GROQ_API_KEY_1..5</code>, <code>GEMINI_API_KEY_1..5</code>. Salin dari Vercel → Settings → Environment Variables agar testing lokal berfungsi penuh.</li>
+<li><b>Catat di kalender: 16 Oktober 2026</b> — <code>gemini-2.5-flash</code> akan di-retire Google; ganti ke <code>gemini-3.5-flash</code> (cukup ubah 1 baris di <code>lib/ai.ts</code>).</li>
+</ol>
+</div>
+
+<h3>Catatan teknis yang belum diperbaiki (disengaja, bukan bug fatal)</h3>
+<ul>
+<li><code>streak</code> di database tidak pernah di-increment — fitur belum diimplementasi.</li>
+<li>Deteksi "interview selesai" memakai daftar kata kunci (mis. "sampai jumpa") — bisa false positive/negative. Untuk jangka panjang, lebih kuat jika Sinta diminta mengeluarkan token tersembunyi (mis. <code>[INTERVIEW_SELESAI]</code>) di akhir, lalu di-strip sebelum ditampilkan.</li>
+<li>Ekstraksi gaji hasil nego memakai regex "X juta" — sudah ada hard clamp ke range, jadi aman, tapi tidak selalu persis angka kesepakatan.</li>
+<li>Riwayat chat dikirim utuh tiap request (max 30 pesan) — wajar untuk sekarang; kalau biaya jadi isu, ringkas riwayat lama.</li>
+</ul>
+
+<h2>3. Strategi Model AI — "Gratis tapi Hasil Luar Biasa"</h2>
+
+<h3>3.1 Verdict: stack kamu sekarang sudah benar</h3>
+<p>Kombinasi <b>Groq (primary) → Gemini (fallback) → OpenRouter (last resort)</b> dengan rotasi 5 key adalah pola terbaik yang tersedia gratis di 2026. Masalahnya bukan arsitektur, tapi 2 dari 3 lapisan sudah mati — dan itu sudah diperbaiki. Konfigurasi sesudah perbaikan:</p>
+
+<table>
+<tr><th>Prioritas</th><th>Provider · Model</th><th>Kuota gratis</th><th>Kenapa</th></tr>
+<tr><td>1</td><td>Groq · <code>llama-3.3-70b-versatile</code></td><td>1.000 request/hari/key × 5 key = <b>5.000 req/hari</b></td><td>Tercepat di kelasnya (latensi penting untuk ilusi "NPC manusia"), Bahasa Indonesia bagus, kualitas 70B</td></tr>
+<tr><td>2</td><td>Gemini · <code>gemini-2.5-flash</code> (thinking off)</td><td>±250 req/hari/key × 5 key ≈ <b>1.250 req/hari</b>, 10 RPM/key</td><td>Kualitas setara/lebih baik, gratis penuh dari Google</td></tr>
+<tr><td>3</td><td>OpenRouter · <code>llama-3.3-70b:free</code> → DeepSeek V3 → Qwen3 (chain)</td><td>50 req/hari (atau <b>1.000/hari selamanya</b> jika top-up $10 sekali)</td><td>Jaring pengaman terakhir, 28+ model :free</td></tr>
+</table>
+
+<h3>3.2 Kapasitas & kapan harus bayar</h3>
+<p>Satu user menyelesaikan hari-1 dengan ±25–40 panggilan AI. Artinya kapasitas gratis total ≈ <b>150–200 user aktif/hari</b> — lebih dari cukup untuk beta dan launch waitlist. Saat melewati itu:</p>
+<ul>
+<li><b>Top-up OpenRouter $10 sekali seumur hidup</b> → kuota free naik ke 1.000/hari. Ini upgrade termurah yang ada.</li>
+<li><b>Groq Developer tier (pay-as-you-go)</b>: llama-3.3-70b ≈ $0,59/$0,79 per juta token. Satu sesi user ≈ 60–100 ribu token ≈ <b>Rp 700–1.200/user</b>. Dengan harga langganan Rp 49.000/bulan, biaya AI hanya ±2% dari revenue — margin sangat sehat.</li>
+<li>Opsi peningkatan kualitas tanpa biaya: <code>openai/gpt-oss-120b</code> di Groq (juga free tier) untuk <i>task review</i> yang butuh penalaran rubrik lebih teliti, sambil tetap pakai llama-3.3-70b untuk chat NPC biasa.</li>
+</ul>
+
+<div class="box">
+<b>Rekomendasi praktis:</b> jangan pindah-pindah model lagi sampai ada masalah nyata. Yang lebih berdampak ke kualitas sekarang bukan ganti model, tapi (1) token penanda interview selesai, (2) few-shot example di prompt review supaya format Status: APPROVED konsisten, (3) logging provider mana yang dipakai tiap request (sudah ada console.log — tinggal pantau di Vercel Logs).
+</div>
+
+<h2>4. Rencana Komersialisasi</h2>
+
+<h3>4.1 Posisi pasar</h3>
+<p>Kompetitor langsung praktis belum ada di Indonesia. Kompetitor tidak langsung: e-course karir (Skill Academy, RevoU mini course), bootcamp, dan konten gratis. Diferensiasi Kantoran: <b>experience, bukan konten</b> — orang tidak "menonton materi", mereka "mengalami kerja". Ditambah aset unik: surat referensi + pengalaman simulasi yang masuk CV. Unfair advantage: audiens @masdata 190K (niche data/Excel/karir = persis target market).</p>
+
+<h3>4.2 Model monetisasi (urutan prioritas)</h3>
+<table>
+<tr><th>Model</th><th>Detail</th><th>Estimasi harga</th><th>Kapan</th></tr>
+<tr><td><b>1. Freemium B2C</b></td><td>Hari-1 gratis (sudah ada) → langganan untuk simulasi 90 hari, task progresif, performance review, promosi jabatan, surat referensi digital</td><td>Rp 49–99rb/bulan, atau Rp 149–249rb sekali beli per "season" 3 bulan (one-time lebih cocok untuk pasar Indonesia yang anti-subscription)</td><td>Sekarang — ini premium gate yang sudah ada di produk</td></tr>
+<tr><td><b>2. Sertifikat & referensi berbayar</b></td><td>Sertifikat penyelesaian + surat referensi PT Vantara yang bisa diverifikasi (link publik), shareable ke LinkedIn</td><td>Rp 25–50rb add-on</td><td>Bersamaan launch premium</td></tr>
+<tr><td><b>3. B2B kampus & bootcamp</b></td><td>Career center kampus membeli seat untuk mahasiswa tingkat akhir (persiapan magang/kerja); bootcamp memakai Kantoran sebagai modul "kesiapan kerja"</td><td>Rp 1,5–5jt/kohort atau Rp 20–35rb/mahasiswa</td><td>Setelah ada data retensi B2C</td></tr>
+<tr><td><b>4. Kartu Prakerja</b></td><td>Daftarkan sebagai pelatihan di ekosistem Prakerja — channel distribusi pemerintah dengan jutaan peserta dan dana pelatihan per orang</td><td>Mengikuti skema Prakerja</td><td>Butuh badan usaha + kurasi; target 6–12 bulan</td></tr>
+<tr><td><b>5. Employer branding / recruiting funnel</b></td><td>Perusahaan nyata membayar untuk jadi "perusahaan simulasi" (ganti PT Vantara) — sekaligus menyaring kandidat dari performa simulasi. Ini bisa jadi model paling bernilai jangka panjang: Kantoran = assessment platform</td><td>Rp 10–50jt/perusahaan/campaign</td><td>Setelah punya volume user</td></tr>
+</table>
+
+<h3>4.3 Unit economics kasar (skenario konservatif)</h3>
+<ul>
+<li>Konversi konten @masdata → 1.000 pendaftar beta bulan pertama (0,5% dari followers) sangat realistis.</li>
+<li>Free → paid 3–5% (standar freemium) = 30–50 pembeli × Rp 149rb = <b>Rp 4,5–7,5jt/bulan</b> di awal.</li>
+<li>Biaya: AI ±Rp 1.200/user berbayar (atau Rp 0 selama masih di free tier), Vercel + Supabase free tier cukup sampai ribuan user. Praktis <b>margin &gt;90%</b>.</li>
+<li>Lever pertumbuhan terbesar: share card hasil simulasi (sudah ada di WishlistForm) + surat referensi yang viral di LinkedIn.</li>
+</ul>
+
+<h3>4.4 Yang harus dibereskan sebelum menerima uang</h3>
+<ol>
+<li><b>Legalitas</b>: badan usaha (PT perorangan cukup untuk mulai), lalu pendaftaran <b>PSE Kominfo</b> (wajib untuk platform digital yang mengelola data pengguna Indonesia).</li>
+<li><b>Privacy Policy + Terms of Service</b> — kamu menyimpan data pribadi (nama, kota, pendidikan, riwayat chat). UU PDP berlaku penuh; minimal: jelaskan data apa yang disimpan, untuk apa, dan cara hapus akun.</li>
+<li><b>Payment gateway</b>: Midtrans atau Xendit (dukungan QRIS/VA/e-wallet penting — target market jarang pakai kartu kredit).</li>
+<li><b>Verifikasi email waitlist</b> sebelum kirim campaign launch (hindari spam-trap).</li>
+<li><b>Keamanan sudah ditangani</b> di commit ini (auth API) — prasyarat penting sebelum komersial karena data chat user kini tidak bisa dibaca orang lain.</li>
+</ol>
+
+<h3>4.5 Roadmap yang disarankan</h3>
+<table>
+<tr><th>Fase</th><th>Fokus</th><th>Sinyal sukses</th></tr>
+<tr><td><b>Beta (sekarang – 1 bulan)</b></td><td>Deploy perbaikan ini, dorong traffic dari konten, pantau funnel: berapa % yang menyelesaikan hari-1 (sebelumnya 0% karena bug stuck step 3!)</td><td>≥40% user yang interview berhasil menyelesaikan task hari-1; rating wishlist ≥4,2</td></tr>
+<tr><td><b>Validasi bayar (bulan 2–3)</b></td><td>Bangun hari ke-2 s/d 7 (cukup 1 minggu dulu, bukan 90 hari), pasang Midtrans, email waitlist dengan harga early-bird</td><td>≥3% waitlist membeli</td></tr>
+<tr><td><b>Skala B2C (bulan 4–6)</b></td><td>Season penuh 3 bulan, sertifikat/referensi, program afiliasi mikro-influencer karir</td><td>MRR Rp 20jt+</td></tr>
+<tr><td><b>B2B (bulan 6+)</b></td><td>Pilot 2–3 kampus/bootcamp, siapkan dossier Prakerja, jajaki employer branding</td><td>1 kontrak B2B ditandatangani</td></tr>
+</table>
+
+<h2>5. Lampiran — File yang Diubah di Commit Ini</h2>
+<table>
+<tr><th>File</th><th>Perubahan</th></tr>
+<tr><td><code>lib/serverAuth.ts</code> (baru)</td><td>Verifikasi Bearer token Supabase + service client lazy</td></tr>
+<tr><td><code>lib/supabase.ts</code></td><td>Helper <code>authFetch()</code> — fetch dengan Authorization header otomatis</td></tr>
+<tr><td><code>lib/ai.ts</code></td><td>Gemini → 2.5-flash (thinking off); OpenRouter → model :free valid + fallback chain</td></tr>
+<tr><td><code>app/api/*</code> (6 route)</td><td>Wajib auth; userId dari token, bukan dari client</td></tr>
+<tr><td><code>components/SimulatorApp.tsx</code></td><td>Fix stuck step 3, phaseUnlocked, DM dobel, room junior, tombol File Manager, save per step, guard review, hapus dead code</td></tr>
+<tr><td><code>app/simulator/page.tsx</code>, <code>ProfileSetup/ProfileTab/WishlistForm.tsx</code></td><td>Migrasi ke <code>authFetch</code></td></tr>
+</table>
+
+<p class="meta">Dokumen ini dibuat otomatis oleh Claude Code setelah audit penuh codebase kantoran-app.<br>
+Sumber riset model AI: console.groq.com/docs (deprecations & models), ai.google.dev/gemini-api/docs/deprecations, openrouter.ai/models.</p>
+
+</body>
+</html>

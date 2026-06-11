@@ -27,7 +27,7 @@ export interface Position {
   taskTitle: string
   taskBody: string
   taskContext: string
-  // Task hari berikutnya — ditampilkan terkunci (teaser premium), tidak bisa diklik
+  // Task hari berikutnya, ditampilkan terkunci (teaser premium), tidak bisa diklik
   upcomingTasks: { day: number; title: string; teaser: string }[]
 }
 
@@ -42,7 +42,7 @@ export const POSITIONS: Record<string, Position> = {
       id: 'sup', initials: 'RP', avClass: 'av-blue', name: 'Rizky Pratama',
       role: 'Senior Data Analyst · Supervisormu', status: '🟢 Online', statusDot: 'bg-green-500',
       bio: `Pria 29 tahun. Lulusan Statistika ITS, 5 tahun di Vantara sejak fresh grad. Kerjaan pertama dan satu-satunya.
-Pengalaman nyata: pernah stuck 3 hari debug pipeline karena satu spasi tersembunyi di CSV. Pernah kena marah Director karena dashboard crash pas presentasi ke client. Punya ritual kopi sebelum coding — tidak mau diganggu sampai kopi habis. Suka chess online, main sela-sela nunggu query panjang jalan.
+Pengalaman nyata: pernah stuck 3 hari debug pipeline karena satu spasi tersembunyi di CSV. Pernah kena marah Director karena dashboard crash pas presentasi ke client. Punya ritual kopi sebelum coding, tidak mau diganggu sampai kopi habis. Suka chess online, main sela-sela nunggu query panjang jalan.
 Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus, dia acknowledge. Kalau salah, langsung bilang.`
     },
     manager: {
@@ -63,10 +63,10 @@ Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus
     taskBody: 'File <strong>task_data_analyst.xlsx</strong> ada di Notion. Temukan semua issue kualitas data dan buat summary singkat.',
     taskContext: 'Tim Marketing butuh data ini untuk planning campaign Q2. Pastikan datanya bisa dipercaya sebelum dipakai.',
     upcomingTasks: [
-      { day: 2, title: 'Dashboard Penjualan untuk Rapat Direksi', teaser: 'Diana butuh dashboard dari data yang kamu bersihkan kemarin — dipresentasikan langsung ke jajaran direksi.' },
+      { day: 2, title: 'Dashboard Penjualan untuk Rapat Direksi', teaser: 'Diana butuh dashboard dari data yang kamu bersihkan kemarin, dipresentasikan langsung ke jajaran direksi.' },
       { day: 3, title: 'Investigasi Anomali Region Timur', teaser: 'Penjualan Jawa Timur tiba-tiba anjlok 38%. Rizky minta kamu cari tahu kenapa, sebelum direksi yang bertanya duluan.' },
       { day: 5, title: 'Forecast Penjualan Q3', teaser: 'Budget semua tim bergantung pada angka forecast-mu. Salah sedikit, satu kantor merasakan akibatnya.' },
-      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Rizky dan Diana menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Rizky dan Diana menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
   },
 
@@ -79,7 +79,7 @@ Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus
     supervisor: {
       id: 'sup', initials: 'DP', avClass: 'av-blue', name: 'Dinda Pratiwi',
       role: 'Senior Marketing Analyst · Supervisormu', status: '🟢 Online', statusDot: 'bg-green-500',
-      bio: `Perempuan 28 tahun. Background komunikasi, self-taught di data dan analitik. Campaign pertama yang dia handle sendiri flop total — impresi tinggi tapi zero konversi. Belajar banyak dari situ. Masih suka impostor syndrome kadang. Hobi: jalan-jalan ke pasar, foto untuk Instagram pribadi, nonton film dokumenter.
+      bio: `Perempuan 28 tahun. Background komunikasi, self-taught di data dan analitik. Campaign pertama yang dia handle sendiri flop total, impresi tinggi tapi zero konversi. Belajar banyak dari situ. Masih suka impostor syndrome kadang. Hobi: jalan-jalan ke pasar, foto untuk Instagram pribadi, nonton film dokumenter.
 Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks kenapa sesuatu penting untuk bisnis.`
     },
     manager: {
@@ -90,7 +90,7 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
     junior: {
       id: 'jnr', initials: 'AL', avClass: 'av-amber', name: 'Aldi Lesmana',
       role: 'Junior Marketing Analyst · Teman tim', status: '🟢 Online', statusDot: 'bg-green-500',
-      bio: `Pria 24 tahun. Obsessed dengan tren sosmed dan pop culture — sering tahu viral content sebelum orang lain. Tapi juga sering overthinking soal kerjaan. Banyak emoji, jujur soal struggle.`
+      bio: `Pria 24 tahun. Obsessed dengan tren sosmed dan pop culture, sering tahu viral content sebelum orang lain. Tapi juga sering overthinking soal kerjaan. Banyak emoji, jujur soal struggle.`
     },
     taskRubric: {
       mustFind: ['TikTok conversion rate rendah', 'Google Ads paling efektif dari sisi CTR dan conversion', 'campaign tanpa start date atau data tidak lengkap'],
@@ -100,10 +100,10 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
     taskBody: 'File <strong>task_marketing_analyst.xlsx</strong> ada di Notion. Hitung CTR dan conversion rate tiap campaign, identifikasi yang terbaik dan terburuk.',
     taskContext: 'Budget Q1 akan diputuskan berdasarkan performa Q4 ini. Analisismu dipakai di rapat besok pagi.',
     upcomingTasks: [
-      { day: 2, title: 'Brief Campaign Lebaran Lumière', teaser: 'Budget Rp 2 miliar. Campaign terbesar tahun ini — dan Dinda mengajakmu masuk tim intinya.' },
+      { day: 2, title: 'Brief Campaign Lebaran Lumière', teaser: 'Budget Rp 2 miliar. Campaign terbesar tahun ini, dan Dinda mengajakmu masuk tim intinya.' },
       { day: 3, title: 'Krisis: Video Komplain Viral di TikTok', teaser: 'Sebuah video komplain menembus 800 ribu views semalam. Seluruh tim menunggu rekomendasi penanganan darimu.' },
       { day: 5, title: 'A/B Test Landing Page Roots&Co', teaser: 'Dua versi, satu pemenang. Datamu yang menentukan ke mana budget mengalir.' },
-      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Dinda dan Pak Budi menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Dinda dan Pak Budi menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
   },
 
@@ -116,7 +116,7 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
     supervisor: {
       id: 'sup', initials: 'AW', avClass: 'av-blue', name: 'Andi Wijaya',
       role: 'Senior Finance Analyst · Supervisormu', status: '🟢 Online', statusDot: 'bg-green-500',
-      bio: `Pria 31 tahun. CPA, background akuntansi. Pernah menemukan error senilai Rp 2 miliar di laporan karena satu formula salah — jadi legend di kantor. Dulu kerja sampai jam 11 malam setiap akhir bulan, sekarang sudah lebih baik manage ekspektasi. Hobi hiking dan masak.
+      bio: `Pria 31 tahun. CPA, background akuntansi. Pernah menemukan error senilai Rp 2 miliar di laporan karena satu formula salah, jadi legend di kantor. Dulu kerja sampai jam 11 malam setiap akhir bulan, sekarang sudah lebih baik manage ekspektasi. Hobi hiking dan masak.
 Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spesifik apa yang salah. Lebih warm kalau sudah kenal.`
     },
     manager: {
@@ -137,10 +137,10 @@ Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spes
     taskBody: 'File <strong>task_finance_analyst.xlsx</strong> ada di Notion. Temukan departemen dengan overspending terbesar dan buat ringkasan untuk CFO.',
     taskContext: 'CFO minta laporan variance sebelum budget meeting minggu depan. Ini urgent.',
     upcomingTasks: [
-      { day: 2, title: 'Closing Akhir Bulan — Rekonsiliasi Kas', teaser: 'Hari paling menegangkan di Finance. Semua angka harus balance sebelum tengah malam.' },
-      { day: 3, title: 'Selisih Rp 80 Juta — Temukan Sumbernya', teaser: 'Angka tidak balance dan CFO sudah bertanya dua kali. Andi menyerahkan investigasinya ke kamu.' },
+      { day: 2, title: 'Closing Akhir Bulan, Rekonsiliasi Kas', teaser: 'Hari paling menegangkan di Finance. Semua angka harus balance sebelum tengah malam.' },
+      { day: 3, title: 'Selisih Rp 80 Juta, Temukan Sumbernya', teaser: 'Angka tidak balance dan CFO sudah bertanya dua kali. Andi menyerahkan investigasinya ke kamu.' },
       { day: 5, title: 'Proyeksi Cashflow 6 Bulan', teaser: 'Manajemen mau ekspansi. Proyeksimu yang menentukan apakah perusahaan sanggup atau tidak.' },
-      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Andi dan Pak Hendra menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Andi dan Pak Hendra menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
   },
 
@@ -153,7 +153,7 @@ Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spes
     supervisor: {
       id: 'sup', initials: 'BR', avClass: 'av-blue', name: 'Bu Ratna',
       role: 'Senior HR Business Partner · Supervisormu', status: '🟢 Online', statusDot: 'bg-green-500',
-      bio: `Perempuan 35 tahun. 10 tahun di HR. Pernah harus lay off 15 orang sekaligus karena restrukturisasi — pengalaman yang tidak pernah terlupakan. Orang-orang think HR itu enak karena banyak ngobrol. Padahal burnout di HR lebih tinggi dari yang dikira. Punya ritual journaling setiap malam untuk dekompresi.
+      bio: `Perempuan 35 tahun. 10 tahun di HR. Pernah harus lay off 15 orang sekaligus karena restrukturisasi, pengalaman yang tidak pernah terlupakan. Orang-orang think HR itu enak karena banyak ngobrol. Padahal burnout di HR lebih tinggi dari yang dikira. Punya ritual journaling setiap malam untuk dekompresi.
 Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap dunia HR.`
     },
     manager: {
@@ -170,14 +170,14 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
       mustFind: ['Eko Wibowo gugur karena pendidikan SMA tidak memenuhi syarat', 'Maya Laksmini kandidat terkuat secara teknikal dan komunikasi', 'Rina Setiawati kandidat kedua dengan pengalaman magang'],
       goodToMention: ['scoring berdasarkan rubrik yang objektif', 'alasan shortlist yang spesifik dan terukur', 'handling kandidat borderline seperti Sari']
     },
-    taskTitle: 'CV Screening Junior Data Analyst — Batch 1',
+    taskTitle: 'CV Screening Junior Data Analyst, Batch 1',
     taskBody: 'File <strong>task_hr_generalist.xlsx</strong> ada di Notion. Screen 5 kandidat dan shortlist 2 terbaik untuk interview tahap berikutnya.',
     taskContext: 'Tim butuh shortlist ini sebelum akhir minggu. Interview tahap berikutnya sudah dijadwalkan minggu depan.',
     upcomingTasks: [
-      { day: 2, title: 'Interview Kandidat Pertamamu', teaser: 'Kali ini kamu yang duduk di kursi pewawancara — kandidatnya dari shortlist yang kamu buat sendiri.' },
+      { day: 2, title: 'Interview Kandidat Pertamamu', teaser: 'Kali ini kamu yang duduk di kursi pewawancara, kandidatnya dari shortlist yang kamu buat sendiri.' },
       { day: 3, title: 'Exit Interview Mendadak', teaser: 'Salah satu performer terbaik tim mengajukan resign pagi ini. Bu Ratna minta kamu yang menangani.' },
       { day: 5, title: 'Susun Program Onboarding Batch Baru', teaser: '8 karyawan baru masuk bulan depan. Pengalaman hari pertama mereka ada di tanganmu.' },
-      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Bu Ratna dan Pak Tono menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Bu Ratna dan Pak Tono menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
   },
 
@@ -190,7 +190,7 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
     supervisor: {
       id: 'sup', initials: 'RF', avClass: 'av-blue', name: 'Reza Firmansyah',
       role: 'BD Manager · Supervisormu', status: '🟢 Online', statusDot: 'bg-green-500',
-      bio: `Pria 33 tahun. Ex-startup founder yang gagal, lalu masuk corporate. Deal senilai Rp 2 miliar pernah gagal di menit terakhir karena satu klausa kontrak. Pernah pitch ke 12 calon partner dalam seminggu dan semua ditolak — minggu paling brutal dalam karirnya.
+      bio: `Pria 33 tahun. Ex-startup founder yang gagal, lalu masuk corporate. Deal senilai Rp 2 miliar pernah gagal di menit terakhir karena satu klausa kontrak. Pernah pitch ke 12 calon partner dalam seminggu dan semua ditolak, minggu paling brutal dalam karirnya.
 Cara bicara: energetik, big-picture thinker. Direct tapi charming. Honest soal failure dan rejection di BD.`
     },
     manager: {
@@ -211,10 +211,10 @@ Cara bicara: energetik, big-picture thinker. Direct tapi charming. Honest soal f
     taskBody: 'File <strong>task_bizdev.xlsx</strong> ada di Notion. Evaluasi 6 calon partner dan shortlist 3 terbaik dengan justifikasi.',
     taskContext: 'Direktur Komersial butuh shortlist ini untuk roadshow partnership bulan depan. Jangan sampai rekomendasikan partner yang bermasalah.',
     upcomingTasks: [
-      { day: 2, title: 'Meeting Follow-up PT Maju Bersama', teaser: 'Shortlist-mu dipakai. Sekarang kamu ikut meeting pertamanya — dan Reza memintamu yang membuka presentasi.' },
+      { day: 2, title: 'Meeting Follow-up PT Maju Bersama', teaser: 'Shortlist-mu dipakai. Sekarang kamu ikut meeting pertamanya, dan Reza memintamu yang membuka presentasi.' },
       { day: 3, title: 'Negosiasi: Partner Minta Diskon 25%', teaser: 'Term sheet hampir deal, lalu mereka menekan di menit terakhir. Mundur, atau cari jalan tengah?' },
       { day: 5, title: 'Riset Ekspansi Indonesia Timur', teaser: 'Pasar baru, data minim, potensi besar. Pak Anton menunggu rekomendasi go / no-go darimu.' },
-      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Reza dan Pak Anton menilai kerjamu — dan menentukan arah karirmu di Vantara.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Reza dan Pak Anton menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
   }
 }
