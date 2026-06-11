@@ -225,32 +225,36 @@ async function callOpenRouter(
 }
 
 // ── MAIN ENTRY ───────────────────────────────────
+// clean=true membersihkan markdown/dash (untuk chat NPC). clean=false untuk output
+// terstruktur seperti JSON (CV review) yang TIDAK boleh disentuh cleanResponse.
 export async function callAI(
   messages: ChatMessage[],
   systemPrompt: string,
   _npcId: string = 'sinta',
-  maxTokens: number = 250
+  maxTokens: number = 250,
+  clean: boolean = true
 ): Promise<string> {
+  const finish = (text: string) => (clean ? cleanResponse(text) : text)
 
   // Try Groq first (fastest, smartest free)
   for (let attempt = 0; attempt < Math.min(GROQ_KEYS.length, 3); attempt++) {
     const result = await callGroq(messages, systemPrompt, maxTokens)
-    if (result) return cleanResponse(result)
+    if (result) return finish(result)
   }
 
   // Try Gemini (fallback)
   for (let attempt = 0; attempt < Math.min(GEMINI_KEYS.length, 3); attempt++) {
     const result = await callGemini(messages, systemPrompt, maxTokens)
-    if (result) return cleanResponse(result)
+    if (result) return finish(result)
   }
 
   // Last resort: OpenRouter
   const orResult = await callOpenRouter(messages, systemPrompt, maxTokens)
-  if (orResult) return cleanResponse(orResult)
+  if (orResult) return finish(orResult)
 
   // All failed
   console.error('ALL PROVIDERS FAILED')
-  return 'Maaf, ada gangguan koneksi sebentar. Coba kirim pesan lagi ya!'
+  return clean ? 'Maaf, ada gangguan koneksi sebentar. Coba kirim pesan lagi ya!' : ''
 }
 
 // Clean markdown artifacts + buang tanda dash (terlihat seperti tulisan AI)
