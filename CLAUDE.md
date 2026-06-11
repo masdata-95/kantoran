@@ -103,3 +103,33 @@ Tables:
 ## Founder
 Zhofar Murry Setiawan (@masdata) — 190K+ followers di niche data/Excel/karir
 Solo founder, fase beta
+
+## Business Context & Strategy
+Selalu pikirkan keputusan teknis dalam konteks bisnis ini, bukan cuma "apakah kodenya benar" tapi "apakah ini menggerakkan funnel".
+
+### Posisi pasar
+- Kategori: experience, BUKAN konten. User "mengalami kerja", bukan "menonton materi". Ini pembeda utama dari e-course/bootcamp.
+- Klaim: simulasi kerja (office roleplay) pertama di Indonesia. Belum ada kompetitor langsung.
+- Unfair advantage: 190K followers @masdata di niche data/Excel/karir = persis target market. Distribusi konten = mesin akuisisi utama.
+- Aset unik yang bikin orang mau bayar: surat referensi kerja + pengalaman simulasi yang bisa masuk CV/LinkedIn.
+
+### Funnel (titik konversi)
+Landing → login Google → profile setup → job listing → simulator (interview, nego gaji, task, review AI) → premium gate "hari pertama selesai" → wishlist/waitlist → (target: beli).
+- Metrik utama yang harus dijaga: % user yang menyelesaikan hari-1 (dulu 0% karena bug stuck step 3, sudah diperbaiki Juni 2026). Target ≥40% dari yang mulai interview.
+- Konversi free→paid target 3-5% (standar freemium).
+- Lever pertumbuhan: share card hasil simulasi + surat referensi yang viral di LinkedIn.
+
+### Monetisasi (urutan prioritas)
+1. Freemium B2C: hari-1 gratis → beli "season" 3 bulan Rp 149-249rb sekali bayar (pasar ID anti-subscription) atau langganan Rp 49-99rb/bln.
+2. Sertifikat + surat referensi berbayar (add-on Rp 25-50rb), shareable ke LinkedIn.
+3. B2B kampus & bootcamp (Rp 1,5-5jt/kohort atau Rp 20-35rb/mahasiswa).
+4. Kartu Prakerja (channel pemerintah, butuh badan usaha + kurasi).
+5. Employer branding/recruiting funnel (perusahaan jadi "perusahaan simulasi" + assessment kandidat) — potensi nilai tertinggi jangka panjang.
+
+### Sebelum terima uang (prasyarat)
+PT perorangan → daftar PSE Kominfo (wajib platform digital ID) → Privacy Policy + ToS (UU PDP, simpan data pribadi + chat) → payment gateway Midtrans/Xendit (QRIS/VA/e-wallet, bukan kartu kredit) → verifikasi email waitlist.
+
+### Prinsip produk untuk konversi
+- Jangan jual fitur, lanjutkan cerita lalu kunci di momen paling penasaran (cliffhanger DM manager, roadmap task terkunci).
+- NPC harus terasa manusia (anti AI-slop): no markdown, no dash, kalimat pendek, partikel chat ID. Ini inti "terasa nyata" yang bikin orang mau lanjut.
+- Setiap posisi (5 divisi) harus terasa setara — tapi Data Analyst kemungkinan converting tertinggi karena niche follower @masdata. Pertimbangkan saat prioritas konten/marketing.
