@@ -1,0 +1,120 @@
+[
+  {
+    "slug": "all-bisnis-vantara",
+    "position_id": "all",
+    "title": "Memahami Bisnis Vantara",
+    "track": "business",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "Sebelum kamu nyentuh kerjaan teknis, aku mau kamu paham dulu perusahaan ini cari uang dari mana. Percaya deh, orang yang ngerti bisnisnya beda banget kualitas kerjanya. Baca dua materi ini, terus kerjain misinya. Nggak lama kok."
+  },
+  {
+    "slug": "da-excel-dasar",
+    "position_id": "data_analyst",
+    "title": "Excel untuk Analis Data",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "Oke, ini fondasi kamu. Di tim ini 80 persen kerjaan harian masih lewat Excel, jadi jangan anggap remeh. Tiga materi ini urutannya sengaja: data kotor dulu, baru formula, baru pivot. Ada misi kecil di akhir, aku cek langsung hasilnya."
+  },
+  {
+    "slug": "da-looker-dasar",
+    "position_id": "data_analyst",
+    "title": "Looker Studio Dasar",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 2,
+    "story_intro": "Dashboard bulanan tim kita pakai Looker Studio. Gratis, cukup powerful, dan direksi sukanya lihat visual bukan tabel mentah. Pelajari dua materi ini, nanti kamu yang pegang salah satu halaman dashboard-nya."
+  },
+  {
+    "slug": "mkt-campaign-dasar",
+    "position_id": "marketing_analyst",
+    "title": "Metrik Campaign & Funnel",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "Sebelum kamu pegang data campaign beneran, kita samain dulu bahasanya. CTR, CPA, ROAS, funnel, ini vocabulary wajib di tim ini. Materinya nggak panjang, tapi misinya aku bikin mikir dikit. Campaign pertamaku dulu flop total gara-gara nggak ngerti beginian, jadi tolong seriusin ya."
+  },
+  {
+    "slug": "fin-pnl-dasar",
+    "position_id": "finance_analyst",
+    "title": "Membaca P&L & Excel Finance",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "Di tim finance, satu angka salah bisa jadi masalah besar. Aku pernah nemu error 2 miliar cuma karena satu formula. Jadi sebelum kamu pegang laporan, pahami dulu struktur P&L dan disiplin kerja di Excel finance. Dua materi, satu misi. Kerjakan teliti."
+  },
+  {
+    "slug": "hr-rekrutmen-dasar",
+    "position_id": "hr_generalist",
+    "title": "Dasar Rekrutmen & Rekap HR",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "Kerja HR itu kelihatannya soal orang, tapi separuhnya soal data orang. Funnel rekrutmen, rekap karyawan, semua harus rapi. Dua materi ini bekal kamu bantu proses hiring bulan ini. Misinya nanti aku review sendiri."
+  },
+  {
+    "slug": "bd-pipeline-dasar",
+    "position_id": "bizdev",
+    "title": "Pipeline & Partnership Dasar",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "BizDev itu bukan cuma jago ngomong. Yang bikin deal jalan adalah pipeline yang rapi dan riset yang bener sebelum ketemu partner. Dua materi ini standar kerja tim kita. Misinya simulasi riset partner beneran, anggap serius ya."
+  },
+
+  {
+    "slug": "da-sql-day2",
+    "position_id": "data_analyst",
+    "title": "SQL untuk Analisis",
+    "track": "tools",
+    "day": 2,
+    "sort_order": 1,
+    "teaser": "Rizky bilang data penjualan asli ada di database, bukan Excel. Saatnya belajar narik data sendiri pakai SQL. Query pertamamu langsung dipakai tim."
+  },
+  {
+    "slug": "da-storytelling-day3",
+    "position_id": "data_analyst",
+    "title": "Dashboard & Data Storytelling",
+    "track": "tools",
+    "day": 3,
+    "sort_order": 1,
+    "teaser": "Diana minta kamu presentasi temuanmu ke direksi minggu ini. Analisis bagus tidak cukup, kamu harus bisa menceritakannya."
+  },
+  {
+    "slug": "mkt-ab-test-day2",
+    "position_id": "marketing_analyst",
+    "title": "A/B Testing & Optimasi Campaign",
+    "track": "tools",
+    "day": 2,
+    "sort_order": 1,
+    "teaser": "Budget campaign Lumière naik 2x bulan depan. Dinda mau kamu yang pegang eksperimennya, tapi kamu harus paham dulu cara test yang benar."
+  },
+  {
+    "slug": "fin-budgeting-day2",
+    "position_id": "finance_analyst",
+    "title": "Budgeting & Variance Analysis",
+    "track": "tools",
+    "day": 2,
+    "sort_order": 1,
+    "teaser": "Siklus budgeting Q3 dimulai. Andi mau kamu ikut rapat budgeting pertamamu, tapi ada yang harus kamu kuasai dulu."
+  },
+  {
+    "slug": "hr-interview-day2",
+    "position_id": "hr_generalist",
+    "title": "Teknik Interview & Screening",
+    "track": "tools",
+    "day": 2,
+    "sort_order": 1,
+    "teaser": "Bu Ratna mau kamu ikut jadi interviewer pendamping minggu ini. Sebelum itu, kamu harus paham cara menggali jawaban kandidat."
+  },
+  {
+    "slug": "bd-nego-day2",
+    "position_id": "bizdev",
+    "title": "Negosiasi & Struktur Deal",
+    "track": "tools",
+    "day": 2,
+    "sort_order": 1,
+    "teaser": "Ada calon partner besar yang mau ketemu minggu depan. Reza bilang kamu boleh ikut, asal sudah paham dasar-dasar struktur deal."
+  }
+]

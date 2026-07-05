@@ -9,7 +9,7 @@ Repo: github.com/masdata-95/kantoran (Private)
 ## Tech Stack
 - Frontend: Next.js 16.2.7 + TypeScript + Tailwind v4
 - Auth + DB: Supabase (Google OAuth, PostgreSQL, RLS)
-- AI: Multi-provider — Groq (primary) → Gemini (fallback) → OpenRouter (last resort)
+- AI: Multi-provider — Gemini (paid, primary) → Groq (fallback) → OpenRouter (last resort)
 - Deploy: Vercel (team: masdatabusiness-9486)
 - Tailwind: v4 — pakai @import "tailwindcss" di globals.css, BUKAN tailwind.config.ts
 
@@ -52,10 +52,31 @@ Kantor: Jakarta Selatan, Hybrid 3x WFO/minggu
 - career_switch: Rp 6-9 juta (Mid-Level)
 
 ## AI System (lib/ai.ts)
-Multi-provider dengan key rotation:
+Multi-provider dengan key rotation, urutan: Gemini (paid) → Groq → OpenRouter:
+- GEMINI_API_KEY_1 sampai _5 (gemini-2.5-flash, key di header x-goog-api-key)
 - GROQ_API_KEY_1 sampai _5 (llama-3.3-70b-versatile)
-- GEMINI_API_KEY_1 sampai _5 (gemini-2.0-flash-exp)
-- OPENROUTER_API_KEY (fallback)
+- OPENROUTER_API_KEY (last resort, model :free)
+- `callAI(messages, systemPrompt, opts)` — opts: `{ maxTokens, temperature, json, clean, deadlineMs }`. Return `AIResult | null` (null = semua provider gagal; route yang menentukan pesan error).
+- `json: true` → structured output (Gemini responseMimeType / Groq response_format), temp 0.3, cleanResponse dimatikan. Wajib untuk endpoint yang parse JSON (cv-review, review via lib/reviewTask.ts).
+- Deadline budget total 25s mencegah rantai fallback melewati maxDuration 30s.
+- Rate limiting harian per user via lib/rateLimit.ts + RPC bump_usage (chat 300, review 25, cv 10, mission 30). Migration: supabase-migrations/002_rate_limits.sql.
+- Auth API: verifikasi JWT lokal (jose) di lib/serverAuth.ts; set SUPABASE_JWT_SECRET di env untuk jalur tercepat, fallback otomatis ke JWKS lalu auth.getUser network.
+
+## CV Kantoran (/cv — satelit AI CV scorer)
+- app/cv/page.tsx — upload PDF/DOCX/TXT (maks 4MB, pre-check client) atau tempel manual, autofill dari profil
+- app/api/cv-extract/route.ts — ekstraksi teks (unpdf/mammoth), runtime nodejs
+- app/api/cv-review/route.ts — skor ATS + rewrite via callAI json mode (2500 token)
+- lib/cvPrompt.ts — prompt JSON schema
+
+## Vantara Academy (sistem belajar per posisi)
+Konsep: e-course DENGAN story + misi. Room 'academy' di sidebar simulator (terbuka step >= 4), supervisor meng-assign "training module" (in-story). Modul day 1 gratis; day >= 2 tampil sebagai kartu teaser terkunci (umpan premium, konten tidak dikirim API).
+- Konten di Supabase (lesson_modules, lessons, lesson_progress) — update tanpa deploy. Migration: supabase-migrations/003_academy.sql.
+- Tiap posisi: modul tools (+ modul bisnis bersama position_id='all'), track 'tools' | 'business'. Lesson type: text | video | mission.
+- Video: kolom youtube_video_id nullable — isi di Supabase Studio kapan saja (lite-embed di YouTubeEmbed.tsx, placeholder "Video menyusul" kalau kosong).
+- Misi direview AI supervisor via lib/reviewTask.ts (engine sama dengan task review → suara konsisten). Rubric mission JSONB tidak pernah dikirim ke client.
+- Authoring: content/lessons/*.md (frontmatter) + modules.json → `npm run seed:lessons` (idempotent, upsert by slug). Seed TIDAK menimpa youtube_video_id yang diisi manual.
+- API: GET /api/lessons?position=..., POST /api/lessons/progress, POST /api/lessons/submit.
+- UI: components/academy/ (AcademyPanel, LessonView, MarkdownLite, YouTubeEmbed) — di-load dinamis, react-markdown tidak membebani bundle chat.
 
 ## Database (Supabase)
 Project ID: owgxrhtmljwjxzvjcdlt
@@ -63,6 +84,9 @@ Tables:
 - user_progress: step, coins, tasks_done, streak, chat_history, background, position
 - user_profiles: full_name, gender, city, education (JSONB), experience (JSONB), skills (TEXT[]), category
 - waitlist: email, name, rating, feedback, wishlist, position_tried
+- api_usage: rate limiting harian (user_id, bucket, day, count) + RPC bump_usage
+- lesson_modules / lessons / lesson_progress: Vantara Academy (lihat section di bawah)
+Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio SQL Editor.
 
 ## Key Files
 - components/SimulatorApp.tsx — main simulator (~2000 lines)
@@ -71,8 +95,11 @@ Tables:
 - components/JobListing.tsx — grid loker + modal
 - components/WishlistForm.tsx — ending form
 - components/OnboardingSlides.tsx — 4 slide sebelum login
-- lib/ai.ts — multi-provider AI system
-- lib/prompts.ts — system prompts semua NPC
+- lib/ai.ts — multi-provider AI system (Gemini primary, json mode, deadline budget)
+- lib/reviewTask.ts — engine review terstruktur (dipakai /api/review + misi Academy)
+- lib/rateLimit.ts — rate limit harian per user (Postgres RPC)
+- lib/lessons.ts — tipe DTO Academy
+- lib/prompts.ts — system prompts semua NPC (+ getTaskReviewPromptJSON, token [SELESAI] Sinta)
 - lib/positions.ts — data 5 posisi + NPC config
 - lib/profile.ts — UserProfile types
 - lib/skills.ts — 70+ skills preset

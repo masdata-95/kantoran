@@ -28,37 +28,7 @@ export default function SimulatorPage() {
   const [simCoins, setSimCoins] = useState(0)
   const [simTasksDone, setSimTasksDone] = useState(0)
 
-  useEffect(() => {
-    initApp()
-  }, [])
-
-  const initApp = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const u = session?.user ?? null
-    setUser(u)
-
-    if (!u) {
-      // Langsung ke login Google — onboarding slides dihilangkan
-      setStage('login')
-      return
-    }
-
-    await checkUserState(u)
-
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      const newUser = session?.user ?? null
-      setUser(newUser)
-      if (!newUser) {
-        setStage('login')
-      } else if (newUser.id !== u?.id) {
-        // Different user logged in
-        await checkUserState(newUser)
-      }
-    })
-  }
-
-  const checkUserState = async (u: User) => {
+  async function checkUserState() {
     try {
       // Check profile
       const profileRes = await authFetch('/api/profile')
@@ -73,8 +43,8 @@ export default function SimulatorPage() {
       const bg = existingProfile.category || ''
       setBackground(bg as BackgroundType | '')
 
-      // Check progress
-      const progressRes = await authFetch('/api/progress')
+      // Check progress — light: tanpa chat_history, cuma butuh step/position untuk routing
+      const progressRes = await authFetch('/api/progress?light=1')
       const { progress } = await progressRes.json()
 
       if (progress && progress.step > 0 && progress.step < 10) {
@@ -96,6 +66,41 @@ export default function SimulatorPage() {
       setStage('profile_setup')
     }
   }
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined
+
+    const initApp = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const u = session?.user ?? null
+      setUser(u)
+
+      if (!u) {
+        // Langsung ke login Google — onboarding slides dihilangkan
+        setStage('login')
+        return
+      }
+
+      await checkUserState()
+
+      // Listen for auth changes — simpan subscription supaya bisa di-unsubscribe
+      // (tanpa ini, remount menumpuk listener duplikat)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const newUser = session?.user ?? null
+        setUser(newUser)
+        if (!newUser) {
+          setStage('login')
+        } else if (newUser.id !== u?.id) {
+          // Different user logged in
+          await checkUserState()
+        }
+      })
+      unsubscribe = () => subscription.unsubscribe()
+    }
+
+    initApp()
+    return () => unsubscribe?.()
+  }, [])
 
   // Loading
   if (stage === 'loading') return (

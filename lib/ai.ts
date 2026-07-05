@@ -1,5 +1,5 @@
 // Multi-provider AI with smart fallback
-// Groq (primary) → Gemini (fallback) → OpenRouter (last resort)
+// Gemini (paid, primary) → Groq (fallback) → OpenRouter (last resort)
 
 const GROQ_KEYS = [
   process.env.GROQ_API_KEY_1,
@@ -64,63 +64,32 @@ export interface ChatMessage {
   content: string
 }
 
-// ── GROQ ─────────────────────────────────────────
-async function callGroq(
-  messages: ChatMessage[],
-  systemPrompt: string,
-  maxTokens: number
-): Promise<string | null> {
-  const key = getNextGroqKey()
-  if (!key) return null
-
-  try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: maxTokens,
-        temperature: 0.85,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages
-        ]
-      }),
-      signal: AbortSignal.timeout(8000)
-    })
-
-    if (!res.ok) {
-      const err = await res.text()
-      console.warn(`Groq key failed (${res.status}):`, err.substring(0, 100))
-      markKeyFailed(key)
-      return null
-    }
-
-    const data = await res.json()
-    const reply = data.choices?.[0]?.message?.content
-    if (!reply) {
-      markKeyFailed(key)
-      return null
-    }
-
-    console.log(`✓ Groq success (key index: ${groqIndex})`)
-    return reply
-
-  } catch (err) {
-    console.warn(`Groq error:`, err)
-    markKeyFailed(key)
-    return null
-  }
+export interface AIOptions {
+  maxTokens?: number      // default 250
+  temperature?: number    // default 0.85; pakai 0.3 untuk output JSON
+  json?: boolean          // structured output (response_format / responseMimeType)
+  clean?: boolean         // default true; otomatis false saat json
+  deadlineMs?: number     // total budget semua provider, default 25000 (< maxDuration 30s)
 }
 
-// ── GEMINI ───────────────────────────────────────
+export interface AIResult {
+  text: string
+  provider: 'gemini' | 'groq' | 'openrouter'
+}
+
+interface CallConfig {
+  maxTokens: number
+  temperature: number
+  json: boolean
+}
+
+// ── GEMINI (PRIMARY — paid) ──────────────────────
+const GEMINI_TIMEOUT_MS = 12000
+
 async function callGemini(
   messages: ChatMessage[],
   systemPrompt: string,
-  maxTokens: number
+  cfg: CallConfig
 ): Promise<string | null> {
   const key = getNextGeminiKey()
   if (!key) return null
@@ -133,19 +102,21 @@ async function callGemini(
 
   try {
     // gemini-2.0-flash-exp & seluruh keluarga 2.0 sudah di-shutdown per 1 Juni 2026 — pakai 2.5-flash
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // Key di header, bukan query string — query string gampang bocor lewat log/proxy
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents,
         generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature: 0.85,
+          maxOutputTokens: cfg.maxTokens,
+          temperature: cfg.temperature,
           // 2.5-flash default-nya "thinking" — matikan agar token output tidak habis untuk reasoning
           thinkingConfig: { thinkingBudget: 0 },
+          ...(cfg.json ? { responseMimeType: 'application/json' } : {}),
         },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -154,7 +125,7 @@ async function callGemini(
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
         ]
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS)
     })
 
     if (!res.ok) {
@@ -181,11 +152,68 @@ async function callGemini(
   }
 }
 
+// ── GROQ (FALLBACK) ──────────────────────────────
+const GROQ_TIMEOUT_MS = 8000
+
+async function callGroq(
+  messages: ChatMessage[],
+  systemPrompt: string,
+  cfg: CallConfig
+): Promise<string | null> {
+  const key = getNextGroqKey()
+  if (!key) return null
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: cfg.maxTokens,
+        temperature: cfg.temperature,
+        ...(cfg.json ? { response_format: { type: 'json_object' } } : {}),
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages
+        ]
+      }),
+      signal: AbortSignal.timeout(GROQ_TIMEOUT_MS)
+    })
+
+    if (!res.ok) {
+      const err = await res.text()
+      console.warn(`Groq key failed (${res.status}):`, err.substring(0, 100))
+      markKeyFailed(key)
+      return null
+    }
+
+    const data = await res.json()
+    const reply = data.choices?.[0]?.message?.content
+    if (!reply) {
+      markKeyFailed(key)
+      return null
+    }
+
+    console.log(`✓ Groq success (key index: ${groqIndex})`)
+    return reply
+
+  } catch (err) {
+    console.warn(`Groq error:`, err)
+    markKeyFailed(key)
+    return null
+  }
+}
+
 // ── OPENROUTER (LAST RESORT) ─────────────────────
+const OPENROUTER_TIMEOUT_MS = 8000
+
 async function callOpenRouter(
   messages: ChatMessage[],
   systemPrompt: string,
-  maxTokens: number
+  cfg: CallConfig
 ): Promise<string | null> {
   if (!OPENROUTER_KEY) return null
 
@@ -206,14 +234,15 @@ async function callOpenRouter(
           'deepseek/deepseek-chat-v3-0324:free',
           'qwen/qwen3-235b-a22b:free',
         ],
-        max_tokens: maxTokens,
-        temperature: 0.85,
+        max_tokens: cfg.maxTokens,
+        temperature: cfg.temperature,
+        ...(cfg.json ? { response_format: { type: 'json_object' } } : {}),
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages
         ]
       }),
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS)
     })
 
     if (!res.ok) return null
@@ -225,40 +254,51 @@ async function callOpenRouter(
 }
 
 // ── MAIN ENTRY ───────────────────────────────────
-// clean=true membersihkan markdown/dash (untuk chat NPC). clean=false untuk output
-// terstruktur seperti JSON (CV review) yang TIDAK boleh disentuh cleanResponse.
+// Urutan: Gemini (paid) → Groq → OpenRouter.
+// Return null saat SEMUA provider gagal — route yang menentukan pesan ke user.
+// Deadline budget mencegah rantai fallback melewati maxDuration serverless.
 export async function callAI(
   messages: ChatMessage[],
   systemPrompt: string,
-  _npcId: string = 'sinta',
-  maxTokens: number = 250,
-  clean: boolean = true
-): Promise<string> {
-  const finish = (text: string) => (clean ? cleanResponse(text) : text)
+  opts: AIOptions = {}
+): Promise<AIResult | null> {
+  const maxTokens = opts.maxTokens ?? 250
+  const temperature = opts.temperature ?? (opts.json ? 0.3 : 0.85)
+  const json = opts.json ?? false
+  const clean = json ? false : (opts.clean ?? true)
+  const deadline = Date.now() + (opts.deadlineMs ?? 25000)
 
-  // Try Groq first (fastest, smartest free)
-  for (let attempt = 0; attempt < Math.min(GROQ_KEYS.length, 3); attempt++) {
-    const result = await callGroq(messages, systemPrompt, maxTokens)
-    if (result) return finish(result)
+  const cfg: CallConfig = { maxTokens, temperature, json }
+  const finish = (text: string): string => (clean ? cleanResponse(text) : text)
+  const timeLeft = () => deadline - Date.now()
+
+  // Gemini dulu (paid, primary)
+  for (let attempt = 0; attempt < Math.min(Math.max(GEMINI_KEYS.length, 1), 2); attempt++) {
+    if (timeLeft() < GEMINI_TIMEOUT_MS) break
+    const result = await callGemini(messages, systemPrompt, cfg)
+    if (result) return { text: finish(result), provider: 'gemini' }
   }
 
-  // Try Gemini (fallback)
-  for (let attempt = 0; attempt < Math.min(GEMINI_KEYS.length, 3); attempt++) {
-    const result = await callGemini(messages, systemPrompt, maxTokens)
-    if (result) return finish(result)
+  // Groq (fallback)
+  for (let attempt = 0; attempt < Math.min(GROQ_KEYS.length, 2); attempt++) {
+    if (timeLeft() < GROQ_TIMEOUT_MS) break
+    const result = await callGroq(messages, systemPrompt, cfg)
+    if (result) return { text: finish(result), provider: 'groq' }
   }
 
   // Last resort: OpenRouter
-  const orResult = await callOpenRouter(messages, systemPrompt, maxTokens)
-  if (orResult) return finish(orResult)
+  if (timeLeft() >= OPENROUTER_TIMEOUT_MS) {
+    const orResult = await callOpenRouter(messages, systemPrompt, cfg)
+    if (orResult) return { text: finish(orResult), provider: 'openrouter' }
+  }
 
-  // All failed
   console.error('ALL PROVIDERS FAILED')
-  return clean ? 'Maaf, ada gangguan koneksi sebentar. Coba kirim pesan lagi ya!' : ''
+  return null
 }
 
-// Clean markdown artifacts + buang tanda dash (terlihat seperti tulisan AI)
-function cleanResponse(text: string): string {
+// Clean markdown artifacts + buang tanda dash (terlihat seperti tulisan AI).
+// Di-export karena dipakai juga untuk membersihkan field teks hasil JSON (mis. feedback review).
+export function cleanResponse(text: string): string {
   return text
     .replace(/\*\*(.+?)\*\*/g, '$1')       // **bold** → bold
     .replace(/\*(.+?)\*/g, '$1')            // *italic* → italic
@@ -275,6 +315,3 @@ function cleanResponse(text: string): string {
     .replace(/[ \t]{2,}/g, ' ')             // rapikan spasi ganda
     .trim()
 }
-
-// Backward compatibility export
-export const callOpenRouter_compat = callAI

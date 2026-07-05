@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { callAI } from '@/lib/ai'
-import { getTaskReviewPrompt } from '@/lib/prompts'
+import { reviewSubmission } from '@/lib/reviewTask'
 import { POSITIONS } from '@/lib/positions'
 import { getAuthUser } from '@/lib/serverAuth'
+import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -11,6 +11,10 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    if (!(await checkLimit(user.id, 'review'))) {
+      return NextResponse.json({ error: LIMIT_MESSAGE.review }, { status: 429 })
+    }
 
     const body = await req.json()
     const { positionId, userContext, submission } = body
@@ -24,33 +28,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
     }
 
-    const systemPrompt = getTaskReviewPrompt(
+    const result = await reviewSubmission({
       userContext,
-      position.supervisor.name,
-      position.supervisor.bio,
-      position.taskTitle,
-      position.taskRubric.mustFind,
-      position.taskRubric.goodToMention,
-      submission
-    )
+      supervisorName: position.supervisor.name,
+      supervisorBio: position.supervisor.bio,
+      taskTitle: position.taskTitle,
+      rubric: position.taskRubric,
+      submission,
+    })
 
-    const review = await callAI(
-      [{ role: 'user', content: 'Review hasil kerja saya.' }],
-      systemPrompt,
-      'review',
-      350
-    )
-
-    const isApproved = review.includes('Status: APPROVED') && !review.includes('REVISION NEEDED')
-    const cleanReview = review
-      .replace(/Status: APPROVED/g, '')
-      .replace(/Status: REVISION NEEDED.*$/gm, '')
-      .trim()
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Layanan AI lagi sibuk. Coba submit lagi 1-2 menit ya.' },
+        { status: 503 }
+      )
+    }
 
     return NextResponse.json({
-      review: cleanReview,
-      isApproved,
-      status: isApproved ? 'APPROVED' : 'REVISION NEEDED'
+      review: result.review,
+      isApproved: result.isApproved,
+      status: result.isApproved ? 'APPROVED' : 'REVISION NEEDED'
     })
 
   } catch (error) {

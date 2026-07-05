@@ -15,8 +15,10 @@ export async function POST(req: NextRequest) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 })
     }
-    if (file.size > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File terlalu besar (maks 8MB)' }, { status: 400 })
+    // 4MB — di bawah batas body Vercel (4.5MB) supaya error selalu dari kita, bukan platform.
+    // Naikkan ke 10MB setelah pindah Cloudflare (batas body 100MB).
+    if (file.size > 4 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File terlalu besar (maks 4MB). Kompres dulu ya.' }, { status: 400 })
     }
 
     const name = file.name.toLowerCase()

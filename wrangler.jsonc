@@ -1,0 +1,24 @@
+// Konfigurasi Cloudflare Workers untuk kantoran (via @opennextjs/cloudflare).
+// Deploy: npm run deploy | Preview lokal (workerd): npm run preview
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kantoran",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-01",
+  // nodejs_compat wajib: Buffer dipakai di app/api/cv-extract (unpdf/mammoth)
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Secrets di-set via CLI, JANGAN ditulis di sini:
+  //   npx wrangler secret put GEMINI_API_KEY_1
+  //   npx wrangler secret put GROQ_API_KEY_1
+  //   npx wrangler secret put OPENROUTER_API_KEY
+  //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+  //   npx wrangler secret put SUPABASE_JWT_SECRET
+  // NEXT_PUBLIC_* bersifat build-time (di-inline saat next build dari .env.local / env CI).
+}

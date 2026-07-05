@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
         streak: progress.streak,
         last_active: new Date().toISOString(),
         chat_history: progress.chatHistory || {},
-        task_submissions: progress.taskSubmissions || {},
       }, {
         onConflict: 'user_id'
       })
@@ -52,9 +51,15 @@ export async function GET(req: NextRequest) {
     const user = await getAuthUser(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // ?light=1 → tanpa chat_history (kolom terbesar) — cukup untuk routing stage awal
+    const light = req.nextUrl.searchParams.get('light') === '1'
+    const columns = light
+      ? 'step, position, background, first_name, coins, tasks_done'
+      : '*'
+
     const { data, error } = await getServiceClient()
       .from('user_progress')
-      .select('*')
+      .select(columns)
       .eq('user_id', user.id)
       .single()
 

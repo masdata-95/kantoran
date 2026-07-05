@@ -3,6 +3,7 @@ import { callAI, type ChatMessage } from '@/lib/ai'
 import { getSintaPrompt, getSupPrompt, getJnrPrompt, getMgrPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
 import { getAuthUser } from '@/lib/serverAuth'
+import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,11 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Limit tercapai → balas sebagai reply biasa (200) supaya UI chat tidak rusak
+    if (!(await checkLimit(user.id, 'chat'))) {
+      return NextResponse.json({ reply: LIMIT_MESSAGE.chat })
+    }
 
     const body = await req.json()
     const { npcId, messages, userContext, positionId } = body
@@ -42,8 +48,22 @@ export async function POST(req: NextRequest) {
         systemPrompt = getSintaPrompt(userContext)
     }
 
-    const reply = await callAI(messages as ChatMessage[], systemPrompt, npcId, 250)
-    return NextResponse.json({ reply })
+    const result = await callAI(messages as ChatMessage[], systemPrompt, { maxTokens: 250 })
+    if (!result) {
+      return NextResponse.json({
+        reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!'
+      })
+    }
+
+    // Sinta menandai penutupan interview dengan token [SELESAI] — strip sebelum dikirim ke user
+    let reply = result.text
+    let interviewDone = false
+    if (npcId === 'sinta' && reply.includes('[SELESAI]')) {
+      interviewDone = true
+      reply = reply.replace(/\s*\[SELESAI\]\s*/g, ' ').trim()
+    }
+
+    return NextResponse.json({ reply, interviewDone })
 
   } catch (error) {
     console.error('Chat API error:', error)

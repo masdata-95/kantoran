@@ -1,0 +1,16 @@
+# Template untuk .dev.vars (dipakai `npm run preview` — workerd lokal).
+# Copy jadi .dev.vars lalu isi nilai aslinya. .dev.vars sudah di-gitignore.
+# Isinya sama dengan secret server di .env.local.
+
+GEMINI_API_KEY_1=
+# GEMINI_API_KEY_2..5 opsional
+
+GROQ_API_KEY_1=
+# GROQ_API_KEY_2..5 opsional
+
+OPENROUTER_API_KEY=
+
+SUPABASE_SERVICE_ROLE_KEY=
+# Opsional tapi disarankan: verifikasi JWT lokal tanpa network round-trip.
+# Ambil dari Supabase Studio -> Project Settings -> API -> JWT Secret (legacy).
+SUPABASE_JWT_SECRET=

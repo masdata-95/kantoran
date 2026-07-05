@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI } from '@/lib/ai'
+import { extractJSON } from '@/lib/reviewTask'
 import { getCVReviewPrompt } from '@/lib/cvPrompt'
 import { getAuthUser } from '@/lib/serverAuth'
+import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
-// Ambil objek JSON pertama dari teks model (toleran terhadap pagar kode / teks nyasar)
-function extractJSON(text: string): unknown {
-  let t = text.replace(/```json/gi, '').replace(/```/g, '').trim()
-  const start = t.indexOf('{')
-  const end = t.lastIndexOf('}')
-  if (start >= 0 && end > start) t = t.slice(start, end + 1)
-  return JSON.parse(t)
+interface CVResultShape {
+  overallScore?: unknown
+  sections?: unknown
 }
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    if (!(await checkLimit(user.id, 'cv'))) {
+      return NextResponse.json({ error: LIMIT_MESSAGE.cv }, { status: 429 })
+    }
 
     const body = await req.json()
     const cvText: string = (body.cvText || '').toString().slice(0, 12000)
@@ -30,14 +32,33 @@ export async function POST(req: NextRequest) {
     }
 
     const prompt = getCVReviewPrompt(cvText, targetRole, jobDesc)
-    // clean=false supaya JSON tidak dirusak cleanResponse
-    const raw = await callAI([{ role: 'user', content: 'Analisis CV ini sekarang.' }], prompt, 'cv', 1100, false)
+    // json: true → structured output + temperature rendah; 2500 token agar JSON lengkap tidak terpotong
+    const aiResult = await callAI(
+      [{ role: 'user', content: 'Analisis CV ini sekarang.' }],
+      prompt,
+      { maxTokens: 2500, json: true, temperature: 0.3 }
+    )
 
-    let result: unknown
+    // Bedakan: semua provider gagal ≠ hasil tidak bisa diparse
+    if (!aiResult) {
+      return NextResponse.json(
+        { error: 'Layanan AI lagi sibuk. Coba lagi 1-2 menit ya.' },
+        { status: 503 }
+      )
+    }
+
+    let result: CVResultShape
     try {
-      result = extractJSON(raw)
+      result = extractJSON(aiResult.text) as CVResultShape
     } catch {
-      console.error('CV review JSON parse gagal:', raw.slice(0, 200))
+      // Log ekor respons — kalau terpotong, kelihatan di sini
+      console.error(`CV review JSON parse gagal (provider: ${aiResult.provider}), tail:`, aiResult.text.slice(-300))
+      return NextResponse.json({ error: 'Gagal memproses hasil. Coba lagi sebentar ya.' }, { status: 502 })
+    }
+
+    // Validasi shape minimal sebelum dikirim ke client
+    if (typeof result.overallScore !== 'number' || !Array.isArray(result.sections)) {
+      console.error(`CV review shape tidak valid (provider: ${aiResult.provider}):`, aiResult.text.slice(0, 200))
       return NextResponse.json({ error: 'Gagal memproses hasil. Coba lagi sebentar ya.' }, { status: 502 })
     }
 

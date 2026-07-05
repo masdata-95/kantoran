@@ -78,6 +78,13 @@ export default function CVPage() {
   const autofill = () => { if (profile) { setCvText(buildCVText(profile)); setUploadedName('') } }
 
   const handleFile = async (file: File) => {
+    // Pre-check di client — batas body Vercel 4.5MB memutus request sebelum sampai handler,
+    // jadi tanpa cek ini user dapat error menyesatkan
+    if (file.size > 4 * 1024 * 1024) {
+      setError('File maksimal 4MB. Kompres PDF-mu dulu ya, atau tempel teksnya manual.')
+      if (fileRef.current) fileRef.current.value = ''
+      return
+    }
     setError(''); setUploading(true)
     try {
       const fd = new FormData()

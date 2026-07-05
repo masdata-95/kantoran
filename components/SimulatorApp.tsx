@@ -1,10 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamicImport from 'next/dynamic'
 import type { User } from '@supabase/supabase-js'
 import { supabase, authFetch } from '@/lib/supabase'
 import { POSITIONS, SALARY_RANGE, type BackgroundType } from '@/lib/positions'
-import * as XLSX from 'xlsx'
+// xlsx di-load dinamis saat upload file saja — library berat, jangan masuk bundle awal
+
+// Academy di-load dinamis — react-markdown dkk tidak membebani bundle chat utama
+const AcademyPanel = dynamicImport(() => import('@/components/academy/AcademyPanel'), { ssr: false })
 
 // ── TYPES ─────────────────────────────────────────
 interface Message {
@@ -170,11 +174,19 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     loadProgress()
   }, [user.id])
 
-  // Auto-save every 30s
+  // Mirror state ke ref supaya interval auto-save tidak perlu dibuat ulang tiap render
+  const stateRef = useRef(state)
+  useEffect(() => { stateRef.current = state }, [state])
+
+  // Auto-save every 30s — interval dibuat SEKALI; dirty-check di saveProgress
+  // memastikan user idle tidak menghasilkan write ke database sama sekali
   useEffect(() => {
-    const iv = setInterval(() => { if (state.step > 0) saveProgress() }, 30000)
+    const iv = setInterval(() => {
+      if (stateRef.current.step > 0) saveProgress()
+    }, 30000)
     return () => clearInterval(iv)
-  }, [state])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Save langsung tiap step berubah, transisi penting (offering, kontrak, task) tidak boleh hilang
   useEffect(() => {
@@ -364,28 +376,30 @@ PT Vantara Nusantara`
     }
   }, [progLoading, showApp, initialPosition])
 
+  const lastSavedRef = useRef('')
   const saveProgress = useCallback(async () => {
     try {
-      await authFetch('/api/progress', {
-        method: 'POST',
-        body: JSON.stringify({
-          progress: {
-            firstName: state.firstName,
-            email: state.email || user.email,
-            background: state.background,
-            bgRole: state.bgRole,
-            position: state.position,
-            step: state.step,
-            coins: state.coins,
-            tasksDone: state.tasksDone,
-            streak: state.streak,
-            chatHistory: state.chatHistory,
-            taskSubmissions: {},
-          }
-        })
+      const s = stateRef.current
+      const payload = JSON.stringify({
+        progress: {
+          firstName: s.firstName,
+          email: s.email || user.email,
+          background: s.background,
+          bgRole: s.bgRole,
+          position: s.position,
+          step: s.step,
+          coins: s.coins,
+          tasksDone: s.tasksDone,
+          streak: s.streak,
+          chatHistory: s.chatHistory,
+        }
       })
+      // Dirty-check: jangan tulis ulang blob yang sama ke database
+      if (payload === lastSavedRef.current) return
+      await authFetch('/api/progress', { method: 'POST', body: payload })
+      lastSavedRef.current = payload
     } catch (e) { console.error('Save progress error:', e) }
-  }, [state, user])
+  }, [user])
 
   const addMsg = useCallback((room: string, msg: Omit<Message, 'id'>, silent = false) => {
     const newMsg: Message = { ...msg, id: `${Date.now()}-${Math.random()}` }
@@ -423,7 +437,7 @@ PT Vantara Nusantara`
     return history.slice(-30)
   }, [state.chatHistory])
 
-  const callChat = async (npcId: string, userMsg: string, room: string) => {
+  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; interviewDone: boolean }> => {
     setLoading(true)
     try {
       const history = buildHistory(room, npcId)
@@ -447,9 +461,12 @@ PT Vantara Nusantara`
         })
       })
       const data = await res.json()
-      return (data.reply as string) || 'Maaf, ada gangguan sebentar. Coba lagi ya!'
+      return {
+        reply: (data.reply as string) || 'Maaf, ada gangguan sebentar. Coba lagi ya!',
+        interviewDone: Boolean(data.interviewDone),
+      }
     } catch {
-      return 'Maaf ada gangguan koneksi. Coba lagi ya!'
+      return { reply: 'Maaf ada gangguan koneksi. Coba lagi ya!', interviewDone: false }
     } finally {
       setLoading(false)
     }
@@ -476,7 +493,7 @@ PT Vantara Nusantara`
     addMsg(room, { role: 'user', text: msg }, true)
 
     // callChat now builds full history from chatHistory for AI memory
-    const reply = await callChat(npcId, msg, room)
+    const { reply, interviewDone: serverSaysDone } = await callChat(npcId, msg, room)
 
     addMsg(room, { role: 'npc', npcId, text: reply }, true)
     addCoins(2)
@@ -502,25 +519,18 @@ PT Vantara Nusantara`
     if (npcId === 'sinta') {
       setState(prev => {
         if (!prev.interviewDone) {
+          // Sumber utama: token [SELESAI] dari server. Fallback: keyword penutup yang
+          // spesifik (frasa umum seperti "selamat siang"/"selamat ya" dulu bikin
+          // interview selesai prematur), dan hanya setelah interview cukup panjang.
+          const userMsgCount = (prev.chatHistory['hr_office'] || []).filter(m => m.role === 'user').length
           const doneSignals = [
-            // Penutup interview
-            'sampai jumpa', 'sampai bertemu', 'sampai ketemu lagi',
-            'terima kasih sudah', 'senang berbicara', 'nice talking',
-            'tutup dulu', 'akhiri', 'semoga sukses', 'selamat ya',
-            // Proses selanjutnya
-            'langkah selanjutnya', 'proses selanjutnya', 'next step',
-            'akan kami hubungi', 'akan menghubungi', 'kami hubungi',
-            'kabar dari kami', 'keputusan dalam', 'beberapa hari',
-            'tim kami akan', '1-2 hari', '2-3 hari',
-            // Keputusan diterima
+            'sampai jumpa di hari pertama', 'sampai ketemu di kantor',
+            'akan kami kirimkan offering', 'offering letter',
             'kamu diterima', 'selamat bergabung', 'welcome to the team',
-            'offering', 'penawaran', 'kami terima', 'bergabung dengan kami',
-            'keputusan akhir', 'hasil wawancara', 'proses rekrutmen',
-            // Penutup natural
-            'kami tutup', 'bye', 'sampai nanti', 'selamat siang',
-            'selamat sore', 'hati-hati', 'sukses ya'
+            'kami tutup interview', 'interview kita cukup sampai',
           ]
-          const isDone = doneSignals.some(s => reply.toLowerCase().includes(s))
+          const isDone = serverSaysDone ||
+            (userMsgCount >= 6 && doneSignals.some(s => reply.toLowerCase().includes(s)))
           if (isDone) {
             setTimeout(() => {
               addMsg('hr_office', {
@@ -716,6 +726,7 @@ PT Vantara Nusantara`
               }
             })
             setTimeout(() => {
+              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oh iya, satu lagi. Aku udah assign beberapa training module buat kamu di Academy, ada di sidebar. Selesaikan yang hari ini ya, itu bekal buat task pertamamu.` })
               addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Nah itu overview-nya. Sekarang standup dulu, hari ini rencananya gimana ${state.firstName}?` })
               addMsg('sup_chat', {
                 role: 'learn',
@@ -784,6 +795,7 @@ PT Vantara Nusantara`
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file)
     try {
+      const XLSX = await import('xlsx')
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
       let extracted = `File: ${file.name}\n`
@@ -959,6 +971,7 @@ PT Vantara Nusantara`
     { id: 'meeting',     icon: '🪑', label: 'Meeting',      locked: state.phaseUnlocked < 1 },
     { id: 'sup_chat',    icon: '👤', label: 'Supervisor',   locked: state.phaseUnlocked < 1 },
     { id: 'workspace',   icon: '🖥️', label: 'Workspace',   locked: state.phaseUnlocked < 1 },
+    { id: 'academy',     icon: '🎓', label: 'Academy',      locked: state.step < 4 },
     { id: 'file_manager',icon: '📁', label: 'File Manager', locked: state.step < 5 },
     { id: 'pantry',      icon: '☕', label: 'Pantry',       locked: state.phaseUnlocked < 1 },
   ]
@@ -1224,6 +1237,27 @@ PT Vantara Nusantara`
           {view !== 'inbox' && (
             <div ref={msgsRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 
+              {/* Academy — training module per posisi (story + misi) */}
+              {view === 'academy' && pos && (
+                <AcademyPanel
+                  positionId={state.position}
+                  userContext={{
+                    firstName: state.firstName,
+                    email: state.email || user.email || '',
+                    background: state.background,
+                    bgRole: state.bgRole,
+                    position: state.position,
+                    experience: state.experience,
+                    motivation: state.motivation,
+                    step: state.step,
+                  }}
+                  supervisorName={pos.supervisor.name}
+                  supervisorInitials={NPC_INITIALS[state.position]?.sup || '??'}
+                  supervisorAvClass={pos.supervisor.avClass}
+                  onXP={addCoins}
+                />
+              )}
+
               {/* Workspace special view */}
               {view === 'workspace' && (
                 <WorkspaceView
@@ -1240,7 +1274,7 @@ PT Vantara Nusantara`
               )}
 
               {/* Regular messages */}
-              {view !== 'workspace' && (state.chatHistory[view] || []).map(msg => (
+              {view !== 'workspace' && view !== 'academy' && (state.chatHistory[view] || []).map(msg => (
                 <MessageBubble
                   key={msg.id}
                   msg={msg}
@@ -1266,7 +1300,7 @@ PT Vantara Nusantara`
               )}
 
               {/* Empty state */}
-              {view !== 'workspace' && (state.chatHistory[view] || []).length === 0 && (
+              {view !== 'workspace' && view !== 'academy' && (state.chatHistory[view] || []).length === 0 && (
                 <EmptyRoom view={view} state={state} />
               )}
 
@@ -1369,6 +1403,7 @@ function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state
     slack:       { initials: '💬', avClass: 'av-teal', name: `#${pos?.dept.toLowerCase().replace(/[^a-z]/g, '-') || 'general'}`, status: 'Group channel tim', tag: 'Slack', tagBg: 'bg-[#E1F5EE] text-[#0F6E56]' },
     meeting:     { initials: '🪑', avClass: 'av-teal', name: 'Meeting Room', status: 'Daily standup & rapat tim', tag: '', tagBg: '' },
     workspace:   { initials: '🖥️', avClass: 'av-teal', name: 'Workspace', status: 'Task & submit hasil kerja', tag: '', tagBg: '' },
+    academy:     { initials: '🎓', avClass: 'av-teal', name: 'Vantara Academy', status: 'Training module dari supervisormu', tag: '', tagBg: '' },
     file_manager:{ initials: '📁', avClass: 'av-amber', name: 'File Manager', status: 'File task & dokumen kerja', tag: '', tagBg: '' },
     pantry:      { initials: '☕', avClass: 'av-amber', name: 'Pantry', status: 'Tempat gosip & ngobrol santai', tag: 'Pantry', tagBg: 'bg-[#FAEEDA] text-[#854F0B]' },
     sup_chat:    { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu`, tag: 'Supervisor', tagBg: 'bg-[#E8F0FC] text-[#1A4A8A]' },
