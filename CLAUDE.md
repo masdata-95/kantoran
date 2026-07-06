@@ -120,6 +120,9 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - Class btn-teal sudah didefinisikan di globals.css
 - NPC avatar classes: av-teal, av-blue, av-purple, av-amber
 
+## Backlog Aktif
+Lihat CATATAN-PENGEMBANGAN.md — temuan beta Juli 2026 yang belum dikerjakan (interview lompat topik karena pesan error mencemari history AI, dugaan limit per-menit Gemini di env production, nego gaji ter-skip). Cek file itu dulu sebelum mengerjakan perbaikan interview/AI.
+
 ## Common Issues & Solutions
 - Tailwind v4: tidak pakai tailwind.config.ts, semua lewat @import di globals.css
 - Supabase RLS: pakai SUPABASE_SERVICE_ROLE_KEY untuk server-side, bukan anon key

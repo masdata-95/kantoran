@@ -50,8 +50,11 @@ export async function POST(req: NextRequest) {
 
     const result = await callAI(messages as ChatMessage[], systemPrompt, { maxTokens: 250 })
     if (!result) {
+      // failed: true → client render sebagai banner error + tombol retry,
+      // BUKAN bubble NPC (pesan palsu di history bikin AI lompat topik)
       return NextResponse.json({
-        reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!'
+        reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!',
+        failed: true,
       })
     }
 
@@ -67,8 +70,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Chat API error:', error)
-    return NextResponse.json({ 
-      reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!' 
+    return NextResponse.json({
+      reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!',
+      failed: true,
     }, { status: 200 })
   }
 }

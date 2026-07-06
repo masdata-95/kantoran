@@ -17,6 +17,8 @@ interface Message {
   npcId?: string
   text?: string
   data?: Record<string, unknown>
+  // Banner gangguan koneksi — TIDAK pernah masuk history AI (lihat buildHistory)
+  isError?: boolean
 }
 
 interface Notification {
@@ -64,6 +66,16 @@ const NPC_INITIALS: Record<string, Record<string, string>> = {
 
 const NPC_AV: Record<string, string> = {
   sinta: 'av-teal', sup: 'av-blue', mgr: 'av-purple', jnr: 'av-amber'
+}
+
+// Room → NPC yang menjawab di room itu (dipakai handleSend + retry)
+const ROOM_NPC: Record<string, string> = {
+  hr_office: 'sinta',
+  sup_chat: 'sup',
+  mgr_chat: 'mgr',
+  pantry: 'jnr',
+  slack: 'jnr',
+  jnr: 'jnr',
 }
 
 // ── MAIN COMPONENT ────────────────────────────────
@@ -428,6 +440,9 @@ PT Vantara Nusantara`
     const messages = state.chatHistory[room] || []
     const history: { role: 'user' | 'assistant'; content: string }[] = []
     for (const msg of messages) {
+      // Banner error JANGAN masuk memori AI — dulu teks "gangguan koneksi" terkirim
+      // sebagai "jawaban Sinta" dan bikin interview lompat topik setelah error
+      if (msg.isError) continue
       if (msg.role === 'user' && msg.text) {
         history.push({ role: 'user', content: msg.text })
       } else if (msg.role === 'npc' && msg.text && msg.npcId === npcId) {
@@ -437,7 +452,7 @@ PT Vantara Nusantara`
     return history.slice(-30)
   }, [state.chatHistory])
 
-  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; interviewDone: boolean }> => {
+  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; interviewDone: boolean; failed: boolean }> => {
     setLoading(true)
     try {
       const history = buildHistory(room, npcId)
@@ -464,36 +479,28 @@ PT Vantara Nusantara`
       return {
         reply: (data.reply as string) || 'Maaf, ada gangguan sebentar. Coba lagi ya!',
         interviewDone: Boolean(data.interviewDone),
+        failed: Boolean(data.failed) || !data.reply,
       }
     } catch {
-      return { reply: 'Maaf ada gangguan koneksi. Coba lagi ya!', interviewDone: false }
+      return { reply: 'Maaf ada gangguan koneksi. Coba lagi ya!', interviewDone: false, failed: true }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return
-    const msg = input.trim()
-    setInput('')
-    focusInput()
+  // Kirim userMsg ke NPC dan proses balasannya. Dipakai handleSend (pesan baru)
+  // dan handleRetry (kirim ulang pesan user terakhir tanpa menduplikasinya di history).
+  const deliverReply = async (npcId: string, userMsg: string, room: string) => {
+    // callChat builds full history from chatHistory for AI memory
+    const { reply, interviewDone: serverSaysDone, failed } = await callChat(npcId, userMsg, room)
 
-    // Determine NPC based on current view
-    const npcMap: Record<string, string> = {
-      hr_office: 'sinta',
-      sup_chat: 'sup',
-      mgr_chat: 'mgr',
-      pantry: 'jnr',
-      slack: 'jnr',
-      jnr: 'jnr',
+    if (failed) {
+      // Gangguan koneksi → banner error + tombol "Kirim ulang", BUKAN bubble NPC.
+      // Kalau masuk history sebagai pesan NPC, AI membacanya seolah topik sudah
+      // dijawab dan lompat ke tahap berikutnya (temuan beta Juli 2026).
+      addMsg(room, { role: 'system', text: reply, isError: true }, true)
+      return
     }
-    const npcId = npcMap[view] || 'sinta'
-    const room = view
-
-    addMsg(room, { role: 'user', text: msg }, true)
-
-    // callChat now builds full history from chatHistory for AI memory
-    const { reply, interviewDone: serverSaysDone } = await callChat(npcId, msg, room)
 
     addMsg(room, { role: 'npc', npcId, text: reply }, true)
     addCoins(2)
@@ -519,18 +526,28 @@ PT Vantara Nusantara`
     if (npcId === 'sinta') {
       setState(prev => {
         if (!prev.interviewDone) {
-          // Sumber utama: token [SELESAI] dari server. Fallback: keyword penutup yang
-          // spesifik (frasa umum seperti "selamat siang"/"selamat ya" dulu bikin
-          // interview selesai prematur), dan hanya setelah interview cukup panjang.
-          const userMsgCount = (prev.chatHistory['hr_office'] || []).filter(m => m.role === 'user').length
+          // Sumber utama: token [SELESAI] dari server. Fallback keyword HARUS sangat ketat:
+          // frasa seperti "kamu diterima" pernah false-positive pada pertanyaan pengandaian
+          // ("KALAU kamu diterima di sini, gimana kamu..."), jadi hanya frasa penutup
+          // eksplisit + pesan tidak boleh diakhiri pertanyaan + interview sudah panjang
+          // (>= 8 tanya jawab, sesuai durasi minimal di prompt Sinta sebelum bahas gaji).
+          const hrMsgs = prev.chatHistory['hr_office'] || []
+          const userMsgCount = hrMsgs.filter(m => m.role === 'user').length
+          // Guard nego gaji: interview TIDAK boleh selesai (termasuk via [SELESAI])
+          // kalau gaji belum pernah dibahas — offering letter bakal pakai angka default
+          const salaryDiscussed = hrMsgs.some(m =>
+            !m.isError && (m.role === 'user' || m.role === 'npc') &&
+            m.text && /gaji|juta|salary/i.test(m.text)
+          )
           const doneSignals = [
             'sampai jumpa di hari pertama', 'sampai ketemu di kantor',
-            'akan kami kirimkan offering', 'offering letter',
-            'kamu diterima', 'selamat bergabung', 'welcome to the team',
+            'akan kami kirimkan offering', 'offering letter akan',
+            'kami kirim offering', 'selamat bergabung', 'welcome to the team',
             'kami tutup interview', 'interview kita cukup sampai',
           ]
-          const isDone = serverSaysDone ||
-            (userMsgCount >= 6 && doneSignals.some(s => reply.toLowerCase().includes(s)))
+          const endsWithQuestion = reply.trim().endsWith('?')
+          const isDone = salaryDiscussed && (serverSaysDone ||
+            (userMsgCount >= 8 && !endsWithQuestion && doneSignals.some(s => reply.toLowerCase().includes(s))))
           if (isDone) {
             setTimeout(() => {
               addMsg('hr_office', {
@@ -549,6 +566,35 @@ PT Vantara Nusantara`
         return prev
       })
     }
+  }
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return
+    const msg = input.trim()
+    setInput('')
+    focusInput()
+
+    const npcId = ROOM_NPC[view] || 'sinta'
+    const room = view
+
+    addMsg(room, { role: 'user', text: msg }, true)
+    await deliverReply(npcId, msg, room)
+  }
+
+  // Retry setelah gangguan koneksi: buang banner error, kirim ulang pesan user
+  // terakhir TANPA menambahkannya lagi ke history (tidak dobel di chat maupun di AI)
+  const handleRetry = async (room: string) => {
+    if (loading) return
+    const lastUser = [...(state.chatHistory[room] || [])].reverse().find(m => m.role === 'user' && m.text)
+    if (!lastUser?.text) return
+    setState(prev => ({
+      ...prev,
+      chatHistory: {
+        ...prev.chatHistory,
+        [room]: (prev.chatHistory[room] || []).filter(m => !m.isError)
+      }
+    }))
+    await deliverReply(ROOM_NPC[room] || 'sinta', lastUser.text, room)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1282,6 +1328,8 @@ PT Vantara Nusantara`
                   pos={pos}
                   onNextStep={handleNextStep}
                   onViewChange={setView}
+                  onRetry={() => handleRetry(view)}
+                  retryDisabled={loading}
                 />
               ))}
 
@@ -1460,10 +1508,12 @@ function EmptyRoom({ view, state }: { view: string; state: SimState }) {
   )
 }
 
-function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
+function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, retryDisabled }: {
   msg: Message; state: SimState; pos?: typeof POSITIONS[string];
   onNextStep: (step: number, data?: Record<string, unknown>) => void;
   onViewChange: (view: string) => void;
+  onRetry?: () => void;
+  retryDisabled?: boolean;
 }) {
   const getNPCInitials = (npcId?: string) => {
     if (npcId === 'sinta') return 'SM'
@@ -1485,6 +1535,24 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange }: {
     if (npcId === 'jnr') return pos.junior.name
     return 'NPC'
   }
+
+  // Banner gangguan koneksi + retry — dicek sebelum role supaya tidak
+  // pernah dirender sebagai bubble NPC/pill system biasa
+  if (msg.isError) return (
+    <div className="flex justify-center animate-messageIn">
+      <div className="bg-[#FDF2F0] border border-[#C2410C]/20 rounded-xl px-4 py-2.5 text-center max-w-[85%]">
+        <p className="text-xs text-[#9A3412] leading-relaxed mb-2">{msg.text}</p>
+        <button
+          onClick={onRetry}
+          disabled={retryDisabled}
+          style={{ cursor: retryDisabled ? 'default' : 'pointer' }}
+          className="text-xs font-semibold text-[#0F6E56] border border-[#0F6E56]/30 rounded-full px-3 py-1 hover:bg-[#E1F5EE] disabled:opacity-50"
+        >
+          ↻ Kirim ulang
+        </button>
+      </div>
+    </div>
+  )
 
   if (msg.role === 'user') return (
     <div className="flex justify-end animate-messageIn">
