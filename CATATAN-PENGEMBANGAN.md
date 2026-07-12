@@ -5,6 +5,52 @@ karena dua-duanya menyentuh pengalaman interview = titik funnel paling kritis.
 
 ---
 
+## 0. Fitur multi-role + level + gate Academy (12 Juli 2026) — langkah sebelum deploy
+
+Sudah di kode (lihat CLAUDE.md section User Flow & Database), TAPI:
+
+- [ ] **WAJIB: jalankan `supabase-migrations/004_multi_role.sql` di Supabase Studio SEBELUM deploy.**
+      Tanpa ini save progress GAGAL (upsert baru pakai `onConflict: 'user_id,position'`).
+- [ ] Uji e2e setelah migration: apply Junior → interview → training Academy (termasuk misi)
+      → task brief terbuka otomatis → approve → wishlist → balik hub → coba posisi kedua
+      → keluar-masuk posisi (progress harus resume di titik terakhir).
+- [ ] Uji user beta lama (baris user_progress pra-level): harus tetap bisa resume,
+      level di-infer dari background via `normalizeLevel()`.
+- [ ] Catatan perilaku (by design): replay posisi yang sama TIDAK mengulang training,
+      karena lesson_progress permanen per user — gate langsung lolos.
+- [ ] Gate menaikkan bobot Academy → isi `youtube_video_id` (item #3 di bawah) jadi lebih
+      penting; lesson video tanpa video tampil "Video menyusul" tapi tetap bisa diselesaikan.
+
+## 0b. Penilaian kesiapan go-live (12 Juli 2026) — gap di luar fitur
+
+Verdict: konsep sudah benar; yang kurang adalah loop di sekelilingnya. Urut prioritas:
+
+**P0 — sebelum dorong traffic:**
+- [ ] Beresin env Gemini production (item #2 di bawah) — titik gagal paling kritis.
+- [ ] Pasang analytics — saat ini NOL instrumentasi (tidak ada Vercel Analytics/PostHog).
+      Metrik utama "% selesai hari-1" tidak bisa diukur; minimal event per transisi stage
+      (landing→login→profile→apply→interview→task→gate).
+- [ ] Halaman Privacy Policy (`/privacy`) + link di landing & LoginPage — UU PDP berlaku
+      sejak data pribadi + chat history disimpan, bukan sejak monetisasi.
+- [ ] Tes serius di mobile (390px) — traffic dari IG/TikTok = HP.
+
+**P1 — penggerak funnel:**
+- [ ] Share card personal (nama, posisi, gaji nego, coin) sebagai halaman share dengan
+      OG image dinamis (Next.js ImageResponse) — ganti tombol copy-teks generik di WishlistForm.
+      Ini lever pertumbuhan utama menurut strategi sendiri.
+- [ ] Welcome email otomatis untuk waitlist (Resend, gratis 3K/bln) — sekalian verifikasi email.
+      Tanpa ini signup waitlist mendingin.
+- [ ] (Jangka menengah) Pindahkan gerbang login: interview bisa mulai sebagai guest, login
+      saat tanda tangan offering letter ("tanda tangani kontrak" = sign in, in-story).
+      Ukur dulu drop-off login+ProfileSetup begitu analytics terpasang.
+- [ ] Error tracking (Sentry/sejenis) — keluhan "gangguan koneksi" user real tidak akan
+      pernah sampai ke founder tanpa ini.
+
+**P2 — prasyarat komersial (sudah terpetakan di CLAUDE.md):**
+- [ ] PT perorangan → PSE Kominfo → ToS → Midtrans/Xendit. Jangan sebelum P0-P1.
+
+---
+
 ## 1. Interview sering "lompat topik" / tidak follow-up
 
 **Gejala:** Sinta (dan NPC lain) pindah ke pertanyaan tahap berikutnya padahal jawaban user

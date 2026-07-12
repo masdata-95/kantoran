@@ -20,21 +20,27 @@ Kantor: Jakarta Selatan, Hybrid 3x WFO/minggu
 
 ## User Flow
 1. Landing page (public/landing.html)
-2. /simulator → OnboardingSlides (4 slide: apply, interview, kerja, feedback)
-3. Login Google
-4. ProfileSetup (5 step: nama/gender/kota, pendidikan, pengalaman, skills, kategori)
-5. JobListing (grid 2 kolom, modal detail, klik Apply)
-6. SimulatorApp:
+2. /simulator → Login Google (onboarding slides sudah dihilangkan)
+3. ProfileSetup (5 step: nama/gender/kota, pendidikan, pengalaman, skills, kategori)
+4. JobListing = HUB KARIR multi-role: semua 5 posisi tampil dengan status per posisi
+   (Tersedia / 🟢 berjalan / ✅ Hari-1 selesai). Modal detail punya pemilih JENJANG
+   (intern_magang/intern/junior/mid — bebas dipilih, background profil cuma default).
+   Setelah login user SELALU diarahkan ke hub ini, bukan auto-resume.
+5. SimulatorApp (progress per (user, posisi) — pindah posisi tidak menghapus run lama;
+   tombol 🏢 Lowongan di topbar = keluar ke hub, Restart = reset posisi ini saja):
    - Step 0: Inbox (email undangan interview)
-   - Step 1: HR Office (interview + nego gaji dengan Sinta)
-   - Step 2: Inbox (Offering Letter)
+   - Step 1: HR Office (interview + nego gaji dengan Sinta, ikut level)
+   - Step 2: Inbox (Offering Letter, gaji ikut level)
    - Step 3: Tanda tangan → Slack welcome
-   - Step 4: Supervisor DM → standup + orientasi perusahaan/posisi/SOP
+   - Step 4: Supervisor DM → standup + orientasi + HARD GATE training: modul tools
+     day-1 Academy (termasuk misi praktik) wajib selesai; task di-hold supervisor.
+     Selesai → auto-lanjut step 5 (evalTraining di SimulatorApp + onProgress AcademyPanel)
    - Step 5: Task brief + File Manager (download Excel)
    - Step 6-8: Workspace (upload Excel, AI review)
    - Step 9: APPROVED → Supervisor "sudah jam 5"
    - Step 10: Premium gate → Wishlist form
-7. WishlistForm → konfirmasi waitlist
+6. WishlistForm hanya SEKALI seumur akun (GET /api/waitlist → {submitted});
+   sesudahnya selesai posisi → langsung balik hub untuk coba posisi lain
 
 ## NPC Characters
 - Sinta Maharani (SM) — HR Business Partner, ada di semua posisi
@@ -45,11 +51,12 @@ Kantor: Jakarta Selatan, Hybrid 3x WFO/minggu
 - HR: Bu Ratna (sup), Pak Tono (mgr), Lili Cahyani (jnr)
 - BizDev: Reza Firmansyah (sup), Pak Anton (mgr), Mira Rahayu (jnr)
 
-## Salary Ranges (per background)
-- fresh_grad: Rp 2-3.5 juta (Intern)
-- student: Rp 1.2-2 juta (Intern Magang)
-- jobseeker: Rp 4-6 juta (Junior)
-- career_switch: Rp 6-9 juta (Mid-Level)
+## Salary Ranges (per LEVEL jenjang, bukan background — lib/positions.ts)
+- intern_magang: Rp 1.2-2 juta (default utk student)
+- intern: Rp 2-3.5 juta (default utk fresh_grad)
+- junior: Rp 4-6 juta (default utk jobseeker)
+- mid: Rp 6-9 juta (default utk career_switch)
+Akses via getSalaryRange()/normalizeLevel() — menerima key background lama (run pra-level).
 
 ## AI System (lib/ai.ts)
 Multi-provider dengan key rotation, urutan: Gemini (paid) → Groq → OpenRouter:
@@ -81,7 +88,9 @@ Konsep: e-course DENGAN story + misi. Room 'academy' di sidebar simulator (terbu
 ## Database (Supabase)
 Project ID: owgxrhtmljwjxzvjcdlt
 Tables:
-- user_progress: step, coins, tasks_done, streak, chat_history, background, position
+- user_progress: MULTI-ROLE — unique (user_id, position), satu baris per run posisi.
+  Kolom: step, coins, tasks_done, streak, chat_history, background, level, position.
+  Migration: supabase-migrations/004_multi_role.sql (WAJIB dijalankan sebelum deploy fitur ini)
 - user_profiles: full_name, gender, city, education (JSONB), experience (JSONB), skills (TEXT[]), category
 - waitlist: email, name, rating, feedback, wishlist, position_tried
 - api_usage: rate limiting harian (user_id, bucket, day, count) + RPC bump_usage

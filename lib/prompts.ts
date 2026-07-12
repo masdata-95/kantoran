@@ -1,20 +1,24 @@
+import { normalizeLevel, type LevelType } from '@/lib/positions'
+
 export interface UserContext {
   firstName: string
   email: string
   background: string
   bgRole: string
   position: string
+  level?: string // jenjang yang dipilih saat apply (intern_magang | intern | junior | mid)
   experience?: string
   motivation?: string
   step?: number
 }
 
-// Salary ranges per background — Sinta harus tahu ini
-const SALARY_CONTEXT: Record<string, { min: number; max: number; ideal: number; label: string }> = {
-  fresh_grad:    { min: 2000000,  max: 3500000,  ideal: 2500000,  label: 'Intern' },
-  student:       { min: 1200000,  max: 2000000,  ideal: 1500000,  label: 'Intern Magang' },
-  jobseeker:     { min: 4000000,  max: 6000000,  ideal: 4500000,  label: 'Junior' },
-  career_switch: { min: 6000000,  max: 9000000,  ideal: 7000000,  label: 'Mid-Level' },
+// Salary ranges per level jenjang — Sinta harus tahu ini.
+// normalizeLevel menerima key background lama untuk progress tersimpan sebelum sistem level.
+const SALARY_CONTEXT: Record<LevelType, { min: number; max: number; ideal: number; label: string }> = {
+  intern_magang: { min: 1200000,  max: 2000000,  ideal: 1500000,  label: 'Intern Magang' },
+  intern:        { min: 2000000,  max: 3500000,  ideal: 2500000,  label: 'Intern' },
+  junior:        { min: 4000000,  max: 6000000,  ideal: 4500000,  label: 'Junior' },
+  mid:           { min: 6000000,  max: 9000000,  ideal: 7000000,  label: 'Mid-Level' },
 }
 
 // Universal style rules
@@ -45,7 +49,7 @@ YANG DILARANG KERAS (INI BIKIN KETAHUAN ROBOT):
 Kalau ragu antara terdengar sopan-formal atau terdengar manusia — pilih manusia.`
 
 export function getSintaPrompt(user: UserContext, positionReqs?: string[]): string {
-  const sal = SALARY_CONTEXT[user.background] || SALARY_CONTEXT['jobseeker']
+  const sal = SALARY_CONTEXT[normalizeLevel(user.level || user.background)]
   const minFmt = (sal.min / 1000000).toFixed(1)
   const maxFmt = (sal.max / 1000000).toFixed(1)
   const idealFmt = (sal.ideal / 1000000).toFixed(1)

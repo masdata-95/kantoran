@@ -9,7 +9,7 @@ import JobListing from '@/components/JobListing'
 import SimulatorApp from '@/components/SimulatorApp'
 import WishlistForm from '@/components/WishlistForm'
 import type { UserProfile } from '@/lib/profile'
-import type { BackgroundType } from '@/lib/positions'
+import type { BackgroundType, LevelType } from '@/lib/positions'
 
 type AppStage =
   | 'loading'
@@ -25,6 +25,7 @@ export default function SimulatorPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [background, setBackground] = useState<BackgroundType | ''>('')
   const [selectedPosition, setSelectedPosition] = useState('')
+  const [selectedLevel, setSelectedLevel] = useState<LevelType>('intern')
   const [simCoins, setSimCoins] = useState(0)
   const [simTasksDone, setSimTasksDone] = useState(0)
 
@@ -40,27 +41,11 @@ export default function SimulatorPage() {
       }
 
       setProfile(existingProfile)
-      const bg = existingProfile.category || ''
-      setBackground(bg as BackgroundType | '')
+      setBackground((existingProfile.category || '') as BackgroundType | '')
 
-      // Check progress — light: tanpa chat_history, cuma butuh step/position untuk routing
-      const progressRes = await authFetch('/api/progress?light=1')
-      const { progress } = await progressRes.json()
-
-      if (progress && progress.step > 0 && progress.step < 10) {
-        // Has active simulation — continue
-        setSelectedPosition(progress.position || '')
-        setBackground((progress.background || bg) as BackgroundType | '')
-        setStage('simulator')
-      } else if (progress && progress.step >= 10) {
-        // Simulation done — go to wishlist
-        setSimCoins(progress.coins || 0)
-        setSimTasksDone(progress.tasks_done || 0)
-        setStage('wishlist')
-      } else {
-        // No active simulation — go to job listing
-        setStage('job_listing')
-      }
+      // Multi-role: job listing adalah hub karir — semua status run per posisi
+      // ditampilkan di sana (Mulai / Lanjutkan / Selesai), jadi selalu ke sana.
+      setStage('job_listing')
     } catch (e) {
       console.error('Check state error:', e)
       setStage('profile_setup')
@@ -102,6 +87,20 @@ export default function SimulatorPage() {
     return () => unsubscribe?.()
   }, [])
 
+  // Selesai hari-1 sebuah posisi: form wishlist hanya sekali seumur akun,
+  // setelah itu langsung balik ke hub karir untuk coba posisi lain
+  const handleSimDone = async (coins: number, tasksDone: number) => {
+    setSimCoins(coins)
+    setSimTasksDone(tasksDone)
+    try {
+      const res = await authFetch('/api/waitlist')
+      const { submitted } = await res.json()
+      setStage(submitted ? 'job_listing' : 'wishlist')
+    } catch {
+      setStage('wishlist')
+    }
+  }
+
   // Loading
   if (stage === 'loading') return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAFAF7' }}>
@@ -129,12 +128,13 @@ export default function SimulatorPage() {
     />
   )
 
-  // Job listing
+  // Job listing — hub karir multi-role
   if (stage === 'job_listing') return (
     <JobListing
       background={background}
-      onApply={(positionId) => {
+      onApply={(positionId, level) => {
         setSelectedPosition(positionId)
+        setSelectedLevel(level)
         setStage('simulator')
       }}
     />
@@ -148,6 +148,7 @@ export default function SimulatorPage() {
       firstName={profile?.full_name?.split(' ')[0] || 'Kamu'}
       coins={simCoins}
       tasksDone={simTasksDone}
+      onExplore={() => setStage('job_listing')}
     />
   )
 
@@ -158,11 +159,9 @@ export default function SimulatorPage() {
       userProfile={profile}
       initialPosition={selectedPosition}
       initialBackground={background}
-      onWishlist={(coins, tasksDone) => {
-        setSimCoins(coins)
-        setSimTasksDone(tasksDone)
-        setStage('wishlist')
-      }}
+      initialLevel={selectedLevel}
+      onExit={() => setStage('job_listing')}
+      onWishlist={handleSimDone}
     />
   )
 }

@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import dynamicImport from 'next/dynamic'
 import type { User } from '@supabase/supabase-js'
 import { supabase, authFetch } from '@/lib/supabase'
-import { POSITIONS, SALARY_RANGE, type BackgroundType } from '@/lib/positions'
+import { POSITIONS, getSalaryRange, normalizeLevel, LEVEL_FOR_BG, type BackgroundType, type LevelType } from '@/lib/positions'
+import type { ModuleDTO } from '@/lib/lessons'
 // xlsx di-load dinamis saat upload file saja — library berat, jangan masuk bundle awal
 
 // Academy di-load dinamis — react-markdown dkk tidak membebani bundle chat utama
@@ -33,6 +34,7 @@ interface SimState {
   email: string
   background: BackgroundType | ''
   bgRole: string
+  level: string // jenjang dipilih saat apply (intern_magang | intern | junior | mid)
   position: string
   experience: string
   motivation: string
@@ -49,7 +51,7 @@ interface SimState {
 }
 
 const INITIAL: SimState = {
-  firstName: '', email: '', background: '', bgRole: '', position: '',
+  firstName: '', email: '', background: '', bgRole: '', level: '', position: '',
   experience: '', motivation: '', step: 0, coins: 0, tasksDone: 0,
   streak: 0, phaseUnlocked: 0, salaryExpected: 0, salaryOffered: 0,
   chatHistory: {}, unreadCounts: {}, interviewDone: false,
@@ -83,11 +85,13 @@ import ProfileTab from '@/components/ProfileTab'
 import type { UserProfile } from '@/lib/profile'
 import type { Experience } from '@/lib/profile'
 
-export default function SimulatorApp({ user, userProfile, initialPosition, initialBackground, onWishlist }: {
+export default function SimulatorApp({ user, userProfile, initialPosition, initialBackground, initialLevel, onExit, onWishlist }: {
   user: User
   userProfile?: UserProfile | null
   initialPosition?: string
   initialBackground?: string
+  initialLevel?: LevelType
+  onExit?: () => void
   onWishlist?: (coins: number, tasksDone: number) => void
 }) {
   const [state, setState] = useState<SimState>(INITIAL)
@@ -110,6 +114,10 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const supDmSentRef = useRef(false)
   const orientationStartedRef = useRef(false)
   const viewRef = useRef(view)
+  // Hard gate training: task brief (step 5) baru terbuka setelah modul tools day-1
+  // selesai semua lesson-nya, termasuk misi praktik yang direview AI supervisor
+  const [trainingDone, setTrainingDone] = useState(false)
+  const trainingAdvanceRef = useRef(false)
 
   // Keep viewRef in sync with view state
   useEffect(() => { viewRef.current = view }, [view])
@@ -287,9 +295,53 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     setTimeout(() => setNotification(null), 5000)
   }, [])
 
+  // Cek apakah modul training wajib sudah selesai. Gate = modul tools day-1 pertama
+  // untuk posisi ini (yang di-assign supervisor), termasuk misi praktiknya.
+  const evalTraining = useCallback((modules: ModuleDTO[]) => {
+    const gateModule = modules.find(m => m.day === 1 && m.track === 'tools' && !m.locked)
+    // Posisi tanpa konten training → jangan kunci user selamanya
+    if (!gateModule || gateModule.lessons.length === 0) { setTrainingDone(true); return }
+    if (gateModule.lessons.every(l => l.progress?.status === 'completed')) setTrainingDone(true)
+  }, [])
+
+  // Reload di tengah step 4: cek status training dari server (Academy mungkin belum dibuka)
+  useEffect(() => {
+    if (state.step !== 4 || trainingDone || !state.position) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await authFetch(`/api/lessons?position=${encodeURIComponent(state.position)}`)
+        const data = await res.json()
+        if (!cancelled && res.ok) evalTraining(data.modules || [])
+      } catch { /* gagal fetch → gate tetap terkunci, AcademyPanel yang jadi sumber berikutnya */ }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step, state.position])
+
+  // Training selesai saat masih di step 4 → supervisor kirim task pertama (step 5)
+  useEffect(() => {
+    if (!trainingDone || state.step !== 4 || trainingAdvanceRef.current) return
+    trainingAdvanceRef.current = true
+    const pos = POSITIONS[state.position]
+    // Kalau orientasi baru saja dimulai di sesi ini, beri jeda supaya urutan chat tidak saling salip
+    const delay = orientationStartedRef.current ? 6500 : 1200
+    setTimeout(() => {
+      addMsg('sup_chat', {
+        role: 'npc', npcId: 'sup',
+        text: `Oke, aku lihat training module kamu udah kelar, termasuk misinya. Bagus, cepet juga. Berarti kamu siap, ini task pertamamu.`
+      })
+      showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', '🎉 Training selesai, task pertama masuk!')
+      setTimeout(() => handleNextStep(5), 1500)
+    }, delay)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trainingDone, state.step])
+
   const loadProgress = async () => {
     try {
-      const res = await authFetch('/api/progress')
+      // Multi-role: muat progress khusus posisi yang dibuka dari hub karir
+      const qs = initialPosition ? `?position=${encodeURIComponent(initialPosition)}` : ''
+      const res = await authFetch(`/api/progress${qs}`)
       const { progress } = await res.json()
       if (progress && progress.step > 0) {
         setState(prev => ({
@@ -298,6 +350,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           email: progress.email || '',
           background: (progress.background || initialBackground || '') as import('@/lib/positions').BackgroundType | '',
           bgRole: progress.bg_role || '',
+          level: progress.level || '',
           position: progress.position || initialPosition || '',
           step: progress.step || 0,
           coins: progress.coins || 0,
@@ -323,7 +376,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       const pos = POSITIONS[initialPosition]
       if (!pos) return
       const bg = (initialBackground || 'fresh_grad') as import('@/lib/positions').BackgroundType
-      const role = pos.getRole(bg)
+      const level = initialLevel || LEVEL_FOR_BG[bg] || 'intern'
+      const role = pos.getRole(level)
       const firstName = userProfile?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Kamu'
 
       // Build inbox email and HR Office message directly into initial state
@@ -367,6 +421,7 @@ PT Vantara Nusantara`
         email: user.email || '',
         background: bg,
         bgRole: role,
+        level,
         position: initialPosition,
         step: 0,
         chatHistory: {
@@ -398,6 +453,7 @@ PT Vantara Nusantara`
           email: s.email || user.email,
           background: s.background,
           bgRole: s.bgRole,
+          level: s.level,
           position: s.position,
           step: s.step,
           coins: s.coins,
@@ -467,6 +523,7 @@ PT Vantara Nusantara`
             email: state.email || user.email,
             background: state.background,
             bgRole: state.bgRole,
+            level: state.level,
             position: state.position,
             experience: state.experience,
             motivation: state.motivation,
@@ -609,10 +666,20 @@ PT Vantara Nusantara`
     await supabase.auth.signOut()
   }
 
+  // Keluar ke hub karir (job listing) — progress tersimpan, bisa lanjut atau coba posisi lain
+  const handleExit = async () => {
+    await saveProgress()
+    onExit?.()
+  }
+
   const handleRestart = async () => {
-    if (!confirm('Yakin mau mulai dari awal?\n\nSemua progress dan chat akan hilang. Kamu bisa pilih posisi baru.')) return
+    if (!confirm('Yakin mau mengulang posisi ini dari awal?\n\nProgress dan chat di posisi INI akan hilang. Progress posisi lain tetap tersimpan.')) return
     try {
-      await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({}) })
+      // Multi-role: reset hanya run posisi yang sedang dibuka
+      await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({ position: state.position }) })
+      lastSavedRef.current = ''
+      trainingAdvanceRef.current = false
+      setTrainingDone(false)
       setState(INITIAL)
       setShowApp(false)
       setView('inbox')
@@ -636,7 +703,7 @@ PT Vantara Nusantara`
 
     if (step === 2) {
       const pos = POSITIONS[state.position]
-      const salRange = SALARY_RANGE[state.background as string] || SALARY_RANGE['fresh_grad']
+      const salRange = getSalaryRange(state.level || state.background)
 
          // Extract agreed salary, prioritas dari konfirmasi Sinta, bukan request user
       const hrMessages = state.chatHistory['hr_office'] || []
@@ -772,7 +839,7 @@ PT Vantara Nusantara`
               }
             })
             setTimeout(() => {
-              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oh iya, satu lagi. Aku udah assign beberapa training module buat kamu di Academy, ada di sidebar. Selesaikan yang hari ini ya, itu bekal buat task pertamamu.` })
+              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oh iya, penting. Aku udah assign training module buat kamu di Academy, ada di sidebar. Selesaikan modul pertama dulu sampai misinya juga, misinya aku review langsung. Task pertamamu aku hold sampai itu kelar ya, biar kamu nggak nyemplung tanpa bekal.` })
               addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Nah itu overview-nya. Sekarang standup dulu, hari ini rencananya gimana ${state.firstName}?` })
               addMsg('sup_chat', {
                 role: 'learn',
@@ -781,7 +848,7 @@ PT Vantara Nusantara`
                   body: '(1) Dikerjakan kemarin, (2) Rencana hari ini, (3) Ada hambatan? Untuk hari pertama, cukup bilang rencana hari ini saja.',
                 }
               })
-              addMsg('sup_chat', { role: 'action', data: { label: 'Lanjut ke Task Brief →', nextStep: 5 } })
+              addMsg('sup_chat', { role: 'action', data: { label: '🎓 Buka Academy, Mulai Training →', goTo: 'academy' } })
               showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Orientasi hari pertama dari supervisor')
             }, 1500)
           }, 1200)
@@ -881,6 +948,7 @@ PT Vantara Nusantara`
             firstName: state.firstName,
             background: state.background,
             bgRole: state.bgRole,
+            level: state.level,
             position: state.position,
           },
           submission: extractedData
@@ -1069,7 +1137,12 @@ PT Vantara Nusantara`
           <div className="flex items-center gap-1.5 bg-[#FAEEDA] border border-[#854F0B]/15 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#854F0B]">
             🪙 {state.coins}
           </div>
-          <button onClick={handleRestart} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Mulai dari awal">
+          {onExit && (
+            <button onClick={handleExit} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Kembali ke daftar lowongan, progress tersimpan">
+              🏢<span className="hidden sm:inline"> Lowongan</span>
+            </button>
+          )}
+          <button onClick={handleRestart} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Ulangi posisi ini dari awal">
             🔄<span className="hidden sm:inline"> Restart</span>
           </button>
           <button onClick={handleLogout} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111] transition-colors">
@@ -1292,6 +1365,7 @@ PT Vantara Nusantara`
                     email: state.email || user.email || '',
                     background: state.background,
                     bgRole: state.bgRole,
+                    level: state.level,
                     position: state.position,
                     experience: state.experience,
                     motivation: state.motivation,
@@ -1301,6 +1375,7 @@ PT Vantara Nusantara`
                   supervisorInitials={NPC_INITIALS[state.position]?.sup || '??'}
                   supervisorAvClass={pos.supervisor.avClass}
                   onXP={addCoins}
+                  onProgress={evalTraining}
                 />
               )}
 

@@ -9,11 +9,45 @@ export interface NPC {
   bio: string
 }
 
+// ── LEVEL / JENJANG ───────────────────────────────
+// Level dipilih user saat apply di job listing — TIDAK lagi dikunci ke background profil.
+// Background hanya dipakai sebagai konteks cerita (CV user) dan default pilihan level.
+export type LevelType = 'intern_magang' | 'intern' | 'junior' | 'mid'
+
+export const LEVEL_LABEL: Record<LevelType, string> = {
+  intern_magang: 'Intern Magang',
+  intern: 'Intern',
+  junior: 'Junior',
+  mid: 'Mid-Level',
+}
+
+export const LEVELS: { id: LevelType; label: string; desc: string }[] = [
+  { id: 'intern_magang', label: 'Intern Magang', desc: 'Magang sambil kuliah, part-time' },
+  { id: 'intern',        label: 'Intern',        desc: 'Full-time internship untuk pemula' },
+  { id: 'junior',        label: 'Junior',        desc: 'Entry-level dengan tanggung jawab penuh' },
+  { id: 'mid',           label: 'Mid-Level',     desc: 'Berpengalaman, ekspektasi lebih tinggi' },
+]
+
+// Default level dari background profil (dipakai sebagai pre-select, bukan kunci)
+export const LEVEL_FOR_BG: Record<string, LevelType> = {
+  student: 'intern_magang',
+  fresh_grad: 'intern',
+  jobseeker: 'junior',
+  career_switch: 'mid',
+}
+
+// Terima nilai level baru maupun key background lama (progress tersimpan sebelum sistem level)
+export function normalizeLevel(v: string | undefined | null): LevelType {
+  if (v && v in LEVEL_LABEL) return v as LevelType
+  if (v && LEVEL_FOR_BG[v]) return LEVEL_FOR_BG[v]
+  return 'intern'
+}
+
 export interface Position {
   title: string
   dept: string
   icon: string
-  getRole: (bg: string) => string
+  getRole: (level: string) => string
   reqs: string[]
   itx: string
   taskFile: string
@@ -34,7 +68,7 @@ export interface Position {
 export const POSITIONS: Record<string, Position> = {
   data_analyst: {
     title: 'Data Analyst', dept: 'Data & Analytics', icon: '📊',
-    getRole: (bg) => ({ fresh_grad:'Intern', jobseeker:'Junior', career_switch:'Mid-Level', student:'Intern Magang' }[bg] || 'Intern') + ' Data Analyst',
+    getRole: (lv) => LEVEL_LABEL[normalizeLevel(lv)] + ' Data Analyst',
     reqs: ['Dasar Excel atau Google Sheets', 'Logika data dan angka', 'Baca dan interpretasi tabel', 'Nilai plus: pernah belajar SQL'],
     itx: 'analisis data, Excel, SQL, cara berpikir berbasis data',
     taskFile: 'task_data_analyst.xlsx',
@@ -72,7 +106,7 @@ Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus
 
   marketing_analyst: {
     title: 'Marketing Analyst', dept: 'Marketing & Brand', icon: '📣',
-    getRole: (bg) => ({ fresh_grad:'Intern', jobseeker:'Junior', career_switch:'Mid-Level', student:'Intern Magang' }[bg] || 'Intern') + ' Marketing Analyst',
+    getRole: (lv) => LEVEL_LABEL[normalizeLevel(lv)] + ' Marketing Analyst',
     reqs: ['Konsep dasar marketing dan branding', 'Baca metrik campaign (CTR, conversion)', 'Consumer behavior dasar', 'Nilai plus: pernah kelola konten atau sosmed'],
     itx: 'marketing funnel, analisis campaign, consumer insight, brand positioning',
     taskFile: 'task_marketing_analyst.xlsx',
@@ -109,7 +143,7 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
 
   finance_analyst: {
     title: 'Finance Analyst', dept: 'Finance & Accounting', icon: '💰',
-    getRole: (bg) => ({ fresh_grad:'Intern', jobseeker:'Junior', career_switch:'Mid-Level', student:'Intern Magang' }[bg] || 'Intern') + ' Finance Analyst',
+    getRole: (lv) => LEVEL_LABEL[normalizeLevel(lv)] + ' Finance Analyst',
     reqs: ['Dasar laporan keuangan (P&L, neraca)', 'Konsep budgeting dan variance analysis', 'Teliti bekerja dengan angka', 'Nilai plus: pernah belajar akuntansi'],
     itx: 'laporan keuangan, budgeting, variance analysis, financial modeling dasar',
     taskFile: 'task_finance_analyst.xlsx',
@@ -146,7 +180,7 @@ Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spes
 
   hr_generalist: {
     title: 'HR Generalist', dept: 'Human Resources', icon: '👥',
-    getRole: (bg) => ({ fresh_grad:'Intern', jobseeker:'Junior', career_switch:'Mid-Level', student:'Intern Magang' }[bg] || 'Intern') + ' HR Generalist',
+    getRole: (lv) => LEVEL_LABEL[normalizeLevel(lv)] + ' HR Generalist',
     reqs: ['Komunikasi verbal dan tulisan yang baik', 'Empati dan kemampuan mendengarkan', 'Konsep dasar rekrutmen', 'Nilai plus: pernah organise event atau kepanitiaan'],
     itx: 'proses rekrutmen, employee relations, people management, culture building',
     taskFile: 'task_hr_generalist.xlsx',
@@ -183,7 +217,7 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
 
   bizdev: {
     title: 'Business Development', dept: 'Komersial & Strategi', icon: '🚀',
-    getRole: (bg) => ({ fresh_grad:'Intern BD', jobseeker:'Junior BD Analyst', career_switch:'BD Associate', student:'Intern Magang BD' }[bg] || 'Intern BD'),
+    getRole: (lv) => ({ intern_magang:'Intern Magang BD', intern:'Intern BD', junior:'Junior BD Analyst', mid:'BD Associate' }[normalizeLevel(lv)]),
     reqs: ['Komunikasi dan presentasi yang kuat', 'Pemahaman dasar bisnis dan pasar', 'Analytical thinking', 'Nilai plus: pernah terlibat sales atau pitching'],
     itx: 'identifikasi peluang bisnis, evaluasi partnership, pitching, negosiasi, growth mindset',
     taskFile: 'task_bizdev.xlsx',
@@ -228,9 +262,14 @@ export const BACKGROUNDS: Record<BackgroundType, { label: string; role: string; 
   student: { label: 'Mahasiswa Tingkat Akhir', role: 'Intern Magang', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal' },
 }
 
-export const SALARY_RANGE: Record<string, Record<string, number>> = {
-  fresh_grad: { min: 2200000, offer: 2500000, max: 2900000 },
-  jobseeker: { min: 4000000, offer: 4500000, max: 5200000 },
-  career_switch: { min: 6500000, offer: 7000000, max: 8000000 },
-  student: { min: 1200000, offer: 1500000, max: 1800000 },
+// Keyed by LevelType — akses lewat getSalaryRange() supaya key background lama tetap jalan
+export const SALARY_RANGE: Record<LevelType, { min: number; offer: number; max: number }> = {
+  intern_magang: { min: 1200000, offer: 1500000, max: 1800000 },
+  intern:        { min: 2200000, offer: 2500000, max: 2900000 },
+  junior:        { min: 4000000, offer: 4500000, max: 5200000 },
+  mid:           { min: 6500000, offer: 7000000, max: 8000000 },
+}
+
+export function getSalaryRange(levelOrBg: string | undefined | null) {
+  return SALARY_RANGE[normalizeLevel(levelOrBg)]
 }

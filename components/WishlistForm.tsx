@@ -10,6 +10,8 @@ interface Props {
   firstName: string
   coins: number
   tasksDone: number
+  // Balik ke hub karir (job listing) untuk coba posisi lain — multi-role
+  onExplore?: () => void
 }
 
 const WISHLIST_OPTIONS = [
@@ -25,7 +27,7 @@ const WISHLIST_OPTIONS = [
   'Koneksi langsung ke HRD perusahaan',
 ]
 
-export default function WishlistForm({ user, positionTried, firstName, coins, tasksDone }: Props) {
+export default function WishlistForm({ user, positionTried, firstName, coins, tasksDone, onExplore }: Props) {
   const [step, setStep] = useState(1)
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
@@ -97,9 +99,20 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
             </button>
           </div>
 
-          <a href="https://kantoran.vercel.app" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
-            Kembali ke Kantoran →
-          </a>
+          {onExplore ? (
+            <div className="flex flex-col gap-3 items-center">
+              <button onClick={onExplore} style={{ cursor: 'pointer' }} className="btn-teal text-sm w-full">
+                Penasaran divisi lain? Coba posisi berbeda →
+              </button>
+              <p className="text-xs text-[#888780]">
+                Progress posisi yang sudah kamu selesaikan tetap tersimpan.
+              </p>
+            </div>
+          ) : (
+            <a href="https://kantoran.vercel.app" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
+              Kembali ke Kantoran →
+            </a>
+          )}
         </div>
       </div>
     )

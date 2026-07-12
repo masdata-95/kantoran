@@ -6,17 +6,25 @@ import type { ModuleDTO } from '@/lib/lessons'
 import type { UserContext } from '@/lib/prompts'
 import LessonView from './LessonView'
 
-export default function AcademyPanel({ positionId, userContext, supervisorName, supervisorInitials, supervisorAvClass, onXP }: {
+export default function AcademyPanel({ positionId, userContext, supervisorName, supervisorInitials, supervisorAvClass, onXP, onProgress }: {
   positionId: string
   userContext: UserContext
   supervisorName: string
   supervisorInitials: string
   supervisorAvClass: string
   onXP: (n: number) => void
+  // Lapor snapshot modul ke parent — dipakai SimulatorApp untuk gate training sebelum task
+  onProgress?: (modules: ModuleDTO[]) => void
 }) {
   const [modules, setModules] = useState<ModuleDTO[] | null>(null)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Tiap modules berubah (load awal maupun lesson selesai), kabari parent
+  useEffect(() => {
+    if (modules) onProgress?.(modules)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modules])
 
   useEffect(() => {
     let cancelled = false

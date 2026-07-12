@@ -1,12 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { POSITIONS, SALARY_RANGE } from '@/lib/positions'
-import type { BackgroundType } from '@/lib/positions'
+import { POSITIONS, SALARY_RANGE, LEVELS, LEVEL_FOR_BG, normalizeLevel } from '@/lib/positions'
+import type { BackgroundType, LevelType } from '@/lib/positions'
+import { authFetch } from '@/lib/supabase'
 
 interface Props {
   background: BackgroundType | ''
-  onApply: (positionId: string) => void
+  onApply: (positionId: string, level: LevelType) => void
+}
+
+// Run tersimpan per posisi — job listing merangkap hub karir multi-role
+interface RunInfo {
+  position: string
+  level: string | null
+  step: number
+  coins: number
+  tasks_done: number
+}
+
+const runStatusLabel = (step: number) => {
+  if (step >= 10) return 'Hari-1 selesai'
+  if (step >= 5) return 'Mengerjakan task'
+  if (step >= 2) return 'Onboarding'
+  return 'Tahap interview'
 }
 
 const POSITION_DETAILS: Record<string, {
@@ -99,6 +116,10 @@ const POSITION_DETAILS: Record<string, {
 
 export default function JobListing({ background, onApply }: Props) {
   const [modalJob, setModalJob] = useState<string | null>(null)
+  const [runs, setRuns] = useState<Record<string, RunInfo>>({})
+  const defaultLevel: LevelType = background ? (LEVEL_FOR_BG[background] || 'intern') : 'intern'
+  const [pickedLevel, setPickedLevel] = useState<LevelType>(defaultLevel)
+  const [resetting, setResetting] = useState(false)
 
   // Prevent body scroll when modal open
   useEffect(() => {
@@ -110,17 +131,55 @@ export default function JobListing({ background, onApply }: Props) {
     return () => { document.body.style.overflow = '' }
   }, [modalJob])
 
-  const salRange = background ? SALARY_RANGE[background] : SALARY_RANGE['jobseeker']
+  // Muat status run tersimpan per posisi (Mulai / Lanjutkan / Selesai)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await authFetch('/api/progress?list=1')
+        const data = await res.json()
+        if (cancelled) return
+        const map: Record<string, RunInfo> = {}
+        for (const r of (data.progresses || []) as RunInfo[]) {
+          if (r.position && r.step > 0) map[r.position] = r
+        }
+        setRuns(map)
+      } catch { /* tanpa status pun listing tetap jalan */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Buka modal detail: pre-select level dari run tersimpan, atau default background
+  const openJobModal = (key: string) => {
+    const run = runs[key]
+    setPickedLevel(run?.level ? normalizeLevel(run.level) : defaultLevel)
+    setModalJob(key)
+  }
+
   const formatSalary = (n: number) => `${(n / 1000000).toFixed(1)} jt`
+  // Semua jenjang terbuka — kartu menampilkan rentang gaji lintas level
+  const salMin = SALARY_RANGE['intern_magang'].min
+  const salMax = SALARY_RANGE['mid'].max
 
   const getCategoryLabel = (bg: BackgroundType | '') => {
     const map: Record<string, string> = {
-      fresh_grad: 'Fresh Graduate, Intern',
-      student: 'Mahasiswa, Intern Magang',
-      jobseeker: 'Job Seeker, Junior',
-      career_switch: 'Career Switcher, Mid-Level',
+      fresh_grad: 'Fresh Graduate',
+      student: 'Mahasiswa',
+      jobseeker: 'Job Seeker',
+      career_switch: 'Career Switcher',
     }
     return bg ? map[bg] || '' : ''
+  }
+
+  const handleReplay = async (positionId: string, level: LevelType) => {
+    setResetting(true)
+    try {
+      await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({ position: positionId }) })
+      onApply(positionId, level)
+    } catch {
+      alert('Gagal memulai ulang, coba lagi ya.')
+      setResetting(false)
+    }
   }
 
   return (
@@ -137,7 +196,7 @@ export default function JobListing({ background, onApply }: Props) {
           <div className="flex items-end justify-between">
             <div>
               <h1 className="font-serif text-xl font-bold text-[#111111]">Pilih posisi yang ingin kamu lamar</h1>
-              <p className="text-xs text-[#888780] mt-0.5">PT Vantara Nusantara · Jakarta Selatan · Hybrid</p>
+              <p className="text-xs text-[#888780] mt-0.5">PT Vantara Nusantara · Jakarta Selatan · Hybrid · Bisa coba lebih dari satu posisi</p>
             </div>
             {background && (
               <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-full px-3 py-1 text-[10px] font-semibold text-[#0F6E56] flex-shrink-0">
@@ -153,22 +212,37 @@ export default function JobListing({ background, onApply }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {Object.entries(POSITIONS).map(([key, pos]) => {
             const detail = POSITION_DETAILS[key]
-            const role = pos.getRole(background)
+            const run = runs[key]
+            const role = run?.level ? pos.getRole(run.level) : pos.title
+            const isDone = !!run && run.step >= 10
+            const isActive = !!run && !isDone
 
             return (
               <button
                 key={key}
-                onClick={() => setModalJob(key)}
+                onClick={() => openJobModal(key)}
                 style={{ cursor: 'pointer' }}
-                className="text-left p-4 rounded-2xl border border-[#E5E3DC] bg-white hover:border-[#0F6E56] hover:shadow-sm transition-all group"
+                className={`text-left p-4 rounded-2xl border bg-white hover:border-[#0F6E56] hover:shadow-sm transition-all group ${
+                  isActive ? 'border-[#0F6E56]/50' : 'border-[#E5E3DC]'
+                }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 rounded-xl bg-[#F1EFE8] flex items-center justify-center text-xl group-hover:bg-[#E1F5EE] transition-colors">
                     {pos.icon}
                   </div>
-                  <span className="text-[9px] text-[#888780] font-medium bg-[#F1EFE8] px-2 py-0.5 rounded-full">
-                    Tersedia
-                  </span>
+                  {isDone ? (
+                    <span className="text-[9px] font-semibold bg-[#E1F5EE] text-[#0F6E56] px-2 py-0.5 rounded-full">
+                      ✅ Hari-1 selesai
+                    </span>
+                  ) : isActive ? (
+                    <span className="text-[9px] font-semibold bg-[#FAEEDA] text-[#854F0B] px-2 py-0.5 rounded-full">
+                      🟢 {runStatusLabel(run.step)}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-[#888780] font-medium bg-[#F1EFE8] px-2 py-0.5 rounded-full">
+                      Tersedia
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-[10px] font-medium text-[#888780] mb-0.5">PT Vantara Nusantara</p>
@@ -177,7 +251,9 @@ export default function JobListing({ background, onApply }: Props) {
 
                 <div className="flex items-center gap-1 mb-3">
                   <span className="text-xs font-semibold text-[#0F6E56]">
-                    Rp {formatSalary(salRange.min)}, {formatSalary(salRange.max)}/bln
+                    {run?.level
+                      ? `Rp ${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].min)}, ${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].max)}/bln`
+                      : `Rp ${formatSalary(salMin)}, ${formatSalary(salMax)}/bln · semua jenjang`}
                   </span>
                 </div>
 
@@ -190,7 +266,7 @@ export default function JobListing({ background, onApply }: Props) {
                 </div>
 
                 <p className="text-[10px] text-[#0F6E56] font-medium group-hover:underline">
-                  Lihat detail →
+                  {isActive ? 'Lanjutkan simulasi →' : isDone ? 'Lihat hasil / ulangi →' : 'Lihat detail →'}
                 </p>
               </button>
             )
@@ -202,8 +278,12 @@ export default function JobListing({ background, onApply }: Props) {
       {modalJob && (() => {
         const pos = POSITIONS[modalJob]
         const detail = POSITION_DETAILS[modalJob]
-        const role = pos?.getRole(background)
         if (!pos || !detail) return null
+        const run = runs[modalJob]
+        const isDone = !!run && run.step >= 10
+        const isActive = !!run && !isDone
+        const role = pos.getRole(isActive && run.level ? run.level : pickedLevel)
+        const pickedSal = SALARY_RANGE[isActive && run.level ? normalizeLevel(run.level) : pickedLevel]
 
         return (
           <div
@@ -235,13 +315,71 @@ export default function JobListing({ background, onApply }: Props) {
                 <div className="flex gap-4 mt-4 text-white/85 text-xs">
                   <span>📍 Jakarta Selatan</span>
                   <span>🏠 Hybrid 3x/minggu</span>
-                  <span>💰 Rp {formatSalary(salRange.min)}, {formatSalary(salRange.max)}/bln</span>
+                  <span>💰 Rp {formatSalary(pickedSal.min)}, {formatSalary(pickedSal.max)}/bln</span>
                 </div>
               </div>
 
               {/* Modal body - scrollable */}
               <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
                 <div className="p-6 flex flex-col gap-5">
+                  {/* Status run tersimpan */}
+                  {isActive && (
+                    <div className="bg-[#FAEEDA] border border-[#854F0B]/15 rounded-xl px-4 py-3 text-xs text-[#854F0B]">
+                      🟢 <strong>Lamaran kamu sedang berjalan</strong> sebagai {role} ({runStatusLabel(run.step)}).
+                      Lanjutkan dari titik terakhir, semua chat dan progress tersimpan.
+                    </div>
+                  )}
+                  {isDone && (
+                    <div className="bg-[#E1F5EE] border border-[#0F6E56]/15 rounded-xl px-4 py-3 text-xs text-[#0F6E56]">
+                      ✅ <strong>Hari pertama selesai</strong> di posisi ini, {run.coins} Kantor Coin dan {run.tasks_done} task.
+                      Kamu bisa mengulang dari awal dengan jenjang berbeda (progress lama akan terhapus).
+                    </div>
+                  )}
+
+                  {/* Pilih jenjang — semua level terbuka, tidak dikunci ke background */}
+                  {!isActive && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Pilih Jenjang</p>
+                      <div className="flex flex-col gap-2">
+                        {LEVELS.map(lv => {
+                          const sal = SALARY_RANGE[lv.id]
+                          const isPicked = pickedLevel === lv.id
+                          const isSuggested = lv.id === defaultLevel
+                          return (
+                            <button
+                              key={lv.id}
+                              onClick={() => setPickedLevel(lv.id)}
+                              style={{ cursor: 'pointer' }}
+                              className={`flex items-center justify-between text-left px-3.5 py-2.5 rounded-xl border transition-all text-sm ${
+                                isPicked
+                                  ? 'border-[#0F6E56] bg-[#E1F5EE]'
+                                  : 'border-[#E5E3DC] hover:border-[#0F6E56]'
+                              }`}
+                            >
+                              <div>
+                                <span className={`font-semibold ${isPicked ? 'text-[#0F6E56]' : 'text-[#111111]'}`}>
+                                  {isPicked ? '● ' : '○ '}{lv.label}
+                                </span>
+                                {isSuggested && (
+                                  <span className="ml-1.5 text-[9px] font-semibold bg-[#F1EFE8] text-[#888780] px-1.5 py-0.5 rounded-full">
+                                    sesuai profilmu
+                                  </span>
+                                )}
+                                <p className="text-[11px] text-[#888780] mt-0.5">{lv.desc}</p>
+                              </div>
+                              <span className={`text-xs font-semibold flex-shrink-0 ml-3 ${isPicked ? 'text-[#0F6E56]' : 'text-[#888780]'}`}>
+                                Rp {formatSalary(sal.min)}, {formatSalary(sal.max)}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="text-[10px] text-[#888780] mt-1.5">
+                        Jenjang menentukan gaji, ekspektasi interview, dan standar kerja yang dinilai.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Tentang Tim</p>
                     <p className="text-sm leading-relaxed text-[#444441]">{detail.about}</p>
@@ -273,20 +411,42 @@ export default function JobListing({ background, onApply }: Props) {
                 </div>
               </div>
 
-              {/* Modal footer - CTA */}
+              {/* Modal footer - CTA menyesuaikan status run */}
               <div className="border-t border-[#E5E3DC] px-6 py-4 bg-[#FAFAF7]">
-                <button
-                  onClick={() => {
-                    setModalJob(null)
-                    onApply(modalJob)
-                  }}
-                  style={{ cursor: 'pointer' }}
-                  className="btn-teal w-full py-3.5 text-sm font-semibold"
-                >
-                  Lamar Posisi Ini →
-                </button>
+                {isActive ? (
+                  <button
+                    onClick={() => {
+                      setModalJob(null)
+                      onApply(modalJob, normalizeLevel(run.level))
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="btn-teal w-full py-3.5 text-sm font-semibold"
+                  >
+                    Lanjutkan Simulasi →
+                  </button>
+                ) : isDone ? (
+                  <button
+                    onClick={() => handleReplay(modalJob, pickedLevel)}
+                    disabled={resetting}
+                    style={{ cursor: resetting ? 'wait' : 'pointer' }}
+                    className="btn-teal w-full py-3.5 text-sm font-semibold disabled:opacity-50"
+                  >
+                    {resetting ? 'Menyiapkan...' : `Ulangi sebagai ${pos.getRole(pickedLevel)} →`}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setModalJob(null)
+                      onApply(modalJob, pickedLevel)
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="btn-teal w-full py-3.5 text-sm font-semibold"
+                  >
+                    Lamar sebagai {role} →
+                  </button>
+                )}
                 <p className="text-center text-xs text-[#888780] mt-2">
-                  Kamu akan diinterview langsung setelah apply
+                  {isActive ? 'Semua progress dan chat kamu tersimpan' : 'Kamu akan diinterview langsung setelah apply'}
                 </p>
               </div>
             </div>
