@@ -23,24 +23,41 @@ Kantor: Jakarta Selatan, Hybrid 3x WFO/minggu
 2. /simulator → Login Google (onboarding slides sudah dihilangkan)
 3. ProfileSetup (5 step: nama/gender/kota, pendidikan, pengalaman, skills, kategori)
 4. JobListing = HUB KARIR multi-role: semua 5 posisi tampil dengan status per posisi
-   (Tersedia / 🟢 berjalan / ✅ Hari-1 selesai). Modal detail punya pemilih JENJANG
-   (intern_magang/intern/junior/mid — bebas dipilih, background profil cuma default).
+   (Tersedia / berjalan / Hari-1 selesai). Modal detail punya pemilih JENJANG
+   (intern/junior/mid — bebas dipilih, background profil cuma default).
    Setelah login user SELALU diarahkan ke hub ini, bukan auto-resume.
+   Saat pertama masuk simulator: GuidedTour (spotlight overlay, sekali per akun
+   via localStorage `kantoran_tour_v1_<user.id>`, components/GuidedTour.tsx).
 5. SimulatorApp (progress per (user, posisi) — pindah posisi tidak menghapus run lama;
    tombol 🏢 Lowongan di topbar = keluar ke hub, Restart = reset posisi ini saja):
    - Step 0: Inbox (email undangan interview)
    - Step 1: HR Office (interview + nego gaji dengan Sinta, ikut level)
    - Step 2: Inbox (Offering Letter, gaji ikut level)
    - Step 3: Tanda tangan → Slack welcome
-   - Step 4: Supervisor DM → standup + orientasi + HARD GATE training: modul tools
-     day-1 Academy (termasuk misi praktik) wajib selesai; task di-hold supervisor.
-     Selesai → auto-lanjut step 5 (evalTraining di SimulatorApp + onProgress AcademyPanel)
+   - Step 4: Supervisor DM → standup + orientasi. Academy di-assign sebagai bekal
+     OPSIONAL (bukan gate, diubah 13 Juli 2026): task turun setelah user menjawab
+     standup (fallback 2 menit kalau diam). Training yang diselesaikan → apresiasi
+     supervisor +10 coin + baris di surat referensi (evalTraining/trainingDone).
    - Step 5: Task brief + File Manager (download Excel)
-   - Step 6-8: Workspace (upload Excel, AI review)
+   - Step 6-8: Workspace (upload Excel, AI review). Step 6 juga memunculkan DILEMA
+     dari junior (message role 'choice') — pilihan menentukan gaya kerja user.
    - Step 9: APPROVED → Supervisor "sudah jam 5"
    - Step 10: Premium gate → Wishlist form
 6. WishlistForm hanya SEKALI seumur akun (GET /api/waitlist → {submitted});
    sesudahnya selesai posisi → langsung balik hub untuk coba posisi lain
+
+Mekanik "career RPG" (12 Juli 2026, semua derived dari chat_history TANPA migration):
+- STAKES: revisi dihitung dari kartu feedback REVISION di sup_chat → grade
+  (exceeds/meets/needs_improvement) tampil di kartu day_done + surat referensi;
+  supervisor makin dingin di revisi ke-2+ (handleSubmitTask).
+- SURAT REFERENSI LIVE: room 'reference' (📜) terbuka setelah kontrak; baris terisi
+  per milestone, baris day 2-7 terkunci (teaser premium), kutipan supervisor ikut grade.
+- KANTOR HIDUP: kembali setelah > 8 jam (cek last_active di loadProgress) → NPC
+  mengirim pesan "selama kamu pergi" (sup kalau sedang ada task, jnr kalau belum).
+- GAYA KERJA: dilema 'choice' dari junior (step 6), trait (integritas/aman) dibaca
+  getWorkStyle() → dibacakan di penilaian akhir hari + jadi baris surat referensi.
+- KEHADIRAN SOSIAL: /api/stats → "N orang menjalani simulasi minggu ini" di JobListing
+  (hanya tampil kalau N >= 3).
 
 ## NPC Characters
 - Sinta Maharani (SM) — HR Business Partner, ada di semua posisi
@@ -52,16 +69,19 @@ Kantor: Jakarta Selatan, Hybrid 3x WFO/minggu
 - BizDev: Reza Firmansyah (sup), Pak Anton (mgr), Mira Rahayu (jnr)
 
 ## Salary Ranges (per LEVEL jenjang, bukan background — lib/positions.ts)
-- intern_magang: Rp 1.2-2 juta (default utk student)
-- intern: Rp 2-3.5 juta (default utk fresh_grad)
+Level hanya 3 sejak 12 Juli 2026 (intern_magang dilebur ke intern):
+- intern: Rp 1.8-3 juta (default utk student & fresh_grad)
 - junior: Rp 4-6 juta (default utk jobseeker)
 - mid: Rp 6-9 juta (default utk career_switch)
-Akses via getSalaryRange()/normalizeLevel() — menerima key background lama (run pra-level).
+Akses via getSalaryRange()/normalizeLevel() — menerima 'intern_magang' lama
+dan key background lama (run pra-level), keduanya dinormalisasi.
 
 ## AI System (lib/ai.ts)
 Multi-provider dengan key rotation, urutan: Gemini (paid) → Groq → OpenRouter:
-- GEMINI_API_KEY_1 sampai _5 (gemini-2.5-flash, key di header x-goog-api-key)
-- GROQ_API_KEY_1 sampai _5 (llama-3.3-70b-versatile)
+- GEMINI_API_KEY_1 sampai _5 (key di header x-goog-api-key)
+- Model via env: GEMINI_MODEL (default gemini-2.5-flash) & GROQ_MODEL (default
+  llama-3.3-70b-versatile) — migrasi model cukup ganti env + redeploy
+- GROQ_API_KEY_1 sampai _5
 - OPENROUTER_API_KEY (last resort, model :free)
 - `callAI(messages, systemPrompt, opts)` — opts: `{ maxTokens, temperature, json, clean, deadlineMs }`. Return `AIResult | null` (null = semua provider gagal; route yang menentukan pesan error).
 - `json: true` → structured output (Gemini responseMimeType / Groq response_format), temp 0.3, cleanResponse dimatikan. Wajib untuk endpoint yang parse JSON (cv-review, review via lib/reviewTask.ts).
@@ -76,7 +96,11 @@ Multi-provider dengan key rotation, urutan: Gemini (paid) → Groq → OpenRoute
 - lib/cvPrompt.ts — prompt JSON schema
 
 ## Vantara Academy (sistem belajar per posisi)
-Konsep: e-course DENGAN story + misi. Room 'academy' di sidebar simulator (terbuka step >= 4), supervisor meng-assign "training module" (in-story). Modul day 1 gratis; day >= 2 tampil sebagai kartu teaser terkunci (umpan premium, konten tidak dikirim API).
+Konsep: e-course DENGAN story + misi, posisinya JUST-IN-TIME (bukan gerbang wajib):
+task tetap turun tanpa training; supervisor menyarankan Academy saat revisi pertama
+("belajar sebagai penyelamat"). Room 'academy' di sidebar (terbuka step >= 4),
+supervisor meng-assign "training module" (in-story). Modul day 1 gratis; day >= 2
+tampil sebagai kartu teaser terkunci (umpan premium, konten tidak dikirim API).
 - Konten di Supabase (lesson_modules, lessons, lesson_progress) — update tanpa deploy. Migration: supabase-migrations/003_academy.sql.
 - Tiap posisi: modul tools (+ modul bisnis bersama position_id='all'), track 'tools' | 'business'. Lesson type: text | video | mission.
 - Video: kolom youtube_video_id nullable — isi di Supabase Studio kapan saja (lite-embed di YouTubeEmbed.tsx, placeholder "Video menyusul" kalau kosong).
@@ -112,9 +136,13 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - lib/positions.ts — data 5 posisi + NPC config
 - lib/profile.ts — UserProfile types
 - lib/skills.ts — 70+ skills preset
-- app/api/chat/route.ts — AI chat endpoint
-- app/api/review/route.ts — task review endpoint
-- app/api/progress/route.ts — save/load progress
+- components/GuidedTour.tsx — tur spotlight untuk user baru di simulator
+- components/ReferenceLetter.tsx — surat referensi live (room 'reference', terbuka setelah kontrak; baris terisi per milestone, bunyi surat ikut grade)
+- lib/performance.ts — grade & gaya kerja diturunkan dari chat_history (countRevisions/computeGrade/getWorkStyle) — SENGAJA tanpa kolom DB baru
+- app/api/stats/route.ts — jumlah user aktif 7 hari (kehadiran sosial di job listing)
+- app/api/chat/route.ts — AI chat endpoint (cap 40 pesan × 2000 char, userContext dibangun ulang server-side)
+- app/api/review/route.ts — task review endpoint (submission di-cap 15rb char)
+- app/api/progress/route.ts — save/load progress (angka di-clamp, step tidak boleh mundur → 409)
 - app/api/profile/route.ts — user profile CRUD
 - app/api/reset/route.ts — reset journey
 - app/api/waitlist/route.ts — waitlist submission
@@ -130,7 +158,10 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - NPC avatar classes: av-teal, av-blue, av-purple, av-amber
 
 ## Backlog Aktif
-Lihat CATATAN-PENGEMBANGAN.md — temuan beta Juli 2026 yang belum dikerjakan (interview lompat topik karena pesan error mencemari history AI, dugaan limit per-menit Gemini di env production, nego gaji ter-skip). Cek file itu dulu sebelum mengerjakan perbaikan interview/AI.
+- CATATAN-PENGEMBANGAN.md — temuan beta Juli 2026 + statusnya. Cek dulu sebelum mengerjakan perbaikan interview/AI.
+- REKOMENDASI-PENGEMBANGAN.md — prioritas pengembangan (P0 analytics/Sentry/privacy) + penyempurnaan konsep.
+- KONTEN-ROADMAP.md — desain Season 1, arc "Kasus Region Timur", katalog study case, interkoneksi antar posisi.
+- DEPLOY-CLOUDFLARE.md — rencana pindah deploy Vercel → Cloudflare Workers (step-by-step). Vercel masih live sampai cutover.
 
 ## Common Issues & Solutions
 - Tailwind v4: tidak pakai tailwind.config.ts, semua lewat @import di globals.css

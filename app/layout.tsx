@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Kantoran — Simulasi Dunia Kerja',
+  title: 'Kantoran | Simulasi Dunia Kerja',
   description: 'Simulasi dunia kerja pertama yang terasa nyata. Belajar kerja, sambil kerja beneran.',
   icons: {
     icon: '/favicon.svg',

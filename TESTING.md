@@ -1,0 +1,146 @@
+# TESTING.md — Skrip Uji Semua Fitur Kantoran
+
+> Diperbarui 13 Juli 2026. Dua lapis: **otomatis** (unit test + build, jalankan setiap sebelum push)
+> dan **manual E2E** (checklist alur user, jalankan setelah deploy atau perubahan besar).
+> Estimasi manual penuh: 30-40 menit.
+
+## 0. Uji otomatis (jalankan dulu, wajib hijau)
+
+```bash
+npm test        # 22 unit test: normalizeLevel, salary, grade/revisi/gaya kerja, cleanResponse
+npm run build   # compile + TypeScript, 16 route harus ter-generate
+```
+
+## 1. Persiapan uji manual
+
+- Siapkan **akun Google baru/sekunder** (untuk menguji alur user baru + guided tour).
+- Untuk mengulang kondisi "user baru" di akun yang sama:
+  - Hapus baris user di Supabase Studio: `user_progress`, `user_profiles`, `waitlist`, `lesson_progress`.
+  - Di browser: hapus localStorage key `kantoran_tour_v1_<user_id>` (DevTools → Application → Local Storage).
+- **Ambil token** untuk uji API (bagian 12): buka app yang sudah login → DevTools → Network →
+  klik request apa pun ke `/api/...` → copy nilai header `Authorization: Bearer <token>`.
+
+## 2. Landing page (`/`)
+
+- [ ] Title tab: "Kantoran | Simulasi Dunia Kerja" (tanpa em-dash).
+- [ ] Hero stat menulis "3 Jenjang karir per posisi".
+- [ ] Tidak ada emoji 🚀/🎉 di tombol CTA dan bubble chat demo.
+- [ ] Tombol CTA → masuk `/simulator`; tombol "Cek Skor CV" → `/cv`.
+
+## 3. CV Kantoran (`/cv`)
+
+- [ ] Upload PDF < 4MB → teks terekstrak; DOCX dan TXT juga.
+- [ ] File > 4MB ditolak dengan pesan dari app (bukan error platform).
+- [ ] "Isi dari profil Kantoran" (tanpa ✨) mengisi textarea dari profil (kalau sudah login + ada profil).
+- [ ] Review menghasilkan skor ATS + rewrite; submit ke-11 di hari yang sama kena rate limit (limit 10/hari).
+
+## 4. Login & Profile Setup
+
+- [ ] `/simulator` → login Google langsung (tanpa onboarding slides).
+- [ ] ProfileSetup 5 step selesai; step 5 kategori "Mahasiswa Tingkat Akhir" menulis "melamar sebagai Intern" (bukan Intern Magang).
+- [ ] Setelah profil tersimpan → diarahkan ke job listing (hub karir).
+
+## 5. Job Listing (hub karir)
+
+- [ ] 5 kartu posisi tampil; kartu tanpa run menulis rentang "Rp 1.8-8 jt/bln · semua jenjang".
+- [ ] Kalau ≥ 3 user aktif minggu ini: baris "● N orang sedang menjalani simulasi..." muncul di header.
+- [ ] Modal detail: pemilih jenjang hanya **3 opsi** (Intern / Junior / Mid-Level), gaji format "Rp 1.8-3 jt", badge "sesuai profilmu" di level default background.
+- [ ] Chip status tanpa emoji: "Tersedia" / "Tahap interview" / "Hari-1 selesai".
+
+## 6. Guided tour (akun baru)
+
+- [ ] Masuk simulasi pertama kali → overlay gelap + kartu "Selamat datang di kantor barumu".
+- [ ] 6 langkah: sambutan → Inbox (list email disorot) → Tim Kamu → Ruangan → Kantor Coin → penutup.
+- [ ] **Mobile (≤ 768px):** langkah Tim Kamu & Ruangan membuka drawer sidebar otomatis, spotlight mengikuti.
+- [ ] Klik area gelap = lanjut; "Lewati tur" atau Escape = tutup.
+- [ ] Refresh halaman → tur TIDAK muncul lagi (flag localStorage).
+
+## 7. Interview (HR Office)
+
+- [ ] Email undangan di Inbox → tombol "Mulai Interview dengan Sinta".
+- [ ] Sinta bertanya bertahap, TIDAK lompat topik, ada follow-up ("contohnya gimana?").
+- [ ] Balasan Sinta tanpa markdown/em-dash/gaya robot.
+- [ ] **Uji gangguan:** matikan wifi → kirim pesan → banner oranye "gangguan koneksi" + tombol "Kirim ulang" (BUKAN bubble Sinta). Nyalakan wifi → "Kirim ulang" → percakapan lanjut dari topik yang sama, tidak lompat.
+- [ ] Interview TIDAK bisa selesai sebelum bahas gaji (guard `salaryDiscussed`), bahkan lewat tombol "Interview selesai" di header — nego tetap harus terjadi.
+- [ ] Nego gaji: minta angka dalam range → diakomodir; jauh di atas → Sinta menahan dengan sopan.
+
+## 8. Offering → Kontrak → Surat Referensi
+
+- [ ] Interview selesai → kartu "Interview selesai!" → Offering Letter masuk Inbox, gaji sesuai/dekat hasil nego dan dalam range level.
+- [ ] Tanda tangan → "Kontrak Berhasil Ditandatangani" → masuk Slack, disambut Sinta + supervisor + junior.
+- [ ] ±9 detik kemudian: notifikasi "HR mulai menyusun surat referensimu" + badge di room **Surat Referensi**.
+- [ ] Buka Surat Referensi: baris interview & kontrak tercentang; training & task masih kosong; baris hari 2-7 terkunci 🔒; blok tanda tangan "Ditandatangani resmi di akhir simulasi".
+
+## 9. Standup → Task (Academy OPSIONAL — perilaku baru)
+
+- [ ] Supervisor DM masuk (setelah kirim 1 chat di Slack, atau 90 detik).
+- [ ] Buka DM supervisor → orientasi (perusahaan, posisi, SOP) → Academy di-assign dengan framing "nggak wajib sekarang" → pertanyaan standup.
+- [ ] **Jawab standup → ±6 detik → task pertama turun** (tanpa menyelesaikan training!).
+- [ ] Alternatif: diam 2 menit → task tetap turun ("Standup bisa nyusul...").
+- [ ] Room Academy & File Manager terbuka sesuai step; tombol "Buka File Manager →" benar-benar pindah room; file Excel bisa didownload.
+
+## 10. Academy (jalur opsional + just-in-time)
+
+- [ ] Selesaikan modul day-1 SETELAH task berjalan → supervisor kirim apresiasi ("aku lihat training module kamu kelar") + 10 coin — hanya sekali, tidak dobel setelah refresh.
+- [ ] Misi Academy: submit jawaban → direview suara supervisor; APPROVED menandai lesson selesai.
+- [ ] Modul day ≥ 2 tampil sebagai kartu teaser terkunci.
+- [ ] Surat Referensi: baris training tercentang HANYA setelah modul benar-benar selesai.
+
+## 11. Dilema, Workspace, Stakes, Akhir Hari
+
+- [ ] Setelah buka File Manager (step 6): junior DM tips + **dilema 2 pilihan** ("tulis apa adanya" / "aman dulu"). Pilih salah satu → jawaban terkirim, junior bereaksi sesuai pilihan, tombol jadi inert, +5 coin.
+- [ ] Workspace: upload Excel → preview terbaca → "Submit ke Supervisor untuk Review".
+- [ ] **Submit jelek (sengaja):** REVISION NEEDED → feedback spesifik; karena training belum selesai → supervisor menyarankan Academy + tombol "Buka Academy →".
+- [ ] **Submit jelek kedua:** pesan supervisor mendingin ("Ini revisi kedua...").
+- [ ] **Submit benar:** APPROVED → +30 coin → junior memberi selamat → supervisor "sudah jam 5" → kartu akhir hari.
+- [ ] Kartu akhir hari menampilkan **"Penilaian hari pertama"**: Exceeds (0 revisi) / Meets (1) / Needs Improvement (2+), plus kalimat gaya kerja sesuai pilihan dilema.
+- [ ] Manager mengirim DM cliffhanger.
+- [ ] Surat Referensi sekarang: semua baris hari-1 tercentang + kutipan supervisor yang bunyinya sesuai grade.
+
+## 12. Wishlist, Multi-role, Kantor Hidup
+
+- [ ] "Daftar Waitlist" → form 3 step → submit → halaman selesai. Selesaikan posisi KEDUA → form TIDAK muncul lagi (sekali seumur akun), langsung balik hub.
+- [ ] Balik hub: posisi selesai berstatus "Hari-1 selesai"; apply posisi lain → run baru; keluar-masuk posisi → resume di titik terakhir; Restart hanya menghapus posisi itu.
+- [ ] **Kantor hidup:** di Supabase, ubah `last_active` run aktif jadi kemarin (`update user_progress set last_active = now() - interval '10 hours' where user_id='...'`) → buka simulasi → NPC mengirim pesan "selama kamu pergi" (supervisor kalau step ≥ 5, junior kalau step 3-4). Muncul sekali, tidak berulang di refresh berikutnya.
+- [ ] User beta lama (baris pra-level / level `intern_magang`): tetap bisa resume, level terbaca Intern.
+
+## 13. API hardening (curl, pakai token dari Persiapan)
+
+```bash
+BASE="https://kantoran.vercel.app"   # atau URL Cloudflare
+TOKEN="<paste token>"
+
+# 13a. Tanpa token → 401
+curl -s -o /dev/null -w "%{http_code}\n" $BASE/api/progress
+
+# 13b. Step mundur ditolak → 409 (jalankan saat run aktif sudah step > 2)
+curl -s -w "\n%{http_code}\n" -X POST $BASE/api/progress \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"progress":{"position":"data_analyst","step":1,"coins":0,"tasksDone":0,"streak":0}}'
+
+# 13c. Posisi tidak valid → 400
+curl -s -w "\n%{http_code}\n" -X POST $BASE/api/progress \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"progress":{"position":"hacker","step":1}}'
+
+# 13d. npcId tidak valid → 400
+curl -s -w "\n%{http_code}\n" -X POST $BASE/api/chat \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"npcId":"admin","messages":[{"role":"user","content":"hai"}],"userContext":{"firstName":"X"},"positionId":"data_analyst"}'
+
+# 13e. Stats → {"activeThisWeek": N}
+curl -s $BASE/api/stats -H "Authorization: Bearer $TOKEN"
+```
+
+- [ ] 13a=401, 13b=409, 13c=400, 13d=400, 13e=JSON angka.
+
+## 14. Mobile (390px, WAJIB — traffic IG/TikTok)
+
+- [ ] Guided tour: spotlight & drawer mulus.
+- [ ] Keyboard tidak menutupi input chat; chat auto-scroll.
+- [ ] Inbox: buka email → list menyembunyikan diri; tombol ✕ balik ke list.
+- [ ] Surat Referensi & modal job listing bisa di-scroll penuh.
+
+## Bug ditemukan?
+
+Catat di CATATAN-PENGEMBANGAN.md dengan format: gejala → langkah reproduksi → dugaan akar masalah.

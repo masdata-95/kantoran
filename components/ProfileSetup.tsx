@@ -381,7 +381,7 @@ export default function ProfileSetup({ user, onComplete }: Props) {
                     { key: 'fresh_grad', label: 'Fresh Graduate', icon: '🎓', desc: 'Baru lulus, belum punya pengalaman kerja kantoran', role: 'Intern' },
                     { key: 'jobseeker', label: 'Job Seeker', icon: '🔍', desc: 'Aktif mencari kerja, sudah punya sedikit pengalaman', role: 'Junior' },
                     { key: 'career_switch', label: 'Career Switcher', icon: '🔄', desc: 'Sudah kerja di bidang lain, ingin pindah karir', role: 'Mid-Level' },
-                    { key: 'student', label: 'Mahasiswa Tingkat Akhir', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal', role: 'Intern Magang' },
+                    { key: 'student', label: 'Mahasiswa Tingkat Akhir', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal', role: 'Intern' },
                   ].map(cat => (
                     <button
                       key={cat.key}

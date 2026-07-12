@@ -9,17 +9,17 @@ karena dua-duanya menyentuh pengalaman interview = titik funnel paling kritis.
 
 Sudah di kode (lihat CLAUDE.md section User Flow & Database), TAPI:
 
-- [ ] **WAJIB: jalankan `supabase-migrations/004_multi_role.sql` di Supabase Studio SEBELUM deploy.**
-      Tanpa ini save progress GAGAL (upsert baru pakai `onConflict: 'user_id,position'`).
-- [ ] Uji e2e setelah migration: apply Junior → interview → training Academy (termasuk misi)
-      → task brief terbuka otomatis → approve → wishlist → balik hub → coba posisi kedua
-      → keluar-masuk posisi (progress harus resume di titik terakhir).
+- [x] ~~WAJIB: jalankan `supabase-migrations/004_multi_role.sql`~~ — SELESAI, dikonfirmasi
+      founder 12 Juli 2026 (migration sudah dijalankan di Supabase Studio).
+- [ ] Uji e2e setelah migration: ikuti TESTING.md (dibuat 13 Juli 2026) — mencakup
+      interview → standup → task langsung turun (Academy opsional) → approve →
+      wishlist → balik hub → posisi kedua → resume.
 - [ ] Uji user beta lama (baris user_progress pra-level): harus tetap bisa resume,
-      level di-infer dari background via `normalizeLevel()`.
-- [ ] Catatan perilaku (by design): replay posisi yang sama TIDAK mengulang training,
-      karena lesson_progress permanen per user — gate langsung lolos.
-- [ ] Gate menaikkan bobot Academy → isi `youtube_video_id` (item #3 di bawah) jadi lebih
-      penting; lesson video tanpa video tampil "Video menyusul" tapi tetap bisa diselesaikan.
+      level di-infer dari background via `normalizeLevel()` (juga melebur intern_magang).
+- [x] ~~Hard gate training~~ — DIHAPUS 13 Juli 2026: Academy kini opsional/just-in-time
+      (task turun setelah standup; Academy disarankan supervisor saat revisi pertama).
+- [ ] Isi `youtube_video_id` tetap penting; lesson video tanpa video tampil
+      "Video menyusul" tapi tetap bisa diselesaikan.
 
 ## 0b. Penilaian kesiapan go-live (12 Juli 2026) — gap di luar fitur
 
@@ -99,13 +99,12 @@ bukan kuota harian habis.
   gemini-2.5-flash ±1.000 req/menit — mustahil tersentuh 1 user.
 - Free tier = 10 req/menit → sangat cocok dengan gejala.
 
-**Langkah diagnosa (lakukan dulu sebelum coding):**
-- [ ] Vercel → Logs, kirim beberapa chat, cari baris `Gemini key failed (429)` →
-      kalau ada, env production masih memakai key lama/free.
-- [ ] Pastikan di Vercel Settings → Environment Variables: `GEMINI_API_KEY_1` = key paid
-      baru, `GEMINI_API_KEY_2..5` DIHAPUS, semua `GROQ_API_KEY_*` DIHAPUS (key mati),
-      lalu **Redeploy** (env baru tidak aktif tanpa redeploy!).
-- [ ] Cek log `✓ Gemini success` muncul konsisten setelahnya.
+**Langkah diagnosa:**
+- [x] ~~Env production Gemini~~ — SELESAI, dikonfirmasi founder 12 Juli 2026:
+      `GEMINI_API_KEY_1` production sudah key PAID.
+- [ ] Verifikasi di log: `✓ Gemini success` konsisten, tidak ada `Gemini key failed (429)`
+      saat dipakai beberapa user bersamaan. (Nama model kini bisa dioverride via env
+      `GEMINI_MODEL` — siapkan migrasi ke gemini-3.5-flash sebelum 16 Okt 2026.)
 
 **Rencana perbaikan di kode (kalau setelah env bersih masih terjadi):**
 - [ ] Bedakan penanganan 429 vs error lain di `lib/ai.ts`: saat 429, retry sekali dengan

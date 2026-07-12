@@ -17,11 +17,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { positionId, userContext, submission } = body
+    const { positionId, userContext, submission: rawSubmission } = body
 
-    if (!positionId || !userContext || !submission) {
+    if (!positionId || !userContext || !rawSubmission) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Cap panjang submission — hasil ekstraksi Excel bisa besar, jangan bakar token tanpa batas
+    const submission = String(rawSubmission).slice(0, 15000)
 
     const position = POSITIONS[positionId]
     if (!position) {

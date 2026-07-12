@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { POSITIONS } from '@/lib/positions'
+
+// Nilai numerik dari client di-clamp — server tidak menelan angka bebas
+const clampInt = (v: unknown, min: number, max: number, fallback = 0): number => {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(Math.max(Math.round(n), min), max)
+}
+
+// chat_history adalah kolom terbesar — batasi supaya satu user tidak bisa
+// membanjiri database (payload normal satu run < 200KB)
+const MAX_CHAT_HISTORY_BYTES = 900_000
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,23 +25,45 @@ export async function POST(req: NextRequest) {
     if (!progress || !progress.position) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+    if (!POSITIONS[progress.position]) {
+      return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
+    }
+
+    const step = clampInt(progress.step, 0, 10)
+    const chatHistory = progress.chatHistory || {}
+    if (JSON.stringify(chatHistory).length > MAX_CHAT_HISTORY_BYTES) {
+      return NextResponse.json({ error: 'Chat history too large' }, { status: 413 })
+    }
+
+    // Progress tidak boleh mundur — save dari tab/sesi lama tidak boleh menimpa
+    // run yang sudah lebih maju. Mundur yang sah hanya lewat /api/reset (hapus baris).
+    const { data: existing } = await supabase
+      .from('user_progress')
+      .select('step')
+      .eq('user_id', user.id)
+      .eq('position', progress.position)
+      .maybeSingle()
+
+    if (existing && step < existing.step) {
+      return NextResponse.json({ error: 'Stale progress', currentStep: existing.step }, { status: 409 })
+    }
 
     const { data, error } = await supabase
       .from('user_progress')
       .upsert({
         user_id: user.id,
-        first_name: progress.firstName,
-        email: progress.email,
-        background: progress.background,
-        bg_role: progress.bgRole,
+        first_name: String(progress.firstName || '').slice(0, 80),
+        email: String(progress.email || '').slice(0, 200),
+        background: String(progress.background || '').slice(0, 40),
+        bg_role: String(progress.bgRole || '').slice(0, 120),
         position: progress.position,
-        level: progress.level || null,
-        step: progress.step,
-        coins: progress.coins,
-        tasks_done: progress.tasksDone,
-        streak: progress.streak,
+        level: progress.level ? String(progress.level).slice(0, 40) : null,
+        step,
+        coins: clampInt(progress.coins, 0, 100000),
+        tasks_done: clampInt(progress.tasksDone, 0, 1000),
+        streak: clampInt(progress.streak, 0, 10000),
         last_active: new Date().toISOString(),
-        chat_history: progress.chatHistory || {},
+        chat_history: chatHistory,
       }, {
         // Multi-role: satu baris per (user, posisi) — butuh migration 004
         onConflict: 'user_id,position'

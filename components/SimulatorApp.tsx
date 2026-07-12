@@ -11,10 +11,26 @@ import type { ModuleDTO } from '@/lib/lessons'
 // Academy di-load dinamis — react-markdown dkk tidak membebani bundle chat utama
 const AcademyPanel = dynamicImport(() => import('@/components/academy/AcademyPanel'), { ssr: false })
 
+import GuidedTour, { type TourStep } from '@/components/GuidedTour'
+import ReferenceLetter from '@/components/ReferenceLetter'
+import { countRevisions, computeGrade, GRADE_LABEL, GRADE_REVIEW, getWorkStyle } from '@/lib/performance'
+
+// Tur pengenalan UI untuk user yang baru pertama kali masuk simulasi.
+// Selector menunjuk atribut data-tour di elemen bersangkutan.
+const TOUR_STEPS: TourStep[] = [
+  { title: 'Selamat datang di kantor barumu', body: 'Semua yang terjadi di sini berjalan seperti kantor sungguhan: ada email, chat tim, interview, sampai nego gaji. Sebelum mulai, kenalan dulu sama ruangannya sebentar.' },
+  { target: '[data-tour="inbox-list"]', title: 'Inbox', body: 'Email undangan interview dari HR sudah masuk di sini. Dokumen penting lain seperti offering letter juga akan datang lewat inbox ini.' },
+  { target: '[data-tour="team"]', title: 'Tim kamu', body: 'Orang-orang yang bisa kamu ajak bicara. Klik nama untuk buka chat. Untuk sekarang baru Sinta dari HR yang aktif, sisanya terbuka setelah kamu diterima kerja.', needsSidebar: true },
+  { target: '[data-tour="rooms"]', title: 'Ruangan kantor', body: 'Pindah ruangan lewat menu ini. Ruangan yang terkunci akan terbuka seiring perjalananmu. Langkah pertamamu nanti: HR Office untuk interview.', needsSidebar: true },
+  { target: '[data-tour="coins"]', title: 'Kantor Coin', body: 'Poin yang kamu kumpulkan dari setiap aktivitas dan task yang selesai.' },
+  { title: 'Mulai dari email Sinta', body: 'Buka email undangan di Inbox, lalu masuk ke HR Office dan sapa Sinta. Sisanya akan mengalir seperti hari pertama kerja beneran. Semoga lancar!' },
+]
+
 // ── TYPES ─────────────────────────────────────────
 interface Message {
   id: string
-  role: 'npc' | 'user' | 'system' | 'email' | 'task' | 'feedback' | 'action' | 'learn' | 'cliff' | 'offering'
+  // 'choice' = dilema dengan pilihan; jawaban user menentukan gaya kerja (lib/performance.ts)
+  role: 'npc' | 'user' | 'system' | 'email' | 'task' | 'feedback' | 'action' | 'learn' | 'cliff' | 'offering' | 'choice'
   npcId?: string
   text?: string
   data?: Record<string, unknown>
@@ -34,7 +50,7 @@ interface SimState {
   email: string
   background: BackgroundType | ''
   bgRole: string
-  level: string // jenjang dipilih saat apply (intern_magang | intern | junior | mid)
+  level: string // jenjang dipilih saat apply (intern | junior | mid)
   position: string
   experience: string
   motivation: string
@@ -114,10 +130,15 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const supDmSentRef = useRef(false)
   const orientationStartedRef = useRef(false)
   const viewRef = useRef(view)
-  // Hard gate training: task brief (step 5) baru terbuka setelah modul tools day-1
-  // selesai semua lesson-nya, termasuk misi praktik yang direview AI supervisor
+  // Academy = bekal OPSIONAL (bukan gate): task turun setelah standup, training
+  // disarankan supervisor saat user butuh (revisi pertama). trainingDone dipakai
+  // untuk apresiasi supervisor + milestone surat referensi.
   const [trainingDone, setTrainingDone] = useState(false)
-  const trainingAdvanceRef = useRef(false)
+  const trainingAdvanceRef = useRef(false) // guard: task step 4→5 hanya sekali
+  const trainingVacuousRef = useRef(false) // posisi tanpa konten training → tanpa apresiasi
+  // Tur pengenalan UI — sekali saja per akun (flag localStorage)
+  const [showTour, setShowTour] = useState(false)
+  const tourKey = `kantoran_tour_v1_${user.id}`
 
   // Keep viewRef in sync with view state
   useEffect(() => { viewRef.current = view }, [view])
@@ -278,6 +299,27 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   // Tutup drawer mobile tiap kali pindah ruangan
   useEffect(() => { setSidebarOpen(false) }, [view])
 
+  // Tampilkan tur saat pertama kali masuk simulasi (masih di tahap awal, belum pernah lihat tur)
+  useEffect(() => {
+    if (!showApp) return
+    try {
+      if (!localStorage.getItem(tourKey) && stateRef.current.step <= 1) setShowTour(true)
+    } catch { /* localStorage tidak tersedia → lewati tur */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showApp])
+
+  const finishTour = useCallback(() => {
+    try { localStorage.setItem(tourKey, '1') } catch { /* abaikan */ }
+    setShowTour(false)
+    setSidebarOpen(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourKey])
+
+  // Step tur yang menyorot elemen di dalam sidebar butuh drawer terbuka di mobile
+  const handleTourStep = useCallback((step: TourStep) => {
+    if (window.innerWidth < 768) setSidebarOpen(!!step.needsSidebar)
+  }, [])
+
   // Clear unread when viewing a room
   useEffect(() => {
     if (state.unreadCounts[view] > 0) {
@@ -295,45 +337,82 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     setTimeout(() => setNotification(null), 5000)
   }, [])
 
-  // Cek apakah modul training wajib sudah selesai. Gate = modul tools day-1 pertama
-  // untuk posisi ini (yang di-assign supervisor), termasuk misi praktiknya.
+  // Cek apakah modul training day-1 sudah selesai (termasuk misi praktiknya).
+  // Bukan gate lagi — dipakai untuk apresiasi supervisor + baris surat referensi.
   const evalTraining = useCallback((modules: ModuleDTO[]) => {
     const gateModule = modules.find(m => m.day === 1 && m.track === 'tools' && !m.locked)
-    // Posisi tanpa konten training → jangan kunci user selamanya
-    if (!gateModule || gateModule.lessons.length === 0) { setTrainingDone(true); return }
+    // Posisi tanpa konten training → anggap selesai, tapi tandai supaya tidak ada apresiasi palsu
+    if (!gateModule || gateModule.lessons.length === 0) {
+      trainingVacuousRef.current = true
+      setTrainingDone(true)
+      return
+    }
     if (gateModule.lessons.every(l => l.progress?.status === 'completed')) setTrainingDone(true)
   }, [])
 
-  // Reload di tengah step 4: cek status training dari server (Academy mungkin belum dibuka)
+  // Reload di step 4+: cek status training dari server (untuk surat referensi & apresiasi)
   useEffect(() => {
-    if (state.step !== 4 || trainingDone || !state.position) return
+    if (state.step < 4 || trainingDone || !state.position) return
     let cancelled = false
     ;(async () => {
       try {
         const res = await authFetch(`/api/lessons?position=${encodeURIComponent(state.position)}`)
         const data = await res.json()
         if (!cancelled && res.ok) evalTraining(data.modules || [])
-      } catch { /* gagal fetch → gate tetap terkunci, AcademyPanel yang jadi sumber berikutnya */ }
+      } catch { /* gagal fetch → AcademyPanel jadi sumber status berikutnya */ }
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.step, state.position])
 
-  // Training selesai saat masih di step 4 → supervisor kirim task pertama (step 5)
+  // Step 4 → 5: task turun setelah user menjawab standup — TIDAK menunggu training.
+  // Belajar itu opsional; kerjaan tetap datang seperti kantor sungguhan.
   useEffect(() => {
-    if (!trainingDone || state.step !== 4 || trainingAdvanceRef.current) return
+    if (state.step !== 4 || trainingAdvanceRef.current) return
+    const userMsgs = (state.chatHistory['sup_chat'] || []).filter(m => m.role === 'user').length
+    if (userMsgs < 1) return
     trainingAdvanceRef.current = true
-    const pos = POSITIONS[state.position]
-    // Kalau orientasi baru saja dimulai di sesi ini, beri jeda supaya urutan chat tidak saling salip
-    const delay = orientationStartedRef.current ? 6500 : 1200
     setTimeout(() => {
       addMsg('sup_chat', {
         role: 'npc', npcId: 'sup',
-        text: `Oke, aku lihat training module kamu udah kelar, termasuk misinya. Bagus, cepet juga. Berarti kamu siap, ini task pertamamu.`
+        text: `Oke, noted. Ini task pertamamu. Baca brief-nya dulu, kalau ada yang nggak jelas tanya sebelum mulai.`
       })
-      showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', '🎉 Training selesai, task pertama masuk!')
       setTimeout(() => handleNextStep(5), 1500)
-    }, delay)
+    }, 6000)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.chatHistory['sup_chat'], state.step])
+
+  // Fallback: user diam 2 menit setelah orientasi → task tetap turun
+  useEffect(() => {
+    if (state.step !== 4 || trainingAdvanceRef.current) return
+    const t = setTimeout(() => {
+      if (trainingAdvanceRef.current || stateRef.current.step !== 4) return
+      trainingAdvanceRef.current = true
+      addMsg('sup_chat', {
+        role: 'npc', npcId: 'sup',
+        text: `Anyway, ini task pertamamu. Standup bisa nyusul, yang penting kamu mulai pegang kerjaan dulu.`
+      })
+      setTimeout(() => handleNextStep(5), 1500)
+    }, 120000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step])
+
+  // Apresiasi kalau user menyelesaikan training (opsional) setelah task berjalan —
+  // sekali saja (cek history), dan tidak untuk posisi tanpa konten training
+  useEffect(() => {
+    if (!trainingDone || trainingVacuousRef.current || state.step < 5) return
+    const already = (state.chatHistory['sup_chat'] || []).some(
+      m => m.role === 'npc' && (m.text || '').includes('training module kamu kelar')
+    )
+    if (already) return
+    setTimeout(() => {
+      addMsg('sup_chat', {
+        role: 'npc', npcId: 'sup',
+        text: `Btw aku lihat training module kamu kelar, termasuk misinya. Bagus, itu bakal kepake banget di task-mu.`
+      }, viewRef.current === 'sup_chat')
+      addCoins(10)
+    }, 2000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trainingDone, state.step])
 
@@ -362,6 +441,30 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         }))
         setView(progress.step >= 3 ? 'slack' : 'inbox')
         setShowApp(true)
+
+        // Kantor tetap hidup saat user pergi: kembali setelah > 8 jam → ada pesan
+        // yang "terjadi selama kamu tidak ada". last_active ter-update saat auto-save,
+        // jadi tidak dobel dalam sesi yang sama.
+        const gapMs = progress.last_active ? Date.now() - new Date(progress.last_active).getTime() : 0
+        const stepNow = progress.step || 0
+        if (gapMs > 8 * 3600 * 1000 && stepNow >= 3 && stepNow < 10) {
+          const posNow = POSITIONS[progress.position || '']
+          setTimeout(() => {
+            if (stepNow >= 5) {
+              addMsg('sup_chat', {
+                role: 'npc', npcId: 'sup',
+                text: `${progress.first_name || 'Hei'}, gimana progress task kemarin? Kalau ada yang ngeganjel bilang aja, jangan dipendam.`
+              })
+              showNotif('sup_chat', posNow?.supervisor.name || 'Supervisor', 'Ada pesan baru selama kamu pergi')
+            } else {
+              addMsg('jnr', {
+                role: 'npc', npcId: 'jnr',
+                text: `eh kemarin lo langsung cabut ya? seru tau, pantry sempet heboh gara-gara mesin kopi error terus semua panik wkwk. btw semangat ya hari ini!`
+              })
+              showNotif('jnr', posNow?.junior.name || 'Teman tim', 'Ada pesan baru selama kamu pergi')
+            }
+          }, 2500)
+        }
       }
     } catch (e) {
       console.error('Load progress error:', e)
@@ -610,7 +713,7 @@ PT Vantara Nusantara`
               addMsg('hr_office', {
                 role: 'action',
                 data: {
-                  label: '🎉 Interview selesai! Kamu diterima di PT Vantara Nusantara.',
+                  label: 'Interview selesai! Kamu diterima di PT Vantara Nusantara.',
                   subLabel: 'Lanjut ke Offering Letter',
                   nextStep: 2,
                   type: 'interview_done'
@@ -679,6 +782,7 @@ PT Vantara Nusantara`
       await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({ position: state.position }) })
       lastSavedRef.current = ''
       trainingAdvanceRef.current = false
+      trainingVacuousRef.current = false
       setTrainingDone(false)
       setState(INITIAL)
       setShowApp(false)
@@ -820,6 +924,15 @@ PT Vantara Nusantara`
         }, 1000)
       }, 800)
       setView('slack')
+
+      // Surat referensi mulai terlihat sejak diterima — aset yang dibangun, bukan janji di akhir
+      setTimeout(() => {
+        showNotif('reference', 'Surat Referensi', 'HR mulai menyusun surat referensimu. Lihat di sidebar.')
+        setState(prev => ({
+          ...prev,
+          unreadCounts: { ...prev.unreadCounts, reference: (prev.unreadCounts['reference'] || 0) + 1 }
+        }))
+      }, 9000)
     }
 
     if (step === 4) {
@@ -839,7 +952,7 @@ PT Vantara Nusantara`
               }
             })
             setTimeout(() => {
-              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oh iya, penting. Aku udah assign training module buat kamu di Academy, ada di sidebar. Selesaikan modul pertama dulu sampai misinya juga, misinya aku review langsung. Task pertamamu aku hold sampai itu kelar ya, biar kamu nggak nyemplung tanpa bekal.` })
+              addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oh iya, aku udah assign training module buat kamu di Academy, ada di sidebar. Nggak wajib sekarang, tapi materinya persis bekal buat task pertamamu. Kalau nanti kejedot, balik ke situ. Misinya aku review langsung.` })
               addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Nah itu overview-nya. Sekarang standup dulu, hari ini rencananya gimana ${state.firstName}?` })
               addMsg('sup_chat', {
                 role: 'learn',
@@ -848,7 +961,7 @@ PT Vantara Nusantara`
                   body: '(1) Dikerjakan kemarin, (2) Rencana hari ini, (3) Ada hambatan? Untuk hari pertama, cukup bilang rencana hari ini saja.',
                 }
               })
-              addMsg('sup_chat', { role: 'action', data: { label: '🎓 Buka Academy, Mulai Training →', goTo: 'academy' } })
+              addMsg('sup_chat', { role: 'action', data: { label: 'Buka Academy, Mulai Training →', goTo: 'academy' } })
               showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Orientasi hari pertama dari supervisor')
             }, 1500)
           }, 1200)
@@ -889,7 +1002,7 @@ PT Vantara Nusantara`
           }
         }, true)
 
-        showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', `📋 Task baru: ${pos?.taskTitle}`)
+        showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', `Task baru: ${pos?.taskTitle}`)
       }, 800)
     }
 
@@ -900,9 +1013,49 @@ PT Vantara Nusantara`
       const pos = POSITIONS[state.position]
       setTimeout(() => {
         addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `Psst ${state.firstName}, dari pengalaman aku, baca dulu semua data sebelum mulai. Kak ${pos?.supervisor.name.split(' ')[0]} lumayan strict soal detail hehe` })
-        showNotif('jnr', POSITIONS[state.position]?.junior.name || 'Junior', '💬 Ada pesan dari rekan tim')
+        showNotif('jnr', POSITIONS[state.position]?.junior.name || 'Junior', 'Ada pesan dari rekan tim')
       }, 3000)
+
+      // Dilema gaya kerja: pilihan user tercatat (chosenTrait) dan dibacakan di
+      // penilaian akhir hari + surat referensi (lib/performance.ts)
+      setTimeout(() => {
+        addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `oh iya satu lagi. kalau nanti lo nemu yang aneh banget di datanya, menurut lo mending gimana: tulis semua apa adanya, atau yang aman-aman aja dulu? aku dulu bingung banget soal ini pas awal masuk wkwk` })
+        addMsg('jnr', {
+          role: 'choice',
+          data: {
+            options: [
+              { label: 'Tulis semua apa adanya', trait: 'integritas', reaction: `nah, aku suka gaya lo. Kak ${pos?.supervisor.name.split(' ')[0]} emang keliatan strict, tapi dia paling respect sama orang yang jujur soal temuan. catet ya wkwk` },
+              { label: 'Yang aman-aman aja dulu', trait: 'aman', reaction: `wkwk relate sih, aku dulu juga gitu. tapi jujur ya, justru pas aku nutup-nutupin sesuatu itu aku kena tegur paling parah. yaudah, good luck!` },
+            ],
+          },
+        }, true)
+      }, 8000)
     }
+  }
+
+  // Pilihan dilema: catat trait di message-nya, kirim jawaban user, lalu reaksi NPC.
+  // Trait dibaca getWorkStyle() untuk penilaian akhir hari + surat referensi.
+  const handleChoice = (room: string, msgId: string, idx: number) => {
+    const msg = (state.chatHistory[room] || []).find(m => m.id === msgId)
+    if (!msg || msg.role !== 'choice' || msg.data?.chosen !== undefined) return
+    const options = (msg.data?.options || []) as { label: string; trait: string; reaction: string }[]
+    const opt = options[idx]
+    if (!opt) return
+
+    setState(prev => ({
+      ...prev,
+      chatHistory: {
+        ...prev.chatHistory,
+        [room]: (prev.chatHistory[room] || []).map(m =>
+          m.id === msgId ? { ...m, data: { ...m.data, chosen: idx, chosenTrait: opt.trait } } : m
+        )
+      }
+    }))
+    addMsg(room, { role: 'user', text: opt.label }, true)
+    addCoins(5)
+    setTimeout(() => {
+      addMsg(room, { role: 'npc', npcId: ROOM_NPC[room] || 'jnr', text: opt.reaction }, viewRef.current === room)
+    }, 1200)
   }
 
   const handleFileUpload = async (file: File) => {
@@ -967,7 +1120,7 @@ PT Vantara Nusantara`
         role: 'feedback',
         data: {
           type: data.isApproved ? 'good' : 'neutral',
-          label: data.isApproved ? '✅ TASK APPROVED' : '🔄 REVISION NEEDED',
+          label: data.isApproved ? 'TASK APPROVED' : 'REVISION NEEDED',
           text: data.isApproved
             ? 'Hasil kerja kamu sudah memenuhi standar. Task ini selesai!'
             : 'Ada hal yang perlu diperbaiki. Upload ulang file yang sudah direvisi.'
@@ -975,7 +1128,31 @@ PT Vantara Nusantara`
       })
 
       showNotif('sup_chat', pos?.supervisor.name || 'Supervisor',
-        data.isApproved ? '✅ Task kamu APPROVED!' : '🔄 Task perlu direvisi')
+        data.isApproved ? 'Task kamu APPROVED!' : 'Task perlu direvisi')
+
+      // Stakes: supervisor makin dingin tiap revisi. Kegagalan tidak menghentikan
+      // progress, tapi mengubah cerita — dan tercatat di penilaian + surat referensi.
+      if (!data.isApproved) {
+        const revCount = countRevisions(state.chatHistory) + 1 // + revisi yang baru saja terjadi
+        if (revCount === 1 && !trainingDone) {
+          // Just-in-time learning: Academy ditawarkan sebagai penyelamat, bukan gerbang
+          setTimeout(() => {
+            addMsg('sup_chat', {
+              role: 'npc', npcId: 'sup',
+              text: `Saranku: buka training module di Academy dulu, 10-15 menit aja. Materinya persis soal bagian yang tadi bolong. Abis itu baru revisi.`
+            }, viewRef.current === 'sup_chat')
+            addMsg('sup_chat', { role: 'action', data: { label: 'Buka Academy →', goTo: 'academy' } }, true)
+          }, 3000)
+        }
+        if (revCount >= 2) {
+          const coldText = revCount === 2
+            ? `Ini revisi kedua, ${state.firstName}. Standar tim memang segini. Pelan sedikit nggak apa-apa, yang penting teliti.`
+            : `Oke, gini aja. Fokus ke poin yang paling penting dulu, satu-satu. Jangan submit sebelum kamu sendiri yakin.`
+          setTimeout(() => {
+            addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: coldText }, viewRef.current === 'sup_chat')
+          }, 2500)
+        }
+      }
 
       if (data.isApproved) {
         addCoins(30)
@@ -1033,7 +1210,7 @@ PT Vantara Nusantara`
                 role: 'npc', npcId: 'mgr',
                 text: `${state.firstName}, ${pos?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya, ada hal yang mau aku diskusikan soal kamu.`
               })
-              showNotif('mgr_chat', pos?.manager.name || 'Manager', '👀 Manager mengirim DM untukmu')
+              showNotif('mgr_chat', pos?.manager.name || 'Manager', 'Manager mengirim DM untukmu')
             }, 3500)
           }, 2000)
         }, 1500)
@@ -1080,13 +1257,14 @@ PT Vantara Nusantara`
 
   const rooms = [
     { id: 'inbox',        icon: '📧', label: 'Inbox',        locked: false },
-    { id: 'hr_office',   icon: '🔥', label: 'HR Office',    locked: false },
+    { id: 'hr_office',   icon: '🤝', label: 'HR Office',    locked: false },
     { id: 'slack',       icon: '💬', label: 'Slack',        locked: state.phaseUnlocked < 1 },
     { id: 'meeting',     icon: '🪑', label: 'Meeting',      locked: state.phaseUnlocked < 1 },
     { id: 'sup_chat',    icon: '👤', label: 'Supervisor',   locked: state.phaseUnlocked < 1 },
     { id: 'workspace',   icon: '🖥️', label: 'Workspace',   locked: state.phaseUnlocked < 1 },
     { id: 'academy',     icon: '🎓', label: 'Academy',      locked: state.step < 4 },
     { id: 'file_manager',icon: '📁', label: 'File Manager', locked: state.step < 5 },
+    { id: 'reference',   icon: '📜', label: 'Surat Referensi', locked: state.phaseUnlocked < 1 },
     { id: 'pantry',      icon: '☕', label: 'Pantry',       locked: state.phaseUnlocked < 1 },
   ]
 
@@ -1134,7 +1312,7 @@ PT Vantara Nusantara`
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <div className="flex items-center gap-1.5 bg-[#FAEEDA] border border-[#854F0B]/15 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#854F0B]">
+          <div data-tour="coins" className="flex items-center gap-1.5 bg-[#FAEEDA] border border-[#854F0B]/15 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#854F0B]">
             🪙 {state.coins}
           </div>
           {onExit && (
@@ -1174,7 +1352,7 @@ PT Vantara Nusantara`
           fixed md:static top-0 bottom-0 left-0 z-40 w-[260px] md:w-[210px]
           transition-transform duration-200 md:!translate-x-0
           ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
-          <div className="p-3 pb-2 border-b border-[#E5E3DC] flex-shrink-0">
+          <div data-tour="team" className="p-3 pb-2 border-b border-[#E5E3DC] flex-shrink-0">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780]">Tim Kamu</p>
               <button onClick={() => setSidebarOpen(false)} className="md:hidden text-[#888780] text-sm" aria-label="Tutup menu" style={{ cursor: 'pointer' }}>✕</button>
@@ -1231,7 +1409,7 @@ PT Vantara Nusantara`
           {/* Rooms */}
           <div className="flex-1 overflow-y-auto p-3 pt-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2">Ruangan</p>
-            <div className="flex flex-col gap-0.5">
+            <div data-tour="rooms" className="flex flex-col gap-0.5">
               {rooms.map(room => (
                 <button
                   key={room.id}
@@ -1280,8 +1458,8 @@ PT Vantara Nusantara`
               <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { n: state.tasksDone, l: 'Task done' },
-                  { n: state.step >= 4 ? state.step - 3 : ', ', l: 'Hari kerja' },
-                  { n: state.bgRole || ', ', l: 'Posisi', small: true },
+                  { n: state.step >= 4 ? state.step - 3 : '-', l: 'Hari kerja' },
+                  { n: state.bgRole || '-', l: 'Posisi', small: true },
                   { n: state.coins, l: 'Coin' },
                 ].map((s, i) => (
                   <div key={i} className="bg-[#FAFAF7] rounded-lg p-2 text-center">
@@ -1379,6 +1557,19 @@ PT Vantara Nusantara`
                 />
               )}
 
+              {/* Surat referensi: aset yang terlihat sejak hari pertama, terisi mengikuti progress */}
+              {view === 'reference' && (
+                <ReferenceLetter
+                  firstName={state.firstName}
+                  bgRole={state.bgRole}
+                  step={state.step}
+                  tasksDone={state.tasksDone}
+                  trainingDone={trainingDone}
+                  history={state.chatHistory}
+                  pos={pos}
+                />
+              )}
+
               {/* Workspace special view */}
               {view === 'workspace' && (
                 <WorkspaceView
@@ -1395,7 +1586,7 @@ PT Vantara Nusantara`
               )}
 
               {/* Regular messages */}
-              {view !== 'workspace' && view !== 'academy' && (state.chatHistory[view] || []).map(msg => (
+              {view !== 'workspace' && view !== 'academy' && view !== 'reference' && (state.chatHistory[view] || []).map(msg => (
                 <MessageBubble
                   key={msg.id}
                   msg={msg}
@@ -1405,13 +1596,14 @@ PT Vantara Nusantara`
                   onViewChange={setView}
                   onRetry={() => handleRetry(view)}
                   retryDisabled={loading}
+                  onChoice={(i) => handleChoice(view, msg.id, i)}
                 />
               ))}
 
               {/* File Manager: file task mendatang, terlihat tapi terkunci */}
               {view === 'file_manager' && state.step >= 5 && (pos?.upcomingTasks.length || 0) > 0 && (
                 <div className="bg-white border border-[#E5E3DC] rounded-xl p-3 opacity-60 select-none" style={{ cursor: 'not-allowed' }}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">📁 Masuk minggu ini</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Masuk minggu ini</p>
                   {pos!.upcomingTasks.map(t => (
                     <div key={t.day} className="flex items-center gap-2 py-1.5 border-b border-[#F1EFE8] last:border-0">
                       <span className="text-sm">🔒</span>
@@ -1423,7 +1615,7 @@ PT Vantara Nusantara`
               )}
 
               {/* Empty state */}
-              {view !== 'workspace' && view !== 'academy' && (state.chatHistory[view] || []).length === 0 && (
+              {view !== 'workspace' && view !== 'academy' && view !== 'reference' && (state.chatHistory[view] || []).length === 0 && (
                 <EmptyRoom view={view} state={state} />
               )}
 
@@ -1474,12 +1666,17 @@ PT Vantara Nusantara`
                 </button>
               </div>
               <p className="text-xs text-[#888780] mt-1.5 ml-1">
-                {view === 'pantry' ? '☕ Pantry, tempat gosip dan ngobrol santai' : '💬 Ketik bebas, NPC merespons dengan AI'}
+                {view === 'pantry' ? 'Pantry, tempat gosip dan ngobrol santai' : 'Ketik bebas, rekan kerjamu akan merespons'}
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Tur pengenalan UI, sekali saja saat pertama masuk */}
+      {showTour && (
+        <GuidedTour steps={TOUR_STEPS} onDone={finishTour} onStepChange={handleTourStep} />
+      )}
     </div>
   )
 }
@@ -1528,6 +1725,7 @@ function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state
     workspace:   { initials: '🖥️', avClass: 'av-teal', name: 'Workspace', status: 'Task & submit hasil kerja', tag: '', tagBg: '' },
     academy:     { initials: '🎓', avClass: 'av-teal', name: 'Vantara Academy', status: 'Training module dari supervisormu', tag: '', tagBg: '' },
     file_manager:{ initials: '📁', avClass: 'av-amber', name: 'File Manager', status: 'File task & dokumen kerja', tag: '', tagBg: '' },
+    reference:   { initials: '📜', avClass: 'av-teal', name: 'Surat Referensi Kerja', status: 'Aset yang sedang kamu bangun di Vantara', tag: '', tagBg: '' },
     pantry:      { initials: '☕', avClass: 'av-amber', name: 'Pantry', status: 'Tempat gosip & ngobrol santai', tag: 'Pantry', tagBg: 'bg-[#FAEEDA] text-[#854F0B]' },
     sup_chat:    { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu`, tag: 'Supervisor', tagBg: 'bg-[#E8F0FC] text-[#1A4A8A]' },
     mgr_chat:    { initials: NPC_INITIALS[state.position]?.mgr || '??', avClass: pos?.manager.avClass || 'av-purple', name: pos?.manager.name || 'Manager', status: pos?.manager.status || '', tag: 'Manager', tagBg: 'bg-[#F0EAF9] text-[#5B2D8E]' },
@@ -1583,12 +1781,13 @@ function EmptyRoom({ view, state }: { view: string; state: SimState }) {
   )
 }
 
-function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, retryDisabled }: {
+function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, retryDisabled, onChoice }: {
   msg: Message; state: SimState; pos?: typeof POSITIONS[string];
   onNextStep: (step: number, data?: Record<string, unknown>) => void;
   onViewChange: (view: string) => void;
   onRetry?: () => void;
   retryDisabled?: boolean;
+  onChoice?: (idx: number) => void;
 }) {
   const getNPCInitials = (npcId?: string) => {
     if (npcId === 'sinta') return 'SM'
@@ -1657,6 +1856,37 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
     </div>
   )
 
+  // Dilema pilihan: sekali dijawab jadi inert, pilihan yang diambil tetap tersorot
+  if (msg.role === 'choice') {
+    const d = msg.data || {}
+    const options = (d.options || []) as { label: string }[]
+    const chosen = d.chosen as number | undefined
+    return (
+      <div className="ml-10 flex flex-col gap-1.5 animate-messageIn max-w-[80%]">
+        {options.map((o, i) => (
+          <button
+            key={i}
+            disabled={chosen !== undefined}
+            onClick={() => onChoice?.(i)}
+            style={{ cursor: chosen === undefined ? 'pointer' : 'default' }}
+            className={`text-left text-sm px-3.5 py-2.5 rounded-xl border transition-all ${
+              chosen === i
+                ? 'border-[#0F6E56] bg-[#E1F5EE] text-[#0F6E56] font-medium'
+                : chosen !== undefined
+                  ? 'border-[#E5E3DC] text-[#888780] opacity-50'
+                  : 'border-[#0F6E56]/30 bg-white text-[#111111] hover:bg-[#E1F5EE]'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+        {chosen === undefined && (
+          <p className="text-[10px] text-[#888780]">Pilihanmu ikut membentuk penilaian gaya kerjamu.</p>
+        )}
+      </div>
+    )
+  }
+
   if (msg.role === 'learn') {
     const d = msg.data || {}
     return (
@@ -1690,6 +1920,10 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
     const isDayDone = d.type === 'day_done'
 
     if (isDayDone) {
+      // Penilaian hari pertama: grade dari jumlah revisi + gaya kerja dari pilihan dilema
+      const revs = countRevisions(state.chatHistory)
+      const grade = computeGrade(revs)
+      const workStyle = getWorkStyle(state.chatHistory)
       return (
         <div className="animate-messageIn bg-gradient-to-br from-[#E1F5EE] to-[#d4f5e9] border border-[#0F6E56]/20 rounded-xl p-4">
           <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertamamu selesai, dan kamu membuktikan kamu bisa.</p>
@@ -1698,6 +1932,14 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
             Banyak orang menunggu berbulan-bulan untuk merasakan semua ini, kamu menjalaninya dalam satu hari.
             Tapi ceritamu di Vantara baru saja dimulai.
           </p>
+          <div className="bg-white/70 rounded-lg p-3 mb-3">
+            <p className="text-xs font-semibold text-[#0F6E56] mb-1">Penilaian hari pertama: {GRADE_LABEL[grade]}</p>
+            <p className="text-[10px] text-[#444441] leading-relaxed">
+              {GRADE_REVIEW[grade]}
+              {workStyle ? ` Gaya kerjamu: ${workStyle.label.toLowerCase()}. ${workStyle.review}` : ''}
+            </p>
+            <p className="text-[10px] text-[#888780] mt-1.5">Semua ini sudah tercatat di surat referensimu (lihat sidebar).</p>
+          </div>
           <div className="bg-white/70 rounded-lg p-3 mb-3">
             <p className="text-xs font-semibold text-[#0F6E56] mb-2">Yang sudah menunggumu minggu ini:</p>
             <div className="flex flex-col">
@@ -1837,7 +2079,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
             style={{ cursor: 'pointer' }}
             className="mt-3 inline-flex items-center gap-2 btn-teal text-sm"
           >
-            ⬇️ Download {String(d.file)}
+            Download {String(d.file)}
           </a>
         )}
       </div>
@@ -1855,7 +2097,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
           <br /><br />Kamu sudah kumpulkan <strong>{coins} Kantor Coin</strong> hari ini 🪙
         </p>
         <button
-          onClick={() => window.open('https://kantoran.vercel.app', '_blank')}
+          onClick={() => window.open('/', '_blank')}
           style={{ cursor: 'pointer' }}
           className="btn-teal text-sm"
         >
@@ -1908,7 +2150,7 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
       {/* Email list, di mobile disembunyikan saat satu email dibuka */}
-      <div className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'hidden md:flex md:w-72' : 'flex-1'}`}>
+      <div data-tour="inbox-list" className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'hidden md:flex md:w-72' : 'flex-1'}`}>
         <div className="px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
           <p className="text-xs font-bold uppercase tracking-wider text-[#888780]">
             {emails.length} pesan
@@ -2013,7 +2255,7 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
                     className="btn-teal w-full py-3 text-sm font-semibold"
                     type="button"
                   >
-                    ✍️ Tanda Tangan & Terima Offer →
+                    Tanda Tangan & Terima Offer →
                   </button>
                 ) : signingState === 'signing' ? (
                   <div className="text-center py-3">
@@ -2027,7 +2269,7 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
                 ) : (
                   <div>
                     <div className="bg-[#DCFCE7] border border-[#166534]/20 rounded-xl p-3 mb-3 text-center">
-                      <p className="text-sm font-bold text-[#166534] mb-1">✅ Kontrak Berhasil Ditandatangani</p>
+                      <p className="text-sm font-bold text-[#166534] mb-1">Kontrak Berhasil Ditandatangani</p>
                       <p className="text-xs text-[#166534]/80">Selamat bergabung di PT Vantara Nusantara!</p>
                     </div>
                     <p className="text-xs text-[#888780] mb-3 leading-relaxed">
@@ -2116,7 +2358,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
 
       {/* Upload area */}
       <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
-        <p className="text-sm font-semibold text-[#111111] mb-3">📤 Upload Hasil Kerja</p>
+        <p className="text-sm font-semibold text-[#111111] mb-3">Upload Hasil Kerja</p>
 
         {!uploadedFile ? (
           <div
@@ -2154,7 +2396,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
               </button>
             </div>
             {extractedData && (
-              <p className="text-xs text-[#0F6E56] font-medium">✅ File berhasil dibaca, siap direview AI</p>
+              <p className="text-xs text-[#0F6E56] font-medium">File berhasil dibaca, siap dikirim ke supervisor</p>
             )}
           </div>
         )}
@@ -2168,7 +2410,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
           style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
           className="btn-teal text-sm disabled:opacity-40"
         >
-          {isSubmitting ? 'Sedang direview oleh AI...' : 'Submit ke Supervisor untuk Review →'}
+          {isSubmitting ? 'Supervisor sedang mereview...' : 'Submit ke Supervisor untuk Review →'}
         </button>
       )}
 
@@ -2176,7 +2418,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
       {reviewResult && (
         <div className={`border rounded-xl p-4 ${reviewResult.isApproved ? 'bg-[#DCFCE7] border-[#166534]/20' : 'bg-[#FAEEDA] border-[#854F0B]/20'}`}>
           <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${reviewResult.isApproved ? 'text-[#166534]' : 'text-[#854F0B]'}`}>
-            {reviewResult.isApproved ? '✅ TASK APPROVED' : '🔄 REVISION NEEDED'}
+            {reviewResult.isApproved ? 'TASK APPROVED' : 'REVISION NEEDED'}
           </p>
           <p className="text-sm leading-relaxed text-[#111111]">{reviewResult.review}</p>
           {!reviewResult.isApproved && (

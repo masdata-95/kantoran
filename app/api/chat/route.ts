@@ -8,6 +8,14 @@ import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
+// Batas payload dari client — history dan konteks dikirim client, jadi server
+// wajib membatasi supaya biaya token terkendali dan konteks tidak bisa dikarang bebas
+const MAX_MESSAGES = 40
+const MAX_MSG_LEN = 2000
+const VALID_NPC = new Set(['sinta', 'sup', 'jnr', 'mgr'])
+
+const capStr = (v: unknown, max: number) => String(v ?? '').slice(0, max)
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req)
@@ -19,10 +27,39 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { npcId, messages, userContext, positionId } = body
+    const { npcId, messages: rawMessages, userContext: rawCtx, positionId } = body
 
-    if (!npcId || !messages || !userContext) {
+    if (!npcId || !Array.isArray(rawMessages) || !rawCtx) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+    if (!VALID_NPC.has(npcId)) {
+      return NextResponse.json({ error: 'Invalid npcId' }, { status: 400 })
+    }
+
+    // Ambil hanya pesan terakhir, paksa role user/assistant, potong yang kepanjangan
+    const messages: ChatMessage[] = rawMessages
+      .slice(-MAX_MESSAGES)
+      .map((m: { role?: string; content?: unknown }) => ({
+        role: m?.role === 'assistant' ? 'assistant' as const : 'user' as const,
+        content: capStr(m?.content, MAX_MSG_LEN),
+      }))
+      .filter(m => m.content.length > 0)
+
+    if (messages.length === 0) {
+      return NextResponse.json({ error: 'Empty messages' }, { status: 400 })
+    }
+
+    // Konteks user dibangun ulang field per field — tidak meneruskan objek client mentah
+    const userContext = {
+      firstName: capStr(rawCtx.firstName, 80),
+      email: capStr(rawCtx.email, 200),
+      background: capStr(rawCtx.background, 40),
+      bgRole: capStr(rawCtx.bgRole, 120),
+      position: capStr(rawCtx.position, 60),
+      level: capStr(rawCtx.level, 40),
+      experience: capStr(rawCtx.experience, 600),
+      motivation: capStr(rawCtx.motivation, 600),
+      step: Number.isFinite(Number(rawCtx.step)) ? Number(rawCtx.step) : undefined,
     }
 
     const position = POSITIONS[positionId]
@@ -48,7 +85,7 @@ export async function POST(req: NextRequest) {
         systemPrompt = getSintaPrompt(userContext)
     }
 
-    const result = await callAI(messages as ChatMessage[], systemPrompt, { maxTokens: 250 })
+    const result = await callAI(messages, systemPrompt, { maxTokens: 250 })
     if (!result) {
       // failed: true → client render sebagai banner error + tombol retry,
       // BUKAN bubble NPC (pesan palsu di history bikin AI lompat topik)

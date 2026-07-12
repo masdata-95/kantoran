@@ -902,7 +902,7 @@ footer{
     <div class="hero-cta">
       <div class="hero-btn-row">
         <button class="btn-hero" onclick="startDemo()">
-          🚀 Coba Jadi Anak Kantoran Sekarang
+          Coba Jadi Anak Kantoran Sekarang
           <span class="arrow">→</span>
         </button>
         <a class="btn-hero-outline" href="/cv">
@@ -922,7 +922,7 @@ footer{
         <div class="stat-label">Karakter NPC interaktif</div>
       </div>
       <div class="stat-item">
-        <div class="stat-num">4</div>
+        <div class="stat-num">3</div>
         <div class="stat-label">Jenjang karir per posisi</div>
       </div>
     </div>
@@ -941,7 +941,7 @@ footer{
         <div class="preview-msg">
           <div class="preview-avatar av-teal">SM</div>
           <div class="preview-bubble">
-            Halo <strong>Budi</strong>! Selamat datang di tim 🎉 Offering Letter sudah saya kirim ke inbox kamu ya.
+            Halo <strong>Budi</strong>! Selamat datang di tim. Offering Letter sudah saya kirim ke inbox kamu ya.
           </div>
         </div>
         <div class="preview-msg">
@@ -1772,7 +1772,7 @@ function handleOffer(i) {
 function step2() {
   label('✍️ HR Office, Kontrak Virtual Ditandatangani');
   typing('av-sm', () => npc('av-sm','SM','Sinta Maharani',
-    `Kontrak sudah ditandatangani, selamat resmi bergabung, <em>${firstName}</em>! 🎉<br><br>Besok adalah hari pertamamu. Saya sudah aktifkan akses workspace Vantara untukmu. Welcome to the team!`,
+    `Kontrak sudah ditandatangani, selamat resmi bergabung, <em>${firstName}</em>!<br><br>Besok adalah hari pertamamu. Saya sudah aktifkan akses workspace Vantara untukmu. Welcome to the team!`,
     () => cont('Buka welcome chat dari tim', () => runStep(3))
   ), 1000);
 }
@@ -1781,7 +1781,7 @@ function step3() {
   label('💬 Slack, #tim-data-analytics');
   typing('av-sm', () => {
     npc('av-sm','SM','Sinta Maharani, #tim-data-analytics',
-      `Hai tim! Perkenalkan anggota baru kita 🎉, <em>${firstName}</em>, Intern Data Analyst yang mulai hari ini. Yuk disambut!`,
+      `Hai tim! Perkenalkan anggota baru kita, <em>${firstName}</em>, Intern Data Analyst yang mulai hari ini. Yuk disambut!`,
       () => typing('av-rp', () => {
         npc('av-rp','RP','Rizky Pratama (Kak Rizky)',
           `Welcome, <em>${firstName}</em>! Kamu akan langsung di bawah saya. Briefing pertama kita besok setelah standup. Enjoy hari pertamanya, tapi jangan lupa baca Company Handbook malam ini ya.`,
@@ -1903,7 +1903,7 @@ function submitWL() {
       <div class="success-sub">
         Halo <strong>${name.split(' ')[0]}</strong>! Kami akan kirim notifikasi ke <strong>${email}</strong> begitu Kantoran siap.<br><br>
         <span style="display:inline-block;margin-top:12px;padding:12px 16px;background:var(--teal-light);border-radius:var(--radius-sm);font-size:13px;color:var(--teal);line-height:1.65">
-          Sambil menunggu: ajak teman yang juga butuh simulasi kerja nyata untuk daftar bersama. Semakin banyak yang join, semakin cepat kami launch! 🚀
+          Sambil menunggu: ajak teman yang juga butuh simulasi kerja nyata untuk daftar bersama. Semakin banyak yang join, semakin cepat kami launch!
         </span>
       </div>
     </div>`;

@@ -109,7 +109,7 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
               </p>
             </div>
           ) : (
-            <a href="https://kantoran.vercel.app" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
+            <a href="/" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
               Kembali ke Kantoran →
             </a>
           )}

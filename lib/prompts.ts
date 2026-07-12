@@ -6,19 +6,18 @@ export interface UserContext {
   background: string
   bgRole: string
   position: string
-  level?: string // jenjang yang dipilih saat apply (intern_magang | intern | junior | mid)
+  level?: string // jenjang yang dipilih saat apply (intern | junior | mid)
   experience?: string
   motivation?: string
   step?: number
 }
 
 // Salary ranges per level jenjang — Sinta harus tahu ini.
-// normalizeLevel menerima key background lama untuk progress tersimpan sebelum sistem level.
+// normalizeLevel menerima level lama (intern_magang) & key background lama (progress pra-level).
 const SALARY_CONTEXT: Record<LevelType, { min: number; max: number; ideal: number; label: string }> = {
-  intern_magang: { min: 1200000,  max: 2000000,  ideal: 1500000,  label: 'Intern Magang' },
-  intern:        { min: 2000000,  max: 3500000,  ideal: 2500000,  label: 'Intern' },
-  junior:        { min: 4000000,  max: 6000000,  ideal: 4500000,  label: 'Junior' },
-  mid:           { min: 6000000,  max: 9000000,  ideal: 7000000,  label: 'Mid-Level' },
+  intern: { min: 1800000,  max: 3000000,  ideal: 2500000,  label: 'Intern' },
+  junior: { min: 4000000,  max: 6000000,  ideal: 4500000,  label: 'Junior' },
+  mid:    { min: 6000000,  max: 9000000,  ideal: 7000000,  label: 'Mid-Level' },
 }
 
 // Universal style rules

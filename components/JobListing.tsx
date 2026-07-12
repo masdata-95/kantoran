@@ -120,6 +120,15 @@ export default function JobListing({ background, onApply }: Props) {
   const defaultLevel: LevelType = background ? (LEVEL_FOR_BG[background] || 'intern') : 'intern'
   const [pickedLevel, setPickedLevel] = useState<LevelType>(defaultLevel)
   const [resetting, setResetting] = useState(false)
+  // Kehadiran sosial: jumlah orang aktif minggu ini (tampil kalau cukup ramai)
+  const [activeCount, setActiveCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    authFetch('/api/stats')
+      .then(r => r.json())
+      .then(d => setActiveCount(typeof d.activeThisWeek === 'number' ? d.activeThisWeek : null))
+      .catch(() => {})
+  }, [])
 
   // Prevent body scroll when modal open
   useEffect(() => {
@@ -156,9 +165,9 @@ export default function JobListing({ background, onApply }: Props) {
     setModalJob(key)
   }
 
-  const formatSalary = (n: number) => `${(n / 1000000).toFixed(1)} jt`
+  const formatSalary = (n: number) => `${(n / 1000000).toFixed(1).replace(/\.0$/, '')}`
   // Semua jenjang terbuka — kartu menampilkan rentang gaji lintas level
-  const salMin = SALARY_RANGE['intern_magang'].min
+  const salMin = SALARY_RANGE['intern'].min
   const salMax = SALARY_RANGE['mid'].max
 
   const getCategoryLabel = (bg: BackgroundType | '') => {
@@ -197,6 +206,12 @@ export default function JobListing({ background, onApply }: Props) {
             <div>
               <h1 className="font-serif text-xl font-bold text-[#111111]">Pilih posisi yang ingin kamu lamar</h1>
               <p className="text-xs text-[#888780] mt-0.5">PT Vantara Nusantara · Jakarta Selatan · Hybrid · Bisa coba lebih dari satu posisi</p>
+              {activeCount !== null && activeCount >= 3 && (
+                <p className="text-[10px] font-medium text-[#0F6E56] mt-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#1D9E75] mr-1 align-middle" />
+                  {activeCount} orang sedang menjalani simulasi di Vantara minggu ini
+                </p>
+              )}
             </div>
             {background && (
               <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-full px-3 py-1 text-[10px] font-semibold text-[#0F6E56] flex-shrink-0">
@@ -232,11 +247,11 @@ export default function JobListing({ background, onApply }: Props) {
                   </div>
                   {isDone ? (
                     <span className="text-[9px] font-semibold bg-[#E1F5EE] text-[#0F6E56] px-2 py-0.5 rounded-full">
-                      ✅ Hari-1 selesai
+                      Hari-1 selesai
                     </span>
                   ) : isActive ? (
                     <span className="text-[9px] font-semibold bg-[#FAEEDA] text-[#854F0B] px-2 py-0.5 rounded-full">
-                      🟢 {runStatusLabel(run.step)}
+                      {runStatusLabel(run.step)}
                     </span>
                   ) : (
                     <span className="text-[9px] text-[#888780] font-medium bg-[#F1EFE8] px-2 py-0.5 rounded-full">
@@ -252,8 +267,8 @@ export default function JobListing({ background, onApply }: Props) {
                 <div className="flex items-center gap-1 mb-3">
                   <span className="text-xs font-semibold text-[#0F6E56]">
                     {run?.level
-                      ? `Rp ${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].min)}, ${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].max)}/bln`
-                      : `Rp ${formatSalary(salMin)}, ${formatSalary(salMax)}/bln · semua jenjang`}
+                      ? `Rp ${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].min)}-${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].max)} jt/bln`
+                      : `Rp ${formatSalary(salMin)}-${formatSalary(salMax)} jt/bln · semua jenjang`}
                   </span>
                 </div>
 
@@ -315,7 +330,7 @@ export default function JobListing({ background, onApply }: Props) {
                 <div className="flex gap-4 mt-4 text-white/85 text-xs">
                   <span>📍 Jakarta Selatan</span>
                   <span>🏠 Hybrid 3x/minggu</span>
-                  <span>💰 Rp {formatSalary(pickedSal.min)}, {formatSalary(pickedSal.max)}/bln</span>
+                  <span>💰 Rp {formatSalary(pickedSal.min)}-{formatSalary(pickedSal.max)} jt/bln</span>
                 </div>
               </div>
 
@@ -325,13 +340,13 @@ export default function JobListing({ background, onApply }: Props) {
                   {/* Status run tersimpan */}
                   {isActive && (
                     <div className="bg-[#FAEEDA] border border-[#854F0B]/15 rounded-xl px-4 py-3 text-xs text-[#854F0B]">
-                      🟢 <strong>Lamaran kamu sedang berjalan</strong> sebagai {role} ({runStatusLabel(run.step)}).
+                      <strong>Lamaran kamu sedang berjalan</strong> sebagai {role} ({runStatusLabel(run.step)}).
                       Lanjutkan dari titik terakhir, semua chat dan progress tersimpan.
                     </div>
                   )}
                   {isDone && (
                     <div className="bg-[#E1F5EE] border border-[#0F6E56]/15 rounded-xl px-4 py-3 text-xs text-[#0F6E56]">
-                      ✅ <strong>Hari pertama selesai</strong> di posisi ini, {run.coins} Kantor Coin dan {run.tasks_done} task.
+                      <strong>Hari pertama selesai</strong> di posisi ini, {run.coins} Kantor Coin dan {run.tasks_done} task.
                       Kamu bisa mengulang dari awal dengan jenjang berbeda (progress lama akan terhapus).
                     </div>
                   )}
@@ -368,7 +383,7 @@ export default function JobListing({ background, onApply }: Props) {
                                 <p className="text-[11px] text-[#888780] mt-0.5">{lv.desc}</p>
                               </div>
                               <span className={`text-xs font-semibold flex-shrink-0 ml-3 ${isPicked ? 'text-[#0F6E56]' : 'text-[#888780]'}`}>
-                                Rp {formatSalary(sal.min)}, {formatSalary(sal.max)}
+                                Rp {formatSalary(sal.min)}-{formatSalary(sal.max)} jt
                               </span>
                             </button>
                           )

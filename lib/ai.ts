@@ -19,6 +19,11 @@ const GEMINI_KEYS = [
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY
 
+// Nama model via env supaya migrasi model (mis. gemini-2.5-flash pensiun Okt 2026)
+// cukup ganti env + redeploy, tanpa ubah kode
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+
 // Track which key was used last (round-robin)
 let groqIndex = 0
 let geminiIndex = 0
@@ -101,8 +106,8 @@ async function callGemini(
   }))
 
   try {
-    // gemini-2.0-flash-exp & seluruh keluarga 2.0 sudah di-shutdown per 1 Juni 2026 — pakai 2.5-flash
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+    // gemini-2.0-flash-exp & seluruh keluarga 2.0 sudah di-shutdown per 1 Juni 2026
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
     const res = await fetch(url, {
       method: 'POST',
@@ -171,7 +176,7 @@ async function callGroq(
         'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         max_tokens: cfg.maxTokens,
         temperature: cfg.temperature,
         ...(cfg.json ? { response_format: { type: 'json_object' } } : {}),
@@ -312,6 +317,7 @@ export function cleanResponse(text: string): string {
     .replace(/\s+-\s+/g, ', ')              // spasi hyphen spasi (dipakai sbg dash) → koma
     .replace(/\s*,\s*,/g, ',')              // bereskan koma dobel
     .replace(/,\s*([.!?])/g, '$1')          // koma sebelum titik/tanya → buang
+    .replace(/[ \t]+([.!?,])/g, '$1')       // spasi menggantung sebelum tanda baca → rapat
     .replace(/[ \t]{2,}/g, ' ')             // rapikan spasi ganda
     .trim()
 }

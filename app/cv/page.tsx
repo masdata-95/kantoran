@@ -244,7 +244,7 @@ export default function CVPage() {
                 <label className="text-xs font-semibold uppercase tracking-wider text-[#888780]">Isi CV kamu</label>
                 {profile && (
                   <button onClick={autofill} style={{ cursor: 'pointer' }} className="text-xs text-[#0F6E56] font-medium hover:underline">
-                    ✨ Isi dari profil Kantoran
+                    Isi dari profil Kantoran
                   </button>
                 )}
               </div>

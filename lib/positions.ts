@@ -12,33 +12,33 @@ export interface NPC {
 // ── LEVEL / JENJANG ───────────────────────────────
 // Level dipilih user saat apply di job listing — TIDAK lagi dikunci ke background profil.
 // Background hanya dipakai sebagai konteks cerita (CV user) dan default pilihan level.
-export type LevelType = 'intern_magang' | 'intern' | 'junior' | 'mid'
+export type LevelType = 'intern' | 'junior' | 'mid'
 
 export const LEVEL_LABEL: Record<LevelType, string> = {
-  intern_magang: 'Intern Magang',
   intern: 'Intern',
   junior: 'Junior',
   mid: 'Mid-Level',
 }
 
 export const LEVELS: { id: LevelType; label: string; desc: string }[] = [
-  { id: 'intern_magang', label: 'Intern Magang', desc: 'Magang sambil kuliah, part-time' },
-  { id: 'intern',        label: 'Intern',        desc: 'Full-time internship untuk pemula' },
-  { id: 'junior',        label: 'Junior',        desc: 'Entry-level dengan tanggung jawab penuh' },
-  { id: 'mid',           label: 'Mid-Level',     desc: 'Berpengalaman, ekspektasi lebih tinggi' },
+  { id: 'intern', label: 'Intern',    desc: 'Magang untuk mahasiswa dan pemula' },
+  { id: 'junior', label: 'Junior',    desc: 'Entry-level dengan tanggung jawab penuh' },
+  { id: 'mid',    label: 'Mid-Level', desc: 'Berpengalaman, ekspektasi lebih tinggi' },
 ]
 
 // Default level dari background profil (dipakai sebagai pre-select, bukan kunci)
 export const LEVEL_FOR_BG: Record<string, LevelType> = {
-  student: 'intern_magang',
+  student: 'intern',
   fresh_grad: 'intern',
   jobseeker: 'junior',
   career_switch: 'mid',
 }
 
-// Terima nilai level baru maupun key background lama (progress tersimpan sebelum sistem level)
+// Terima nilai level baru, level lama ('intern_magang' sudah dilebur ke 'intern'),
+// maupun key background lama (progress tersimpan sebelum sistem level)
 export function normalizeLevel(v: string | undefined | null): LevelType {
   if (v && v in LEVEL_LABEL) return v as LevelType
+  if (v === 'intern_magang') return 'intern'
   if (v && LEVEL_FOR_BG[v]) return LEVEL_FOR_BG[v]
   return 'intern'
 }
@@ -98,7 +98,7 @@ Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus
     taskContext: 'Tim Marketing butuh data ini untuk planning campaign Q2. Pastikan datanya bisa dipercaya sebelum dipakai.',
     upcomingTasks: [
       { day: 2, title: 'Dashboard Penjualan untuk Rapat Direksi', teaser: 'Diana butuh dashboard dari data yang kamu bersihkan kemarin, dipresentasikan langsung ke jajaran direksi.' },
-      { day: 3, title: 'Investigasi Anomali Region Timur', teaser: 'Penjualan Jawa Timur tiba-tiba anjlok 38%. Rizky minta kamu cari tahu kenapa, sebelum direksi yang bertanya duluan.' },
+      { day: 3, title: 'Investigasi Anomali Region Timur', teaser: 'Penjualan Jawa Timur tiba-tiba anjlok 38%, dan tim Finance menemukan selisih pembayaran distributor di region yang sama. Rizky minta kamu cari tahu sebelum direksi bertanya duluan.' },
       { day: 5, title: 'Forecast Penjualan Q3', teaser: 'Budget semua tim bergantung pada angka forecast-mu. Salah sedikit, satu kantor merasakan akibatnya.' },
       { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Rizky dan Diana menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
@@ -135,7 +135,7 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
     taskContext: 'Budget Q1 akan diputuskan berdasarkan performa Q4 ini. Analisismu dipakai di rapat besok pagi.',
     upcomingTasks: [
       { day: 2, title: 'Brief Campaign Lebaran Lumière', teaser: 'Budget Rp 2 miliar. Campaign terbesar tahun ini, dan Dinda mengajakmu masuk tim intinya.' },
-      { day: 3, title: 'Krisis: Video Komplain Viral di TikTok', teaser: 'Sebuah video komplain menembus 800 ribu views semalam. Seluruh tim menunggu rekomendasi penanganan darimu.' },
+      { day: 3, title: 'Krisis: Video Komplain Viral di TikTok', teaser: 'Video komplain produk Lumière menembus 800 ribu views semalam, dan asalnya dari region timur yang penjualannya sedang diselidiki tim Data. Seluruh tim menunggu rekomendasimu.' },
       { day: 5, title: 'A/B Test Landing Page Roots&Co', teaser: 'Dua versi, satu pemenang. Datamu yang menentukan ke mana budget mengalir.' },
       { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Dinda dan Pak Budi menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
@@ -172,7 +172,7 @@ Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spes
     taskContext: 'CFO minta laporan variance sebelum budget meeting minggu depan. Ini urgent.',
     upcomingTasks: [
       { day: 2, title: 'Closing Akhir Bulan, Rekonsiliasi Kas', teaser: 'Hari paling menegangkan di Finance. Semua angka harus balance sebelum tengah malam.' },
-      { day: 3, title: 'Selisih Rp 80 Juta, Temukan Sumbernya', teaser: 'Angka tidak balance dan CFO sudah bertanya dua kali. Andi menyerahkan investigasinya ke kamu.' },
+      { day: 3, title: 'Selisih Rp 80 Juta, Temukan Sumbernya', teaser: 'Angka tidak balance dan CFO sudah bertanya dua kali. Jejaknya mengarah ke pembayaran distributor region timur, kasus yang juga sedang diselidiki tim Data. Andi menyerahkannya ke kamu.' },
       { day: 5, title: 'Proyeksi Cashflow 6 Bulan', teaser: 'Manajemen mau ekspansi. Proyeksimu yang menentukan apakah perusahaan sanggup atau tidak.' },
       { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Andi dan Pak Hendra menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
@@ -208,7 +208,7 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
     taskBody: 'File <strong>task_hr_generalist.xlsx</strong> ada di Notion. Screen 5 kandidat dan shortlist 2 terbaik untuk interview tahap berikutnya.',
     taskContext: 'Tim butuh shortlist ini sebelum akhir minggu. Interview tahap berikutnya sudah dijadwalkan minggu depan.',
     upcomingTasks: [
-      { day: 2, title: 'Interview Kandidat Pertamamu', teaser: 'Kali ini kamu yang duduk di kursi pewawancara, kandidatnya dari shortlist yang kamu buat sendiri.' },
+      { day: 2, title: 'Interview Kandidat Pertamamu', teaser: 'Kali ini kamu yang duduk di kursi pewawancara. Kandidatnya dari shortlist yang kamu buat sendiri, calon Junior Data Analyst untuk tim Rizky.' },
       { day: 3, title: 'Exit Interview Mendadak', teaser: 'Salah satu performer terbaik tim mengajukan resign pagi ini. Bu Ratna minta kamu yang menangani.' },
       { day: 5, title: 'Susun Program Onboarding Batch Baru', teaser: '8 karyawan baru masuk bulan depan. Pengalaman hari pertama mereka ada di tanganmu.' },
       { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Bu Ratna dan Pak Tono menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
@@ -217,7 +217,7 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
 
   bizdev: {
     title: 'Business Development', dept: 'Komersial & Strategi', icon: '🚀',
-    getRole: (lv) => ({ intern_magang:'Intern Magang BD', intern:'Intern BD', junior:'Junior BD Analyst', mid:'BD Associate' }[normalizeLevel(lv)]),
+    getRole: (lv) => ({ intern:'Intern BD', junior:'Junior BD Analyst', mid:'BD Associate' }[normalizeLevel(lv)]),
     reqs: ['Komunikasi dan presentasi yang kuat', 'Pemahaman dasar bisnis dan pasar', 'Analytical thinking', 'Nilai plus: pernah terlibat sales atau pitching'],
     itx: 'identifikasi peluang bisnis, evaluasi partnership, pitching, negosiasi, growth mindset',
     taskFile: 'task_bizdev.xlsx',
@@ -247,7 +247,7 @@ Cara bicara: energetik, big-picture thinker. Direct tapi charming. Honest soal f
     upcomingTasks: [
       { day: 2, title: 'Meeting Follow-up PT Maju Bersama', teaser: 'Shortlist-mu dipakai. Sekarang kamu ikut meeting pertamanya, dan Reza memintamu yang membuka presentasi.' },
       { day: 3, title: 'Negosiasi: Partner Minta Diskon 25%', teaser: 'Term sheet hampir deal, lalu mereka menekan di menit terakhir. Mundur, atau cari jalan tengah?' },
-      { day: 5, title: 'Riset Ekspansi Indonesia Timur', teaser: 'Pasar baru, data minim, potensi besar. Pak Anton menunggu rekomendasi go / no-go darimu.' },
+      { day: 5, title: 'Riset Ekspansi Indonesia Timur', teaser: 'Pasar baru, data minim, potensi besar. Tapi laporan anomali region timur dari tim Data bikin Pak Anton ragu. Dia menunggu rekomendasi go atau no-go darimu.' },
       { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Reza dan Pak Anton menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
   }
@@ -259,15 +259,14 @@ export const BACKGROUNDS: Record<BackgroundType, { label: string; role: string; 
   fresh_grad: { label: 'Fresh Graduate', role: 'Intern', icon: '🎓', desc: 'Baru lulus, belum punya pengalaman kerja kantoran' },
   jobseeker: { label: 'Job Seeker', role: 'Junior', icon: '🔍', desc: 'Aktif mencari kerja, sudah punya sedikit pengalaman' },
   career_switch: { label: 'Career Switcher', role: 'Mid-Level', icon: '🔄', desc: 'Sudah kerja di bidang lain, ingin pindah karir' },
-  student: { label: 'Mahasiswa Tingkat Akhir', role: 'Intern Magang', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal' },
+  student: { label: 'Mahasiswa Tingkat Akhir', role: 'Intern', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal' },
 }
 
-// Keyed by LevelType — akses lewat getSalaryRange() supaya key background lama tetap jalan
+// Keyed by LevelType — akses lewat getSalaryRange() supaya key background/level lama tetap jalan
 export const SALARY_RANGE: Record<LevelType, { min: number; offer: number; max: number }> = {
-  intern_magang: { min: 1200000, offer: 1500000, max: 1800000 },
-  intern:        { min: 2200000, offer: 2500000, max: 2900000 },
-  junior:        { min: 4000000, offer: 4500000, max: 5200000 },
-  mid:           { min: 6500000, offer: 7000000, max: 8000000 },
+  intern: { min: 1800000, offer: 2500000, max: 3000000 },
+  junior: { min: 4000000, offer: 4500000, max: 5200000 },
+  mid:    { min: 6500000, offer: 7000000, max: 8000000 },
 }
 
 export function getSalaryRange(levelOrBg: string | undefined | null) {
