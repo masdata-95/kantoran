@@ -11,7 +11,8 @@
     "seed:lessons": "tsx scripts/seed-lessons.ts",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf:tail": "wrangler tail kantoran"
+    "cf:tail": "wrangler tail kantoran",
+    "generate:universe": "tsx scripts/generate-universe.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -24,6 +25,7 @@
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "sql.js": "^1.14.1",
     "unpdf": "^1.6.2",
     "xlsx": "^0.18.5"
   },
@@ -33,6 +35,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sql.js": "^1.4.11",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "gray-matter": "^4.0.3",

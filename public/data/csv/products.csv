@@ -1,0 +1,37 @@
+sku,name,brand,category,price
+LUM-001,Lumière Serum Vit C,Lumière,Skincare,96500
+LUM-002,Lumière Serum Niacinamide,Lumière,Skincare,64500
+LUM-003,Lumière Moisturizer Gel,Lumière,Skincare,166500
+LUM-004,Lumière Moisturizer Cream,Lumière,Skincare,165500
+LUM-005,Lumière Sunscreen SPF50,Lumière,Skincare,120000
+LUM-006,Lumière Facial Wash,Lumière,Skincare,46500
+LUM-007,Lumière Toner Exfoliating,Lumière,Skincare,89000
+LUM-008,Lumière Toner Hydrating,Lumière,Skincare,152000
+LUM-009,Lumière Eye Cream,Lumière,Skincare,55000
+LUM-010,Lumière Face Mist,Lumière,Skincare,156500
+LUM-011,Lumière Night Cream,Lumière,Skincare,143000
+LUM-012,Lumière Micellar Water,Lumière,Skincare,55500
+RTC-001,Roots&Co Shampoo Anti Rontok,Roots&Co,Haircare,40000
+RTC-002,Roots&Co Shampoo Anti Ketombe,Roots&Co,Haircare,31000
+RTC-003,Roots&Co Conditioner Smoothing,Roots&Co,Haircare,100000
+RTC-004,Roots&Co Hair Serum,Roots&Co,Haircare,36000
+RTC-005,Roots&Co Hair Mask,Roots&Co,Haircare,103000
+RTC-006,Roots&Co Hair Tonic,Roots&Co,Haircare,111000
+RTC-007,Roots&Co Dry Shampoo,Roots&Co,Haircare,77000
+RTC-008,Roots&Co Scalp Scrub,Roots&Co,Haircare,102500
+RTC-009,Roots&Co Hair Oil,Roots&Co,Haircare,62500
+RTC-010,Roots&Co Leave-in Cream,Roots&Co,Haircare,118000
+RTC-011,Roots&Co Hair Vitamin,Roots&Co,Haircare,113500
+RTC-012,Roots&Co Curl Cream,Roots&Co,Haircare,114000
+VGL-001,Vanta Glow Body Lotion Brightening,Vanta Glow,Body Care,29500
+VGL-002,Vanta Glow Body Serum,Vanta Glow,Body Care,70500
+VGL-003,Vanta Glow Body Wash,Vanta Glow,Body Care,85500
+VGL-004,Vanta Glow Body Scrub,Vanta Glow,Body Care,77000
+VGL-005,Vanta Glow Hand Cream,Vanta Glow,Body Care,94500
+VGL-006,Vanta Glow Body Mist,Vanta Glow,Body Care,42500
+VGL-007,Vanta Glow Deodorant Serum,Vanta Glow,Body Care,37500
+VGL-008,Vanta Glow Sunscreen Body,Vanta Glow,Body Care,62000
+VGL-009,Vanta Glow Body Butter,Vanta Glow,Body Care,59500
+VGL-010,Vanta Glow Foot Cream,Vanta Glow,Body Care,61500
+VGL-011,Vanta Glow Body Oil,Vanta Glow,Body Care,73000
+VGL-012,Vanta Glow Sleeping Body Mask,Vanta Glow,Body Care,60000

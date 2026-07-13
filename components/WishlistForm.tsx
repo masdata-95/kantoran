@@ -10,6 +10,9 @@ interface Props {
   firstName: string
   coins: number
   tasksDone: number
+  // Rekap personal dari run (role, gaji nego, grade, gaya kerja) — lebih menular
+  // daripada template generik; fallback ke teks generik kalau kosong
+  shareText?: string
   // Balik ke hub karir (job listing) untuk coba posisi lain — multi-role
   onExplore?: () => void
 }
@@ -27,7 +30,9 @@ const WISHLIST_OPTIONS = [
   'Koneksi langsung ke HRD perusahaan',
 ]
 
-export default function WishlistForm({ user, positionTried, firstName, coins, tasksDone, onExplore }: Props) {
+export default function WishlistForm({ user, positionTried, firstName, coins, tasksDone, shareText, onExplore }: Props) {
+  const defaultShare = `Baru coba Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.vercel.app`
+  const share = shareText || defaultShare
   const [step, setStep] = useState(1)
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
@@ -83,13 +88,10 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
           {/* Share card */}
           <div className="bg-white border border-[#E5E3DC] rounded-2xl p-5 mb-6 text-left">
             <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Bagikan pengalaman kamu</p>
-            <p className="text-sm text-[#444441] leading-relaxed mb-4">
-              "Baru coba Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata banget. Diinterview AI, nego gaji, langsung dapat task dari supervisor. Recommended banget buat yang mau prepare diri sebelum kerja."
-            </p>
+            <p className="text-sm text-[#444441] leading-relaxed mb-4">"{share}"</p>
             <button
               onClick={() => {
-                const text = `Baru coba @Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview AI, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.vercel.app`
-                navigator.clipboard.writeText(text).catch(() => {})
+                navigator.clipboard.writeText(share).catch(() => {})
                 alert('Teks sudah dicopy! Tempel di Twitter/LinkedIn kamu.')
               }}
               style={{ cursor: 'pointer' }}

@@ -7,7 +7,7 @@
 ## 0. Uji otomatis (jalankan dulu, wajib hijau)
 
 ```bash
-npm test        # 22 unit test: normalizeLevel, salary, grade/revisi/gaya kerja, cleanResponse
+npm test        # 30 unit test: normalizeLevel, salary, grade/revisi/gaya kerja, cleanResponse, sqlCompare
 npm run build   # compile + TypeScript, 16 route harus ter-generate
 ```
 
@@ -96,6 +96,37 @@ npm run build   # compile + TypeScript, 16 route harus ter-generate
 - [ ] Kartu akhir hari menampilkan **"Penilaian hari pertama"**: Exceeds (0 revisi) / Meets (1) / Needs Improvement (2+), plus kalimat gaya kerja sesuai pilihan dilema.
 - [ ] Manager mengirim DM cliffhanger.
 - [ ] Surat Referensi sekarang: semua baris hari-1 tercentang + kutipan supervisor yang bunyinya sesuai grade.
+
+## 11b. Refresh & Resume (fix 13 Juli 2026)
+
+- [ ] Di tengah interview (atau room mana pun): **refresh halaman → kembali ke simulasi
+      di room yang sama**, BUKAN ke pemilihan posisi.
+- [ ] Klik tombol "Lowongan" (keluar ke hub) → refresh → tetap di hub (tidak dipaksa masuk simulasi).
+- [ ] Tutup tab, buka tab baru → mendarat di hub (perilaku sessionStorage yang diharapkan).
+- [ ] Tombol "Interview selesai" di header hr_office SEBELUM bahas gaji → Sinta menolak
+      dan menanyakan ekspektasi gaji (tidak lompat ke offering).
+
+## 11c. Database Vantara — SQL editor (khusus Data Analyst)
+
+- [ ] Apply sebagai Data Analyst → step task (5): supervisor menyebut akses database +
+      tombol "Buka Database Vantara"; room Database (🗄️) muncul di sidebar (posisi lain TIDAK punya).
+- [ ] Room terbuka: "Menyambungkan ke database..." → daftar tabel (products, distributors, sales, payments).
+- [ ] `SELECT * FROM sales LIMIT 10` → hasil tampil; Ctrl+Enter juga menjalankan.
+- [ ] Query non-SELECT (`DELETE FROM sales`) → ditolak "read-only".
+- [ ] Query salah sintaks → pesan error tampil, app tidak crash.
+- [ ] Latihan 1 (total revenue Jan 2026): tulis query benar → "Cek query-ku" → "Benar! +15 coin",
+      coin di topbar bertambah; cek ulang → TIDAK dobel coin; refresh → status ✓ bertahan.
+- [ ] Latihan 3: hasilnya memperlihatkan revenue Jawa Timur anjlok mulai 2026-05 (konsisten cerita).
+
+## 11d. Teach-back & Refleksi (setelah task APPROVED)
+
+- [ ] ±12 detik setelah ucapan selamat junior: junior bertanya minta DIAJARI
+      (mis. DA: "cara nemuin duplikat gimana sih?"). Jawab dengan penjelasan →
+      junior menanggapi isi penjelasan (bukan generik), bertanya lanjutan bila perlu.
+- [ ] Chat supervisor: setelah "sudah jam 5" ada pertanyaan refleksi "satu hal yang paling
+      kamu pelajari hari ini". Jawab → supervisor menanggapi natural.
+- [ ] Halaman wishlist: teks share PERSONAL (menyebut role, gaji nego, grade, gaya kerja),
+      bukan template generik; tombol copy menyalin teks tersebut.
 
 ## 12. Wishlist, Multi-role, Kantor Hidup
 

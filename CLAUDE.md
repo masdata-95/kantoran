@@ -58,6 +58,14 @@ Mekanik "career RPG" (12 Juli 2026, semua derived dari chat_history TANPA migrat
   getWorkStyle() → dibacakan di penilaian akhir hari + jadi baris surat referensi.
 - KEHADIRAN SOSIAL: /api/stats → "N orang menjalani simulasi minggu ini" di JobListing
   (hanya tampil kalau N >= 3).
+- TEACH-BACK: setelah task approved, junior minta diajari (POSITIONS[x].teachBack) —
+  user gantian menjelaskan, junior AI menanggapi sebagai pembelajar (getJnrPrompt).
+- REFLEKSI: supervisor menanyakan "satu hal yang paling kamu pelajari" setelah jam 5.
+- SHARE PERSONAL: buildRecap() di SimulatorApp (role, gaji nego, grade, gaya kerja)
+  → dikirim ke WishlistForm via onWishlist(coins, tasksDone, recap).
+- REFRESH RESUME: posisi aktif per-tab di sessionStorage (kantoran_active_pos_<uid>),
+  room terakhir juga (kantoran_last_view_<uid>_<pos>) — refresh TIDAK melempar ke hub;
+  keluar via tombol Lowongan/selesai wishlist menghapus key.
 
 ## NPC Characters
 - Sinta Maharani (SM) — HR Business Partner, ada di semua posisi
@@ -137,6 +145,9 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - lib/profile.ts — UserProfile types
 - lib/skills.ts — 70+ skills preset
 - components/GuidedTour.tsx — tur spotlight untuk user baru di simulator
+- components/SqlEditor.tsx — "Database Vantara": SQL editor in-browser (sql.js WASM) khusus data_analyst, room 'database' step >= 5; tantangan dinilai otomatis via lib/sqlCompare.ts (tanpa AI)
+- lib/sqlCompare.ts — pembanding hasil query untuk grading tantangan SQL
+- scripts/generate-universe.ts — Vantara Data Universe: generator seeded (npm run generate:universe) → public/data/vantara.db + public/data/csv/* + public/sql-wasm.wasm; anomali cerita ditanam di data (Jatim -38% YoY, Berkah Jaya nunggak ±Rp 77jt, TikTok conversion rendah, overspend Q4)
 - components/ReferenceLetter.tsx — surat referensi live (room 'reference', terbuka setelah kontrak; baris terisi per milestone, bunyi surat ikut grade)
 - lib/performance.ts — grade & gaya kerja diturunkan dari chat_history (countRevisions/computeGrade/getWorkStyle) — SENGAJA tanpa kolom DB baru
 - app/api/stats/route.ts — jumlah user aktif 7 hari (kehadiran sosial di job listing)

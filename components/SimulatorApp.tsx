@@ -10,6 +10,8 @@ import type { ModuleDTO } from '@/lib/lessons'
 
 // Academy di-load dinamis — react-markdown dkk tidak membebani bundle chat utama
 const AcademyPanel = dynamicImport(() => import('@/components/academy/AcademyPanel'), { ssr: false })
+// SQL editor (Data Analyst) juga dinamis — sql.js WASM hanya dimuat saat room dibuka
+const SqlEditor = dynamicImport(() => import('@/components/SqlEditor'), { ssr: false })
 
 import GuidedTour, { type TourStep } from '@/components/GuidedTour'
 import ReferenceLetter from '@/components/ReferenceLetter'
@@ -96,6 +98,19 @@ const ROOM_NPC: Record<string, string> = {
   jnr: 'jnr',
 }
 
+// Room boleh dibuka pada step tertentu? Dipakai saat restore room terakhir setelah
+// refresh — jangan pernah mendaratkan user di room yang masih terkunci.
+const isRoomAvailable = (room: string, step: number): boolean => {
+  const phase = step >= 3 ? 1 : 0
+  const locked: Record<string, boolean> = {
+    inbox: false, hr_office: false,
+    slack: phase < 1, meeting: phase < 1, sup_chat: phase < 1, mgr_chat: phase < 1,
+    jnr: phase < 1, pantry: phase < 1, workspace: phase < 1, reference: phase < 1,
+    academy: step < 4, file_manager: step < 5, database: step < 5,
+  }
+  return room in locked && !locked[room]
+}
+
 // ── MAIN COMPONENT ────────────────────────────────
 import ProfileTab from '@/components/ProfileTab'
 import type { UserProfile } from '@/lib/profile'
@@ -108,7 +123,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   initialBackground?: string
   initialLevel?: LevelType
   onExit?: () => void
-  onWishlist?: (coins: number, tasksDone: number) => void
+  onWishlist?: (coins: number, tasksDone: number, recap?: string) => void
 }) {
   const [state, setState] = useState<SimState>(INITIAL)
   const [view, setView]   = useState('inbox')
@@ -299,6 +314,12 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   // Tutup drawer mobile tiap kali pindah ruangan
   useEffect(() => { setSidebarOpen(false) }, [view])
 
+  // Simpan room terakhir per (user, posisi) — dipulihkan saat refresh
+  useEffect(() => {
+    if (!showApp || !state.position) return
+    try { sessionStorage.setItem(`kantoran_last_view_${user.id}_${state.position}`, view) } catch { /* abaikan */ }
+  }, [view, showApp, state.position, user.id])
+
   // Tampilkan tur saat pertama kali masuk simulasi (masih di tahap awal, belum pernah lihat tur)
   useEffect(() => {
     if (!showApp) return
@@ -439,7 +460,13 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           chatHistory: (progress.chat_history as Record<string, Message[]>) || {},
           interviewDone: progress.step >= 2,
         }))
-        setView(progress.step >= 3 ? 'slack' : 'inbox')
+        // Refresh harus mendarat kembali di room terakhir yang dibuka, bukan reset ke slack/inbox
+        let initialView = progress.step >= 3 ? 'slack' : 'inbox'
+        try {
+          const savedView = sessionStorage.getItem(`kantoran_last_view_${user.id}_${progress.position || initialPosition || ''}`)
+          if (savedView && isRoomAvailable(savedView, progress.step || 0)) initialView = savedView
+        } catch { /* sessionStorage tidak tersedia */ }
+        setView(initialView)
         setShowApp(true)
 
         // Kantor tetap hidup saat user pergi: kembali setelah > 8 jam → ada pesan
@@ -567,8 +594,10 @@ PT Vantara Nusantara`
       })
       // Dirty-check: jangan tulis ulang blob yang sama ke database
       if (payload === lastSavedRef.current) return
-      await authFetch('/api/progress', { method: 'POST', body: payload })
-      lastSavedRef.current = payload
+      const res = await authFetch('/api/progress', { method: 'POST', body: payload })
+      // Hanya tandai tersimpan kalau server benar-benar menerima — save yang gagal
+      // (409 stale / 500) harus dicoba lagi di siklus berikutnya, bukan dianggap beres
+      if (res.ok) lastSavedRef.current = payload
     } catch (e) { console.error('Save progress error:', e) }
   }, [user])
 
@@ -793,12 +822,22 @@ PT Vantara Nusantara`
     } catch { alert('Gagal reset, coba lagi.') }
   }
 
+  // Rekap personal untuk dibagikan — dibangun dari data run (bukan template generik)
+  const buildRecap = () => {
+    const grade = GRADE_LABEL[computeGrade(countRevisions(state.chatHistory))]
+    const ws = getWorkStyle(state.chatHistory)
+    const salary = state.salaryOffered > 0
+      ? `nego gaji sampai Rp ${(state.salaryOffered / 1000000).toFixed(1).replace(/\.0$/, '')} juta`
+      : 'nego gaji sendiri'
+    return `Hari pertamaku sebagai ${state.bgRole} di simulasi Kantoran: lulus interview HR, ${salary}, task pertama APPROVED dengan penilaian "${grade}"${ws ? ` dan gaya kerja "${ws.label}"` : ''}. ${state.coins} Kantor Coin terkumpul. Rasain juga jadi anak kantoran: kantoran.vercel.app`
+  }
+
   const handleNextStep = async (step: number, data?: Record<string, unknown>) => {
     // Special case: go to day 2 / wishlist
     if (step === 99) {
       if (onWishlist) {
         await saveProgress()
-        onWishlist(state.coins, state.tasksDone)
+        onWishlist(state.coins, state.tasksDone, buildRecap())
       }
       return
     }
@@ -1003,6 +1042,17 @@ PT Vantara Nusantara`
         }, true)
 
         showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', `Task baru: ${pos?.taskTitle}`)
+
+        // Data Analyst dapat akses database internal + latihan SQL dari supervisor
+        if (state.position === 'data_analyst') {
+          setTimeout(() => {
+            addMsg('sup_chat', {
+              role: 'npc', npcId: 'sup',
+              text: `Satu lagi. Kamu udah aku kasih akses read-only ke database penjualan internal, ada di sidebar namanya Database. Aku taruh beberapa latihan SQL kecil di situ, kerjain kalau sempat, kepake banget buat investigasi data.`
+            })
+            addMsg('sup_chat', { role: 'action', data: { label: 'Buka Database Vantara →', goTo: 'database' } }, true)
+          }, 5000)
+        }
       }, 800)
     }
 
@@ -1188,10 +1238,23 @@ PT Vantara Nusantara`
 
         setTimeout(() => {
           addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `${state.firstName}! Denger-denger task pertamamu approved ya, selamat! Aku dulu sampe minggu kedua baru approved wkwk` })
+
+          // Teach-back: junior gantian minta diajari — mengajar adalah bentuk
+          // belajar terdalam, dan membuat user merasa sudah "naik level"
+          setTimeout(() => {
+            addMsg('jnr', { role: 'npc', npcId: 'jnr', text: pos?.teachBack || 'eh btw, ajarin dong tadi lo ngerjainnya gimana?' })
+            showNotif('jnr', pos?.junior.name || 'Teman tim', `${(pos?.junior.name || 'Junior').split(' ')[0]} minta tolong diajari sesuatu`)
+          }, 12000)
+
           setTimeout(() => {
             addMsg('sup_chat', {
               role: 'npc', npcId: 'sup',
               text: `Good work hari ini ${state.firstName}. Sudah jam 5, bisa pulang dulu. Besok standup jam 9, ada task lanjutan yang perlu kita bahas.`
+            })
+            // Ritual refleksi akhir hari — konsolidasi belajar + ritme pulang yang sehat
+            addMsg('sup_chat', {
+              role: 'npc', npcId: 'sup',
+              text: `Oh satu lagi, kebiasaan tim ini tiap pulang: sebut satu hal yang paling kamu pelajari hari ini. Apa punyamu?`
             })
             addMsg('sup_chat', {
               role: 'action',
@@ -1264,6 +1327,10 @@ PT Vantara Nusantara`
     { id: 'workspace',   icon: '🖥️', label: 'Workspace',   locked: state.phaseUnlocked < 1 },
     { id: 'academy',     icon: '🎓', label: 'Academy',      locked: state.step < 4 },
     { id: 'file_manager',icon: '📁', label: 'File Manager', locked: state.step < 5 },
+    // Database Vantara: SQL editor in-story, khusus Data Analyst
+    ...(state.position === 'data_analyst'
+      ? [{ id: 'database', icon: '🗄️', label: 'Database', locked: state.step < 5 }]
+      : []),
     { id: 'reference',   icon: '📜', label: 'Surat Referensi', locked: state.phaseUnlocked < 1 },
     { id: 'pantry',      icon: '☕', label: 'Pantry',       locked: state.phaseUnlocked < 1 },
   ]
@@ -1514,6 +1581,20 @@ PT Vantara Nusantara`
             state={state}
             pos={pos}
             onOfferingClick={() => {
+              // Tombol pintas TIDAK boleh melewati nego gaji — tanpa guard ini,
+              // offering letter keluar dengan angka default tanpa pernah dibahas
+              const hrMsgs = state.chatHistory['hr_office'] || []
+              const salaryDiscussed = hrMsgs.some(m =>
+                !m.isError && (m.role === 'user' || m.role === 'npc') &&
+                m.text && /gaji|juta|salary/i.test(m.text)
+              )
+              if (!salaryDiscussed) {
+                addMsg('hr_office', {
+                  role: 'npc', npcId: 'sinta',
+                  text: `Eh sebentar, sebelum kita tutup ada satu hal penting yang belum dibahas: ekspektasi gaji kamu untuk posisi ini berapa?`
+                }, true)
+                return
+              }
               setState(prev => ({ ...prev, interviewDone: true }))
               handleNextStep(2)
             }}
@@ -1557,6 +1638,11 @@ PT Vantara Nusantara`
                 />
               )}
 
+              {/* Database Vantara: SQL editor in-browser, khusus Data Analyst */}
+              {view === 'database' && state.position === 'data_analyst' && (
+                <SqlEditor userId={user.id} onCoins={addCoins} />
+              )}
+
               {/* Surat referensi: aset yang terlihat sejak hari pertama, terisi mengikuti progress */}
               {view === 'reference' && (
                 <ReferenceLetter
@@ -1586,7 +1672,7 @@ PT Vantara Nusantara`
               )}
 
               {/* Regular messages */}
-              {view !== 'workspace' && view !== 'academy' && view !== 'reference' && (state.chatHistory[view] || []).map(msg => (
+              {view !== 'workspace' && view !== 'academy' && view !== 'reference' && view !== 'database' && (state.chatHistory[view] || []).map(msg => (
                 <MessageBubble
                   key={msg.id}
                   msg={msg}
@@ -1615,7 +1701,7 @@ PT Vantara Nusantara`
               )}
 
               {/* Empty state */}
-              {view !== 'workspace' && view !== 'academy' && view !== 'reference' && (state.chatHistory[view] || []).length === 0 && (
+              {view !== 'workspace' && view !== 'academy' && view !== 'reference' && view !== 'database' && (state.chatHistory[view] || []).length === 0 && (
                 <EmptyRoom view={view} state={state} />
               )}
 
@@ -1726,6 +1812,7 @@ function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state
     academy:     { initials: '🎓', avClass: 'av-teal', name: 'Vantara Academy', status: 'Training module dari supervisormu', tag: '', tagBg: '' },
     file_manager:{ initials: '📁', avClass: 'av-amber', name: 'File Manager', status: 'File task & dokumen kerja', tag: '', tagBg: '' },
     reference:   { initials: '📜', avClass: 'av-teal', name: 'Surat Referensi Kerja', status: 'Aset yang sedang kamu bangun di Vantara', tag: '', tagBg: '' },
+    database:    { initials: '🗄️', avClass: 'av-blue', name: 'Database Vantara', status: 'Akses read-only · SQL editor', tag: '', tagBg: '' },
     pantry:      { initials: '☕', avClass: 'av-amber', name: 'Pantry', status: 'Tempat gosip & ngobrol santai', tag: 'Pantry', tagBg: 'bg-[#FAEEDA] text-[#854F0B]' },
     sup_chat:    { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu`, tag: 'Supervisor', tagBg: 'bg-[#E8F0FC] text-[#1A4A8A]' },
     mgr_chat:    { initials: NPC_INITIALS[state.position]?.mgr || '??', avClass: pos?.manager.avClass || 'av-purple', name: pos?.manager.name || 'Manager', status: pos?.manager.status || '', tag: 'Manager', tagBg: 'bg-[#F0EAF9] text-[#5B2D8E]' },

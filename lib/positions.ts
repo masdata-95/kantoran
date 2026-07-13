@@ -61,6 +61,9 @@ export interface Position {
   taskTitle: string
   taskBody: string
   taskContext: string
+  // Pertanyaan junior setelah task user approved — user gantian MENGAJARI
+  // (protégé effect: mengajar = bentuk belajar terdalam, konten gratis via chat AI)
+  teachBack: string
   // Task hari berikutnya, ditampilkan terkunci (teaser premium), tidak bisa diklik
   upcomingTasks: { day: number; title: string; teaser: string }[]
 }
@@ -96,6 +99,7 @@ Cara bicara: sangat singkat untuk non-teknikal. Demanding tapi fair. Kalau bagus
     taskTitle: 'Cek Kualitas Data Penjualan Lumière Jan 2026',
     taskBody: 'File <strong>task_data_analyst.xlsx</strong> ada di Notion. Temukan semua issue kualitas data dan buat summary singkat.',
     taskContext: 'Tim Marketing butuh data ini untuk planning campaign Q2. Pastikan datanya bisa dipercaya sebelum dipakai.',
+    teachBack: `eh btw, tadi kan task lo soal data kotor tuh. cara lo nemuin duplikat sama data aneh di Excel gimana sih? aku suka kelewatan mulu, ajarin dong versi simpelnya`,
     upcomingTasks: [
       { day: 2, title: 'Dashboard Penjualan untuk Rapat Direksi', teaser: 'Diana butuh dashboard dari data yang kamu bersihkan kemarin, dipresentasikan langsung ke jajaran direksi.' },
       { day: 3, title: 'Investigasi Anomali Region Timur', teaser: 'Penjualan Jawa Timur tiba-tiba anjlok 38%, dan tim Finance menemukan selisih pembayaran distributor di region yang sama. Rizky minta kamu cari tahu sebelum direksi bertanya duluan.' },
@@ -133,6 +137,7 @@ Cara bicara: lebih warm dari Rizky tapi tetap high standard. Suka kasih konteks 
     taskTitle: 'Analisis Performa Campaign Lumière Q4 2025',
     taskBody: 'File <strong>task_marketing_analyst.xlsx</strong> ada di Notion. Hitung CTR dan conversion rate tiap campaign, identifikasi yang terbaik dan terburuk.',
     taskContext: 'Budget Q1 akan diputuskan berdasarkan performa Q4 ini. Analisismu dipakai di rapat besok pagi.',
+    teachBack: `eh mumpung lo baru ngerjain analisis campaign, jelasin dong bedanya CTR sama conversion rate. aku suka ketuker, malu nanya ke kak Dinda wkwk`,
     upcomingTasks: [
       { day: 2, title: 'Brief Campaign Lebaran Lumière', teaser: 'Budget Rp 2 miliar. Campaign terbesar tahun ini, dan Dinda mengajakmu masuk tim intinya.' },
       { day: 3, title: 'Krisis: Video Komplain Viral di TikTok', teaser: 'Video komplain produk Lumière menembus 800 ribu views semalam, dan asalnya dari region timur yang penjualannya sedang diselidiki tim Data. Seluruh tim menunggu rekomendasimu.' },
@@ -170,6 +175,7 @@ Cara bicara: presisi dan terstruktur. Kalau ada yang salah, langsung bilang spes
     taskTitle: 'Review Budget Variance Q4 2025',
     taskBody: 'File <strong>task_finance_analyst.xlsx</strong> ada di Notion. Temukan departemen dengan overspending terbesar dan buat ringkasan untuk CFO.',
     taskContext: 'CFO minta laporan variance sebelum budget meeting minggu depan. Ini urgent.',
+    teachBack: `eh lo kan baru ngerjain variance analysis. itu sebenernya ngitungnya gimana sih, terus kapan selisih dianggap wajar? jelasin dong, aku suka bingung pas ditanya bu CFO`,
     upcomingTasks: [
       { day: 2, title: 'Closing Akhir Bulan, Rekonsiliasi Kas', teaser: 'Hari paling menegangkan di Finance. Semua angka harus balance sebelum tengah malam.' },
       { day: 3, title: 'Selisih Rp 80 Juta, Temukan Sumbernya', teaser: 'Angka tidak balance dan CFO sudah bertanya dua kali. Jejaknya mengarah ke pembayaran distributor region timur, kasus yang juga sedang diselidiki tim Data. Andi menyerahkannya ke kamu.' },
@@ -207,6 +213,7 @@ Cara bicara: warm dan empatik, tapi tetap professional. Honest soal sisi gelap d
     taskTitle: 'CV Screening Junior Data Analyst, Batch 1',
     taskBody: 'File <strong>task_hr_generalist.xlsx</strong> ada di Notion. Screen 5 kandidat dan shortlist 2 terbaik untuk interview tahap berikutnya.',
     taskContext: 'Tim butuh shortlist ini sebelum akhir minggu. Interview tahap berikutnya sudah dijadwalkan minggu depan.',
+    teachBack: `eh gimana sih cara lo scoring kandidat biar objektif? aku masih suka kebawa feeling pas screening, ajarin dong caranya`,
     upcomingTasks: [
       { day: 2, title: 'Interview Kandidat Pertamamu', teaser: 'Kali ini kamu yang duduk di kursi pewawancara. Kandidatnya dari shortlist yang kamu buat sendiri, calon Junior Data Analyst untuk tim Rizky.' },
       { day: 3, title: 'Exit Interview Mendadak', teaser: 'Salah satu performer terbaik tim mengajukan resign pagi ini. Bu Ratna minta kamu yang menangani.' },
@@ -244,6 +251,7 @@ Cara bicara: energetik, big-picture thinker. Direct tapi charming. Honest soal f
     taskTitle: 'Evaluasi Peluang Partnership Distributor Regional',
     taskBody: 'File <strong>task_bizdev.xlsx</strong> ada di Notion. Evaluasi 6 calon partner dan shortlist 3 terbaik dengan justifikasi.',
     taskContext: 'Direktur Komersial butuh shortlist ini untuk roadshow partnership bulan depan. Jangan sampai rekomendasikan partner yang bermasalah.',
+    teachBack: `eh lo tadi nge-rank calon partner pake kriteria apa aja sih? aku kalau disuruh gitu bingung mulai dari mana, share dong cara mikirnya`,
     upcomingTasks: [
       { day: 2, title: 'Meeting Follow-up PT Maju Bersama', teaser: 'Shortlist-mu dipakai. Sekarang kamu ikut meeting pertamanya, dan Reza memintamu yang membuka presentasi.' },
       { day: 3, title: 'Negosiasi: Partner Minta Diskon 25%', teaser: 'Term sheet hampir deal, lalu mereka menekan di menit terakhir. Mundur, atau cari jalan tengah?' },

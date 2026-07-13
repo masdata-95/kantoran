@@ -19,6 +19,11 @@ type AppStage =
   | 'simulator'
   | 'wishlist'
 
+// Posisi yang sedang dibuka disimpan per-tab: refresh di tengah simulasi harus
+// kembali ke simulasi, BUKAN ke hub. sessionStorage pas: bertahan saat refresh,
+// bersih saat tab ditutup (kunjungan berikutnya tetap mendarat di hub).
+const activePosKey = (uid: string) => `kantoran_active_pos_${uid}`
+
 export default function SimulatorPage() {
   const [user, setUser] = useState<User | null>(null)
   const [stage, setStage] = useState<AppStage>('loading')
@@ -28,8 +33,9 @@ export default function SimulatorPage() {
   const [selectedLevel, setSelectedLevel] = useState<LevelType>('intern')
   const [simCoins, setSimCoins] = useState(0)
   const [simTasksDone, setSimTasksDone] = useState(0)
+  const [simRecap, setSimRecap] = useState('')
 
-  async function checkUserState() {
+  async function checkUserState(uid: string) {
     try {
       // Check profile
       const profileRes = await authFetch('/api/profile')
@@ -43,8 +49,22 @@ export default function SimulatorPage() {
       setProfile(existingProfile)
       setBackground((existingProfile.category || '') as BackgroundType | '')
 
+      // Refresh di tengah simulasi → langsung resume posisi yang sedang dibuka
+      try {
+        const raw = sessionStorage.getItem(activePosKey(uid))
+        if (raw) {
+          const saved = JSON.parse(raw) as { position?: string; level?: LevelType }
+          if (saved?.position) {
+            setSelectedPosition(saved.position)
+            if (saved.level) setSelectedLevel(saved.level)
+            setStage('simulator')
+            return
+          }
+        }
+      } catch { /* sessionStorage tidak tersedia → ke hub seperti biasa */ }
+
       // Multi-role: job listing adalah hub karir — semua status run per posisi
-      // ditampilkan di sana (Mulai / Lanjutkan / Selesai), jadi selalu ke sana.
+      // ditampilkan di sana (Mulai / Lanjutkan / Selesai).
       setStage('job_listing')
     } catch (e) {
       console.error('Check state error:', e)
@@ -66,7 +86,7 @@ export default function SimulatorPage() {
         return
       }
 
-      await checkUserState()
+      await checkUserState(u.id)
 
       // Listen for auth changes — simpan subscription supaya bisa di-unsubscribe
       // (tanpa ini, remount menumpuk listener duplikat)
@@ -77,7 +97,7 @@ export default function SimulatorPage() {
           setStage('login')
         } else if (newUser.id !== u?.id) {
           // Different user logged in
-          await checkUserState()
+          await checkUserState(newUser.id)
         }
       })
       unsubscribe = () => subscription.unsubscribe()
@@ -89,9 +109,11 @@ export default function SimulatorPage() {
 
   // Selesai hari-1 sebuah posisi: form wishlist hanya sekali seumur akun,
   // setelah itu langsung balik ke hub karir untuk coba posisi lain
-  const handleSimDone = async (coins: number, tasksDone: number) => {
+  const handleSimDone = async (coins: number, tasksDone: number, recap?: string) => {
     setSimCoins(coins)
     setSimTasksDone(tasksDone)
+    if (recap) setSimRecap(recap)
+    if (user) try { sessionStorage.removeItem(activePosKey(user.id)) } catch { /* abaikan */ }
     try {
       const res = await authFetch('/api/waitlist')
       const { submitted } = await res.json()
@@ -135,6 +157,7 @@ export default function SimulatorPage() {
       onApply={(positionId, level) => {
         setSelectedPosition(positionId)
         setSelectedLevel(level)
+        try { sessionStorage.setItem(activePosKey(user.id), JSON.stringify({ position: positionId, level })) } catch { /* abaikan */ }
         setStage('simulator')
       }}
     />
@@ -148,6 +171,7 @@ export default function SimulatorPage() {
       firstName={profile?.full_name?.split(' ')[0] || 'Kamu'}
       coins={simCoins}
       tasksDone={simTasksDone}
+      shareText={simRecap}
       onExplore={() => setStage('job_listing')}
     />
   )
@@ -160,7 +184,10 @@ export default function SimulatorPage() {
       initialPosition={selectedPosition}
       initialBackground={background}
       initialLevel={selectedLevel}
-      onExit={() => setStage('job_listing')}
+      onExit={() => {
+        try { sessionStorage.removeItem(activePosKey(user.id)) } catch { /* abaikan */ }
+        setStage('job_listing')
+      }}
       onWishlist={handleSimDone}
     />
   )
