@@ -114,6 +114,20 @@ bukan kuota harian habis.
 - [ ] Pertimbangkan antrian ringan di client: kalau request gagal karena limit, tampilkan
       "Sinta lagi ngetik..." lebih lama dan auto-retry 1x sebelum menyerah.
 
+## 2b. Layar login Google menampilkan "to continue to owgxrhtml...supabase.co" (14 Juli 2026)
+
+**Bukan bug kode** — Google menampilkan domain milik redirect URI OAuth, dan karena auth
+di-host Supabase, yang tampil adalah `<project-ref>.supabase.co`. Perbaikan bertingkat:
+
+- [ ] **Cepat (gratis, 10 menit):** Google Cloud Console → APIs & Services → OAuth consent
+      screen → isi App name "Kantoran" + logo + link privacy policy. Nama & logo Kantoran
+      tampil besar di layar login (baris kecil "to continue to ..." masih domain Supabase).
+- [ ] **Tuntas (saat cutover domain):** Supabase Custom Domain add-on (perlu paket Pro,
+      ±$10/bln) → `auth.kantoran.<tld>` → layar Google menulis "to continue to kantoran...".
+      Setelah aktif: update Redirect URI di Google Console + Site URL Supabase.
+      Kerjakan BERSAMAAN dengan cutover domain Cloudflare (DEPLOY-CLOUDFLARE.md Step 4)
+      supaya konfigurasi OAuth cuma disentuh sekali.
+
 ## 3. Backlog kecil terkait (sudah diketahui, belum urgent)
 
 - [x] ~~Nego gaji bisa ter-skip~~ — SELESAI (Juli 2026): guard `salaryDiscussed` di

@@ -445,6 +445,13 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       const res = await authFetch(`/api/progress${qs}`)
       const { progress } = await res.json()
       if (progress && progress.step > 0) {
+        const loadedHistory = (progress.chat_history as Record<string, Message[]>) || {}
+        // interviewDone juga dipulihkan dari kartu "interview_done" di history —
+        // refresh setelah interview selesai tapi sebelum klik offering TIDAK boleh
+        // membuka interview lagi (kartu bisa dobel)
+        const hasDoneCard = (loadedHistory['hr_office'] || []).some(
+          m => m.role === 'action' && (m.data as Record<string, unknown> | undefined)?.type === 'interview_done'
+        )
         setState(prev => ({
           ...prev,
           firstName: progress.first_name || '',
@@ -458,8 +465,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           tasksDone: progress.tasks_done || 0,
           streak: progress.streak || 0,
           phaseUnlocked: progress.step >= 3 ? 1 : 0,
-          chatHistory: (progress.chat_history as Record<string, Message[]>) || {},
-          interviewDone: progress.step >= 2,
+          chatHistory: loadedHistory,
+          interviewDone: progress.step >= 2 || hasDoneCard,
         }))
         // Refresh harus mendarat kembali di room terakhir yang dibuka, bukan reset ke slack/inbox
         let initialView = progress.step >= 3 ? 'slack' : 'inbox'
@@ -1167,6 +1174,8 @@ PT Vantara Nusantara`
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file)
+    // File baru = review lama tidak berlaku lagi — tanpa ini tombol submit tertahan
+    setReviewResult(null)
     try {
       const XLSX = await import('xlsx')
       const buf = await file.arrayBuffer()
@@ -1198,6 +1207,8 @@ PT Vantara Nusantara`
       alert('Upload file Excel hasil kerjamu dulu ya.')
       return
     }
+    // Task hari ini sudah APPROVED → jangan bisa disubmit ulang (dobel coin/tasksDone)
+    if (state.step >= 10) return
     setIsSubmittingTask(true)
     try {
       const res = await authFetch('/api/review', {
@@ -1726,7 +1737,14 @@ PT Vantara Nusantara`
                   isSubmitting={isSubmittingTask}
                   onFileUpload={handleFileUpload}
                   onSubmit={handleSubmitTask}
-                  onClearUpload={() => { setUploadedFile(null); setExtractedData('') }}
+                  onClearUpload={() => {
+                    // WAJIB ikut membersihkan reviewResult — tombol submit hanya muncul
+                    // saat !reviewResult; tanpa ini upload ulang setelah revisi tidak
+                    // pernah bisa disubmit (bug temuan founder 14 Juli 2026)
+                    setUploadedFile(null)
+                    setExtractedData('')
+                    setReviewResult(null)
+                  }}
                 />
               )}
 
@@ -2502,7 +2520,16 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
         </div>
       )}
 
+      {/* Task selesai: tutup jalur upload supaya tidak bisa submit dobel */}
+      {state.step >= 10 && (
+        <div className="bg-[#DCFCE7] border border-[#166534]/20 rounded-xl p-4">
+          <p className="text-sm font-semibold text-[#166534]">Task hari ini sudah APPROVED.</p>
+          <p className="text-xs text-[#166534]/80 mt-1">Task berikutnya menunggumu besok. Cek chat supervisor untuk menutup harimu.</p>
+        </div>
+      )}
+
       {/* Upload area */}
+      {state.step < 10 && (
       <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
         <p className="text-sm font-semibold text-[#111111] mb-3">Upload Hasil Kerja</p>
 
@@ -2547,6 +2574,7 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
           </div>
         )}
       </div>
+      )}
 
       {/* Submit button */}
       {uploadedFile && extractedData && !reviewResult && (

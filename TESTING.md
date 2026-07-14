@@ -92,6 +92,10 @@ npm run build   # compile + TypeScript, 16 route harus ter-generate
 - [ ] Workspace: upload Excel → preview terbaca → "Submit ke Supervisor untuk Review".
 - [ ] **Submit jelek (sengaja):** REVISION NEEDED → feedback spesifik; karena training belum selesai → supervisor menyarankan Academy + tombol "Buka Academy →".
 - [ ] **Submit jelek kedua:** pesan supervisor mendingin ("Ini revisi kedua...").
+- [ ] **Upload ulang setelah revisi (bug fix 14 Juli 2026):** klik "Upload ulang file yang
+      sudah direvisi" → pilih file → tombol "Submit ke Supervisor" MUNCUL lagi dan bisa
+      disubmit. Setelah APPROVED: area upload berganti kartu "Task hari ini sudah APPROVED"
+      (tidak bisa submit dobel).
 - [ ] **Submit benar:** APPROVED → +30 coin → junior memberi selamat → supervisor "sudah jam 5" → kartu akhir hari.
 - [ ] Kartu akhir hari menampilkan **"Penilaian hari pertama"**: Exceeds (0 revisi) / Meets (1) / Needs Improvement (2+), plus kalimat gaya kerja sesuai pilihan dilema.
 - [ ] Manager mengirim DM cliffhanger.

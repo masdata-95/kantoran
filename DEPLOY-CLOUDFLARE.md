@@ -68,7 +68,10 @@ Urutannya penting:
    - Authorized JavaScript origins → tambah domain baru.
    - Authorized redirect URIs → tambah `https://<project>.supabase.co/auth/v1/callback` (biasanya sudah ada) + domain baru bila dipakai langsung.
 4. Tes login Google DARI domain baru dalam incognito.
-5. **Biarkan deployment Vercel hidup 1-2 minggu** sebagai rollback instan. Rollback = arahkan DNS balik, tidak ada migrasi data (database tetap di Supabase).
+5. **Sekalian bereskan branding layar login Google** (lihat CATATAN-PENGEMBANGAN.md item 2b):
+   OAuth consent screen diberi nama+logo Kantoran, dan pertimbangkan Supabase Custom Domain
+   (`auth.<domain>`) supaya layar Google tidak lagi menulis `...supabase.co`.
+6. **Biarkan deployment Vercel hidup 1-2 minggu** sebagai rollback instan. Rollback = arahkan DNS balik, tidak ada migrasi data (database tetap di Supabase).
 
 ## Step 5 — Rapikan jejak URL lama (10 menit)
 
