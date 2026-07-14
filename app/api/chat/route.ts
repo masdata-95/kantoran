@@ -95,15 +95,28 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Sinta menandai penutupan interview dengan token [SELESAI] — strip sebelum dikirim ke user
+    // Sinta menandai hasil interview dengan token — parse lalu strip sebelum ke user.
+    // Tiga tingkat: SELESAI (lulus) | SELESAI_CATATAN (diterima bersyarat) | TOLAK.
     let reply = result.text
     let interviewDone = false
-    if (npcId === 'sinta' && reply.includes('[SELESAI]')) {
-      interviewDone = true
-      reply = reply.replace(/\s*\[SELESAI\]\s*/g, ' ').trim()
+    let interviewOutcome: 'pass' | 'conditional' | 'rejected' | undefined
+    if (npcId === 'sinta') {
+      const userMsgCount = messages.filter(m => m.role === 'user').length
+      if (reply.includes('[TOLAK]')) {
+        // Guardrail server: TOLAK terlalu dini (model melanggar aturan minimal
+        // 6 tanya-jawab) tidak dihormati — token dibuang, interview lanjut biasa
+        if (userMsgCount >= 6) interviewOutcome = 'rejected'
+      } else if (reply.includes('[SELESAI_CATATAN]')) {
+        interviewDone = true
+        interviewOutcome = 'conditional'
+      } else if (reply.includes('[SELESAI]')) {
+        interviewDone = true
+        interviewOutcome = 'pass'
+      }
+      reply = reply.replace(/\s*\[(SELESAI_CATATAN|SELESAI|TOLAK)\]\s*/g, ' ').trim()
     }
 
-    return NextResponse.json({ reply, interviewDone })
+    return NextResponse.json({ reply, interviewDone, interviewOutcome })
 
   } catch (error) {
     console.error('Chat API error:', error)

@@ -15,7 +15,7 @@ const SqlEditor = dynamicImport(() => import('@/components/SqlEditor'), { ssr: f
 
 import GuidedTour, { type TourStep } from '@/components/GuidedTour'
 import ReferenceLetter from '@/components/ReferenceLetter'
-import { countRevisions, computeGrade, GRADE_LABEL, GRADE_REVIEW, getWorkStyle } from '@/lib/performance'
+import { countRevisions, computeGrade, GRADE_LABEL, GRADE_REVIEW, getWorkStyle, isConditionalOffer } from '@/lib/performance'
 
 // Tur pengenalan UI untuk user yang baru pertama kali masuk simulasi.
 // Selector menunjuk atribut data-tour di elemen bersangkutan.
@@ -82,6 +82,7 @@ const NPC_INITIALS: Record<string, Record<string, string>> = {
   finance_analyst:    { sup: 'AW', mgr: 'PH', jnr: 'NS' },
   hr_generalist:      { sup: 'BR', mgr: 'TS', jnr: 'LL' },
   bizdev:             { sup: 'RF', mgr: 'PA', jnr: 'MR' },
+  admin_ops:          { sup: 'SW', mgr: 'DW', jnr: 'FR' },
 }
 
 const NPC_AV: Record<string, string> = {
@@ -640,7 +641,7 @@ PT Vantara Nusantara`
     return history.slice(-30)
   }, [state.chatHistory])
 
-  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; interviewDone: boolean; failed: boolean }> => {
+  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; interviewDone: boolean; interviewOutcome?: string; failed: boolean }> => {
     setLoading(true)
     try {
       const history = buildHistory(room, npcId)
@@ -668,6 +669,7 @@ PT Vantara Nusantara`
       return {
         reply: (data.reply as string) || 'Maaf, ada gangguan sebentar. Coba lagi ya!',
         interviewDone: Boolean(data.interviewDone),
+        interviewOutcome: data.interviewOutcome as string | undefined,
         failed: Boolean(data.failed) || !data.reply,
       }
     } catch {
@@ -681,7 +683,7 @@ PT Vantara Nusantara`
   // dan handleRetry (kirim ulang pesan user terakhir tanpa menduplikasinya di history).
   const deliverReply = async (npcId: string, userMsg: string, room: string) => {
     // callChat builds full history from chatHistory for AI memory
-    const { reply, interviewDone: serverSaysDone, failed } = await callChat(npcId, userMsg, room)
+    const { reply, interviewDone: serverSaysDone, interviewOutcome, failed } = await callChat(npcId, userMsg, room)
 
     if (failed) {
       // Gangguan koneksi → banner error + tombol "Kirim ulang", BUKAN bubble NPC.
@@ -711,8 +713,25 @@ PT Vantara Nusantara`
       }))
     }
 
+    // Interview DITOLAK: bukan pintu keluar, tapi cabang cerita — Sinta sudah memberi
+    // alasan spesifik; tawarkan belajar (Academy) + interview ulang
+    if (npcId === 'sinta' && interviewOutcome === 'rejected' && !state.interviewDone) {
+      setTimeout(() => {
+        addMsg('hr_office', {
+          role: 'action',
+          data: { label: 'Pelajari: Cara Menjawab Interview', goTo: 'academy', type: 'interview_rejected' }
+        }, true)
+        addMsg('hr_office', {
+          role: 'action',
+          data: { label: 'Aku siap, Ulangi Interview', nextStep: 98 }
+        }, true)
+      }, 1500)
+      return
+    }
+
     // Check if interview is done, use functional setState to get latest state
     if (npcId === 'sinta') {
+      const conditional = interviewOutcome === 'conditional'
       setState(prev => {
         if (!prev.interviewDone) {
           // Sumber utama: token [SELESAI] dari server. Fallback keyword HARUS sangat ketat:
@@ -742,10 +761,15 @@ PT Vantara Nusantara`
               addMsg('hr_office', {
                 role: 'action',
                 data: {
-                  label: 'Interview selesai! Kamu diterima di PT Vantara Nusantara.',
+                  label: conditional
+                    ? 'Interview selesai. Kamu diterima, dengan catatan evaluasi dari HR.'
+                    : 'Interview selesai! Kamu diterima di PT Vantara Nusantara.',
                   subLabel: 'Lanjut ke Offering Letter',
                   nextStep: 2,
-                  type: 'interview_done'
+                  type: 'interview_done',
+                  // Diterima bersyarat: offer konservatif + supervisor lebih dingin +
+                  // baris "dengan catatan" di surat referensi (lib/performance.ts)
+                  conditional,
                 }
               })
             }, 1500)
@@ -842,15 +866,37 @@ PT Vantara Nusantara`
       return
     }
 
+    // Special case: interview ulang setelah ditolak — percakapan HR direset bersih,
+    // progress lain tidak tersentuh. Penolakan = momen belajar, bukan tembok.
+    if (step === 98) {
+      setState(prev => ({
+        ...prev,
+        interviewDone: false,
+        chatHistory: {
+          ...prev.chatHistory,
+          hr_office: [{
+            id: `sinta-retry-${Date.now()}`,
+            role: 'npc' as const,
+            npcId: 'sinta',
+            text: `Hai lagi. Aku menghargai kamu mau balik dan coba lagi, itu poin plus buatku. Kita mulai dari awal ya, santai aja. Cerita dong, siapa kamu dan kenapa tertarik sama posisi ini?`
+          }]
+        }
+      }))
+      setView('hr_office')
+      return
+    }
+
     setState(prev => ({ ...prev, step }))
 
     if (step === 2) {
       const pos = POSITIONS[state.position]
       const salRange = getSalaryRange(state.level || state.background)
+      // Diterima bersyarat → default offer konservatif (batas bawah range)
+      const conditional = isConditionalOffer(state.chatHistory)
 
          // Extract agreed salary, prioritas dari konfirmasi Sinta, bukan request user
       const hrMessages = state.chatHistory['hr_office'] || []
-      let agreedSalary = salRange.offer
+      let agreedSalary = conditional ? salRange.min : salRange.offer
 
       const extractJuta = (text: string): number | null => {
         const m = text.match(/(\d+[.,]?\d*)\s*juta/)
@@ -861,36 +907,39 @@ PT Vantara Nusantara`
         return null
       }
 
+      let agreedFound = false
+
       // Prioritas 1: dari pesan Sinta yang konfirmasi/setuju angka
       const confirmKw = ['masuk', 'bisa diakomodir', 'sesuai budget', 'acceptable',
         'oke', 'deal', 'bisa kami', 'akan kami cantumkan', 'offering letter',
-        'bisa diterima', 'kita setuju', 'sepakat']
+        'bisa diterima', 'kita setuju', 'sepakat', 'tercantum']
       for (const msg of [...hrMessages].reverse()) {
         if (msg.role === 'npc' && msg.npcId === 'sinta' && msg.text) {
           const text = msg.text.toLowerCase()
           if (confirmKw.some(kw => text.includes(kw))) {
             const val = extractJuta(text)
-            if (val) { agreedSalary = val; break }
+            if (val) { agreedSalary = val; agreedFound = true; break }
           }
         }
       }
 
       // Prioritas 2: Sinta sebut angka maksimal
-      if (agreedSalary === salRange.offer) {
+      if (!agreedFound) {
         const maxKw = ['maksimal', 'maksimum', 'paling tinggi', 'sampai', 'bisa kami berikan']
         for (const msg of [...hrMessages].reverse()) {
           if (msg.role === 'npc' && msg.npcId === 'sinta' && msg.text) {
             const text = msg.text.toLowerCase()
             if (maxKw.some(kw => text.includes(kw))) {
               const val = extractJuta(text)
-              if (val) { agreedSalary = val; break }
+              if (val) { agreedSalary = val; agreedFound = true; break }
             }
           }
         }
       }
 
-      // Prioritas 3: dari user HANYA kalau dalam range valid
-      if (agreedSalary === salRange.offer) {
+      // Prioritas 3: dari user HANYA kalau dalam range normal — angka di atas max
+      // cuma sah kalau keluar dari mulut Sinta (prioritas 1/2), bukan klaim user
+      if (!agreedFound) {
         for (const msg of [...hrMessages].reverse()) {
           if (msg.role === 'user' && msg.text) {
             const val = extractJuta(msg.text.toLowerCase())
@@ -901,8 +950,10 @@ PT Vantara Nusantara`
         }
       }
 
-      // Hard clamp: tidak boleh keluar dari range min-max
-      const finalSalary = Math.min(Math.max(agreedSalary, salRange.min), salRange.max)
+      // Clamp: kesepakatan di atas range SAH sampai batas stretch (+20% dari max) —
+      // sesuai wewenang nego Sinta di prompt; offering letter memakai angka sepakat
+      const stretchMax = Math.round(salRange.max * 1.2)
+      const finalSalary = Math.min(Math.max(agreedSalary, salRange.min), stretchMax)
 
       // Add offering letter directly to state (avoid addMsg race condition)
       const offeringMsg = {
@@ -953,7 +1004,13 @@ PT Vantara Nusantara`
           addMsg('slack', { role: 'npc', npcId: 'sinta', text: `Hai tim! Perkenalkan ${state.firstName}, ${state.bgRole} yang mulai hari ini. Disambut ya!` })
           showNotif('slack', 'Slack', `Sinta Maharani menyebut nama kamu di #${channelName}`)
           setTimeout(() => {
-            addMsg('slack', { role: 'npc', npcId: 'sup', text: `Welcome ${state.firstName}. Saya ${pos?.supervisor.name}, supervisor langsungmu. Santai dulu, kenalan sama tim. Nanti kita standup.` })
+            // Diterima bersyarat → supervisor menyambut lebih dingin; kepercayaan harus direbut
+            addMsg('slack', {
+              role: 'npc', npcId: 'sup',
+              text: isConditionalOffer(state.chatHistory)
+                ? `Welcome ${state.firstName}. Saya ${pos?.supervisor.name}, supervisor langsungmu. Sinta cerita soal interviewmu, jadi aku to the point aja: di sini yang bicara hasil kerja. Buktikan ya. Nanti kita standup.`
+                : `Welcome ${state.firstName}. Saya ${pos?.supervisor.name}, supervisor langsungmu. Santai dulu, kenalan sama tim. Nanti kita standup.`
+            })
             setTimeout(() => {
               addMsg('slack', { role: 'npc', npcId: 'jnr', text: `Heyy welcome!! Saya ${pos?.junior.name}, udah di sini beberapa bulan lebih awal. Kalau butuh apa-apa DM aku ya, santai aja!` })
               // After 90 seconds OR after user sends 1 message in slack → supervisor DM
@@ -1325,7 +1382,9 @@ PT Vantara Nusantara`
     { id: 'meeting',     icon: '🪑', label: 'Meeting',      locked: state.phaseUnlocked < 1 },
     { id: 'sup_chat',    icon: '👤', label: 'Supervisor',   locked: state.phaseUnlocked < 1 },
     { id: 'workspace',   icon: '🖥️', label: 'Workspace',   locked: state.phaseUnlocked < 1 },
-    { id: 'academy',     icon: '🎓', label: 'Academy',      locked: state.step < 4 },
+    // Academy juga terbuka saat interview DITOLAK (belum step 4) — modul "Cara
+    // Menjawab Interview" adalah jalan kembalinya
+    { id: 'academy',     icon: '🎓', label: 'Academy',      locked: state.step < 4 && !(state.chatHistory['hr_office'] || []).some(m => m.role === 'action' && m.data?.type === 'interview_rejected') },
     { id: 'file_manager',icon: '📁', label: 'File Manager', locked: state.step < 5 },
     // Database Vantara: SQL editor in-story, khusus Data Analyst
     ...(state.position === 'data_analyst'

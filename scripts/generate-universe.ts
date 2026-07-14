@@ -14,6 +14,7 @@
  *          public/sql-wasm.wasm   (runtime sql.js untuk browser)
  */
 import initSqlJs from 'sql.js'
+import * as XLSX from 'xlsx'
 import fs from 'fs'
 import path from 'path'
 
@@ -333,6 +334,46 @@ async function main() {
   // ── Runtime wasm untuk sql.js di browser ──
   const wasmSrc = path.join(root, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm')
   fs.copyFileSync(wasmSrc, path.join(root, 'public', 'sql-wasm.wasm'))
+
+  // ── Task file Admin Operasional: rekap & validasi invoice ──
+  // Diambil dari payments 2026 + masalah yang DITANAM sesuai rubric admin_ops:
+  // (1) invoice dobel, (2) tunggakan Berkah Jaya (sudah ada di data), (3) due_date kosong
+  const distName = new Map(DISTRIBUTORS.map(d => [d.id, d.name]))
+  const invoiceRows = payments
+    .filter(p => p.period >= '2026-01')
+    .map(p => ({
+      invoice_id: p.invoice_id,
+      distributor: distName.get(p.distributor_id) || p.distributor_id,
+      periode: p.period,
+      nilai_invoice: p.invoice_amount,
+      jatuh_tempo: p.due_date,
+      tanggal_bayar: p.paid_date ?? '',
+      jumlah_dibayar: p.paid_amount,
+    }))
+  // Tanam masalah: 2 invoice dobel + 3 due_date kosong (deterministik dari PRNG)
+  const dupA = invoiceRows[randInt(3, 20)]
+  const dupB = invoiceRows[randInt(25, 50)]
+  invoiceRows.splice(randInt(55, 70), 0, { ...dupA }, { ...dupB })
+  for (const idx of [randInt(5, 30), randInt(35, 60), randInt(65, 90)]) {
+    if (invoiceRows[idx]) invoiceRows[idx] = { ...invoiceRows[idx], jatuh_tempo: '' }
+  }
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['TASK: Rekap & Validasi Invoice Distributor Semester 1 2026'],
+    [''],
+    ['Dari: Mbak Sari (Office & Admin Lead)'],
+    ['Periksa sheet "Invoice 2026". Temukan pencatatan yang janggal, lalu buat'],
+    ['sheet baru berisi rekap status pembayaran per distributor + daftar temuanmu.'],
+    ['Tim Finance menunggu rekap ini untuk closing.'],
+    [''],
+    ['Tips: jangan percaya data mentah. Cek nomor invoice, tanggal, dan selisih bayar.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invoiceRows), 'Invoice 2026')
+  const tasksDir = path.join(root, 'public', 'tasks')
+  fs.mkdirSync(tasksDir, { recursive: true })
+  XLSX.writeFile(wb, path.join(tasksDir, 'task_admin_ops.xlsx'))
+  console.log(`task_admin_ops.xlsx: ${invoiceRows.length} baris invoice (2 dobel + 3 tanpa jatuh tempo ditanam)`)
 
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih

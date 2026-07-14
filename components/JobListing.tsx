@@ -96,6 +96,22 @@ const POSITION_DETAILS: Record<string, {
     ],
     tags: ['Rekrutmen', 'Komunikasi', 'People', 'Administrasi'],
   },
+  admin_ops: {
+    about: 'Tim Operations & Sales Support PT Vantara Nusantara adalah nadi administrasi perusahaan: memastikan order, invoice, kontrak, dan dokumen operasional dari tiga lini produk tercatat rapi dan bisa dipercaya.',
+    responsibilities: [
+      'Merekap dan memvalidasi invoice serta pembayaran distributor',
+      'Mengelola arsip kontrak dan dokumen operasional',
+      'Mengatur jadwal meeting dan kebutuhan administratif tim',
+      'Menjadi penghubung administrasi antara Sales, Finance, dan Gudang',
+    ],
+    qualifications: [
+      'Teliti, rapi, dan bisa dipercaya memegang dokumen penting',
+      'Excel dasar: sort, filter, SUM, dan rekap sederhana',
+      'Komunikasi tertulis yang jelas dan sopan',
+      'Nilai plus: pernah pegang administrasi organisasi, toko, atau usaha keluarga',
+    ],
+    tags: ['Excel', 'Administrasi', 'Dokumen', 'Teliti'],
+  },
   bizdev: {
     about: 'Tim Business Development PT Vantara Nusantara bertugas mengidentifikasi dan mengembangkan peluang bisnis baru, termasuk partnership strategis dan pengembangan channel distribusi.',
     responsibilities: [

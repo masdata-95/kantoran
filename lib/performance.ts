@@ -62,6 +62,14 @@ export const WORK_STYLES: Record<string, WorkStyle> = {
   },
 }
 
+// Diterima bersyarat? Ditandai di kartu "interview_done" (data.conditional) —
+// memengaruhi default offer, sambutan supervisor, dan baris surat referensi.
+export function isConditionalOffer(history: PerfHistory): boolean {
+  return (history['hr_office'] || []).some(
+    m => m.role === 'action' && m.data?.type === 'interview_done' && m.data?.conditional === true
+  )
+}
+
 export function getWorkStyle(history: PerfHistory): WorkStyle | null {
   for (const room of Object.values(history)) {
     for (const m of room) {

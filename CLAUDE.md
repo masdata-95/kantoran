@@ -22,7 +22,7 @@ Kantor: Jakarta Selatan, Hybrid 3x WFO/minggu
 1. Landing page (public/landing.html)
 2. /simulator → Login Google (onboarding slides sudah dihilangkan)
 3. ProfileSetup (5 step: nama/gender/kota, pendidikan, pengalaman, skills, kategori)
-4. JobListing = HUB KARIR multi-role: semua 5 posisi tampil dengan status per posisi
+4. JobListing = HUB KARIR multi-role: semua 6 posisi tampil dengan status per posisi
    (Tersedia / berjalan / Hari-1 selesai). Modal detail punya pemilih JENJANG
    (intern/junior/mid — bebas dipilih, background profil cuma default).
    Setelah login user SELALU diarahkan ke hub ini, bukan auto-resume.
@@ -75,6 +75,23 @@ Mekanik "career RPG" (12 Juli 2026, semua derived dari chat_history TANPA migrat
 - Finance: Andi Wijaya (sup), Pak Hendra (mgr), Nisa Safitri (jnr)
 - HR: Bu Ratna (sup), Pak Tono (mgr), Lili Cahyani (jnr)
 - BizDev: Reza Firmansyah (sup), Pak Anton (mgr), Mira Rahayu (jnr)
+- Admin Ops (admin_ops, 14 Juli 2026): Mbak Sari Wulandari (sup), Pak Darmawan (mgr), Fajar Ramadhan (jnr)
+
+## Hasil Interview (3 tingkat, 14 Juli 2026)
+Token penutup Sinta di lib/prompts.ts, diparse app/api/chat:
+- [SELESAI] → lulus normal
+- [SELESAI_CATATAN] → diterima BERSYARAT: offer default = batas bawah range, sambutan
+  supervisor dingin (step 3), baris surat referensi "dengan catatan"; redemption arc kalau
+  task pertama Exceeds. Marker: data.conditional di kartu interview_done (isConditionalOffer).
+- [TOLAK] → hanya kandidat tidak serius, server guard minimal 6 tanya-jawab; muncul 2 kartu:
+  Academy modul "Cara Menjawab Interview" (room academy ikut terbuka) + Ulangi Interview
+  (handleNextStep(98) mereset chat hr_office saja).
+
+## Nego Gaji (sehuman mungkin, 14 Juli 2026)
+- Sinta menilai ALASAN, bukan cuma angka. Di atas max s.d. +20% (stretch) BISA disepakati
+  dengan justifikasi kuat — Sinta wajib menyebut angka final eksplisit.
+- Offering letter memakai angka kesepakatan: ekstraksi prioritas dari konfirmasi Sinta,
+  clamp ke [min, max*1.2]; angka user sendiri hanya sah dalam range normal.
 
 ## Salary Ranges (per LEVEL jenjang, bukan background — lib/positions.ts)
 Level hanya 3 sejak 12 Juli 2026 (intern_magang dilebur ke intern):
@@ -141,7 +158,7 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - lib/rateLimit.ts — rate limit harian per user (Postgres RPC)
 - lib/lessons.ts — tipe DTO Academy
 - lib/prompts.ts — system prompts semua NPC (+ getTaskReviewPromptJSON, token [SELESAI] Sinta)
-- lib/positions.ts — data 5 posisi + NPC config
+- lib/positions.ts — data 6 posisi + NPC config (+teachBack per posisi)
 - lib/profile.ts — UserProfile types
 - lib/skills.ts — 70+ skills preset
 - components/GuidedTour.tsx — tur spotlight untuk user baru di simulator

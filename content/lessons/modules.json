@@ -62,7 +62,6 @@
     "sort_order": 1,
     "story_intro": "BizDev itu bukan cuma jago ngomong. Yang bikin deal jalan adalah pipeline yang rapi dan riset yang bener sebelum ketemu partner. Dua materi ini standar kerja tim kita. Misinya simulasi riset partner beneran, anggap serius ya."
   },
-
   {
     "slug": "da-sql-day2",
     "position_id": "data_analyst",
@@ -116,5 +115,23 @@
     "day": 2,
     "sort_order": 1,
     "teaser": "Ada calon partner besar yang mau ketemu minggu depan. Reza bilang kamu boleh ikut, asal sudah paham dasar-dasar struktur deal."
+  },
+  {
+    "slug": "adm-excel-dasar",
+    "position_id": "admin_ops",
+    "title": "Excel untuk Admin: Rekap & Validasi",
+    "track": "tools",
+    "day": 1,
+    "sort_order": 1,
+    "story_intro": "Sebelum kamu pegang invoice beneran, samakan dulu standar kita. Kerjaan admin itu nggak kelihatan kalau benar, tapi satu angka salah kelihatan semua orang. Dua materi pendek plus satu misi, aku cek langsung hasilnya."
+  },
+  {
+    "slug": "all-interview-dasar",
+    "position_id": "all",
+    "title": "Cara Menjawab Interview Kerja",
+    "track": "business",
+    "day": 1,
+    "sort_order": 0,
+    "story_intro": "Materi ini dari tim HR. Dipakai kandidat yang mau mengulang interview, tapi karyawan lama pun banyak yang baca ulang sebelum promosi. Interview itu skill, bukan bakat."
   }
 ]

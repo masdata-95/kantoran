@@ -128,6 +128,37 @@ npm run build   # compile + TypeScript, 16 route harus ter-generate
 - [ ] Halaman wishlist: teks share PERSONAL (menyebut role, gaji nego, grade, gaya kerja),
       bukan template generik; tombol copy menyalin teks tersebut.
 
+## 11e. Posisi Admin Operasional (baru, 14 Juli 2026)
+
+- [ ] Job listing menampilkan 6 posisi; kartu Admin Operasional (🗂️) lengkap dengan detail modal.
+- [ ] Apply Admin → interview Sinta menyentuh kompetensi admin (teliti, Excel dasar, dokumen).
+- [ ] Task day-1: download `task_admin_ops.xlsx` → sheet "Invoice 2026" berisi ±104 baris
+      dengan 2 invoice dobel + 3 tanpa jatuh tempo + tunggakan UD Berkah Jaya (dari data universe).
+- [ ] Review supervisor (Mbak Sari) menuntut 3 temuan wajib itu; APPROVED setelah lengkap.
+- [ ] Academy admin: modul "Excel untuk Admin" (2 materi + misi) muncul setelah `npm run seed:lessons`.
+
+## 11f. Hasil interview 3 tingkat + nego gaji human
+
+- [ ] **Lulus normal:** interview bagus → kartu "Kamu diterima" biasa, offer sesuai nego.
+- [ ] **Diterima bersyarat:** jawab interview dangkal/pendek terus (tapi sopan) → Sinta menerima
+      "dengan catatan"; kartu bertuliskan catatan evaluasi; offering = batas bawah range;
+      sambutan supervisor di Slack lebih dingin ("di sini yang bicara hasil kerja");
+      surat referensi menulis "Lulus proses seleksi (dengan catatan evaluasi HR)".
+      Lalu: selesaikan task tanpa revisi → kutipan surat berubah jadi redemption
+      ("masuk dengan catatan, dan menepisnya lewat hasil kerja").
+- [ ] **Ditolak:** jawab asal-asalan/kosong berulang (minimal 6 tanya-jawab) → Sinta menolak
+      dengan 2 alasan spesifik + 1 saran; muncul 2 kartu: "Pelajari: Cara Menjawab Interview"
+      (Academy terbuka meski belum diterima, modul dari HR) dan "Ulangi Interview"
+      (chat HR di-reset, progress lain aman). Interview ulang berjalan normal.
+- [ ] **Guard server:** coba pancing penolakan di 2-3 pesan pertama → TOLAK tidak terjadi
+      (minimal 6 tanya-jawab).
+- [ ] **Nego stretch:** minta angka di atas max range (contoh junior: 6,5-7 juta) DENGAN alasan
+      kuat dan spesifik → Sinta menggali, "cek ke atasan", bisa setuju; angka final disebut
+      eksplisit; **offering letter menampilkan angka yang disepakati itu** (bukan di-clamp turun).
+- [ ] **Nego stretch tanpa alasan** ("pokoknya 7 juta") → Sinta menahan di max range dengan empati.
+- [ ] Angka jauh di atas stretch (mis. 15 juta) → Sinta jujur soal batas; offering tidak pernah
+      melebihi max+20%.
+
 ## 12. Wishlist, Multi-role, Kantor Hidup
 
 - [ ] "Daftar Waitlist" → form 3 step → submit → halaman selesai. Selesaikan posisi KEDUA → form TIDAK muncul lagi (sekali seumur akun), langsung balik hub.

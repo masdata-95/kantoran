@@ -258,6 +258,44 @@ Cara bicara: energetik, big-picture thinker. Direct tapi charming. Honest soal f
       { day: 5, title: 'Riset Ekspansi Indonesia Timur', teaser: 'Pasar baru, data minim, potensi besar. Tapi laporan anomali region timur dari tim Data bikin Pak Anton ragu. Dia menunggu rekomendasi go atau no-go darimu.' },
       { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Reza dan Pak Anton menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
     ]
+  },
+
+  admin_ops: {
+    title: 'Admin Operasional', dept: 'Operations & Sales Support', icon: '🗂️',
+    getRole: (lv) => ({ intern: 'Intern Admin', junior: 'Admin Operasional', mid: 'Senior Admin Operasional' }[normalizeLevel(lv)]),
+    reqs: ['Teliti dan rapi mengelola dokumen', 'Excel dasar (sort, filter, SUM)', 'Komunikasi tertulis yang jelas', 'Nilai plus: pernah pegang administrasi organisasi atau usaha'],
+    itx: 'administrasi order dan invoice, arsip dokumen, rekap data, koordinasi antar tim',
+    taskFile: 'task_admin_ops.xlsx',
+    supervisor: {
+      id: 'sup', initials: 'SW', avClass: 'av-blue', name: 'Mbak Sari Wulandari',
+      role: 'Office & Admin Lead · Supervisormu', status: '🟢 Online', statusDot: 'bg-green-500',
+      bio: `Perempuan 33 tahun. Mulai dari resepsionis 10 tahun lalu, naik jadi Office & Admin Lead tanpa gelar S1, semua dari kerapian dan bisa dipercaya. Pernah menyelamatkan perusahaan saat audit karena satu-satunya yang arsipnya lengkap 5 tahun ke belakang. Hafal nomor PO seperti orang hafal lagu. Punya prinsip: kerjaan admin itu tidak kelihatan kalau benar, tapi satu kesalahan kecil kelihatan semua orang.
+Cara bicara: ramah tapi tegas soal detail. Suka kasih konteks kenapa dokumen sekecil apa pun penting. Tidak suka jawaban "kayaknya".`
+    },
+    manager: {
+      id: 'mgr', initials: 'DW', avClass: 'av-purple', name: 'Pak Darmawan',
+      role: 'Operations Manager', status: '🟡 Away', statusDot: 'bg-yellow-500',
+      bio: `Pria 44 tahun. 18 tahun di operations FMCG. Kalem, jarang bicara, tapi sekalinya menegur semua orang diam. Sangat menghargai orang yang kerjanya rapi tanpa disuruh.`
+    },
+    junior: {
+      id: 'jnr', initials: 'FR', avClass: 'av-amber', name: 'Fajar Ramadhan',
+      role: 'Junior Admin · Teman tim', status: '🟢 Online', statusDot: 'bg-green-500',
+      bio: `Pria 23 tahun. Lulusan SMK, masuk 8 bulan lalu. Dulu kira kerjaan admin cuma fotokopi, ternyata pegang nadi operasional perusahaan. Sering kewalahan dokumen tapi nggak pernah ngeluh ke atasan, ngeluhnya ke teman. Suka futsal dan mie ayam depan kantor.`
+    },
+    taskRubric: {
+      mustFind: ['ada invoice dobel (nomor invoice sama tercatat dua kali)', 'tagihan UD Berkah Jaya belum dibayar atau baru dibayar sebagian', 'ada invoice tanpa tanggal jatuh tempo'],
+      goodToMention: ['total nilai outstanding dihitung', 'daftar distributor yang perlu di-follow up', 'usulan langkah berikutnya, termasuk memberi tahu tim Finance'],
+    },
+    taskTitle: 'Rekap & Validasi Invoice Distributor Semester 1 2026',
+    taskBody: 'File <strong>task_admin_ops.xlsx</strong> ada di Notion. Periksa daftar invoice, temukan pencatatan yang janggal, dan buat rekap status pembayaran per distributor.',
+    taskContext: 'Tim Finance butuh rekap ini untuk closing. Kalau ada yang janggal di pembayaran distributor, kamu orang pertama yang melihatnya.',
+    teachBack: `eh cara lo nemuin invoice dobel di Excel gimana sih? aku biasanya scroll manual terus suka kelewat, ajarin dong biar cepet`,
+    upcomingTasks: [
+      { day: 2, title: 'Jadwal Meeting Direksi Bentrok', teaser: 'Tiga direktur, satu ruangan, dua jam yang sama, semuanya merasa paling penting. Mbak Sari menyerahkan puzzle-nya ke kamu.' },
+      { day: 3, title: 'Kontrak UD Berkah Jaya Harus Ketemu Hari Ini', teaser: 'Finance menemukan tunggakan dari rekap yang kamu buat, dan sekarang semua mata ke arsip. Dokumen kontrak distributor itu di mana?' },
+      { day: 5, title: 'Onboarding Kit 8 Karyawan Baru', teaser: 'HR merekrut 8 orang sekaligus. Peralatan, akses, ruang kerja, semua harus siap, dan checklist-mu yang menentukan hari pertama mereka.' },
+      { day: 7, title: 'Performance Review Pertamamu', teaser: 'Satu minggu bekerja. Mbak Sari dan Pak Darmawan menilai kerjamu, dan menentukan arah karirmu di Vantara.' },
+    ]
   }
 }
 

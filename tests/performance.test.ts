@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  countRevisions, computeGrade, getWorkStyle,
+  countRevisions, computeGrade, getWorkStyle, isConditionalOffer,
   GRADE_LABEL, GRADE_REVIEW, WORK_STYLES,
   type PerfHistory,
 } from '@/lib/performance'
@@ -73,5 +73,28 @@ describe('getWorkStyle', () => {
       expect(ws.review).toBeTruthy()
       expect(ws.letterNote).toBeTruthy()
     }
+  })
+})
+
+describe('isConditionalOffer (diterima bersyarat dari interview)', () => {
+  it('true kalau kartu interview_done ditandai conditional', () => {
+    const history: PerfHistory = {
+      hr_office: [{ role: 'action', data: { type: 'interview_done', conditional: true } }],
+    }
+    expect(isConditionalOffer(history)).toBe(true)
+  })
+
+  it('false untuk interview lulus normal atau belum selesai', () => {
+    expect(isConditionalOffer({
+      hr_office: [{ role: 'action', data: { type: 'interview_done' } }],
+    })).toBe(false)
+    expect(isConditionalOffer({ hr_office: [] })).toBe(false)
+    expect(isConditionalOffer({})).toBe(false)
+  })
+
+  it('marker di room lain tidak dihitung', () => {
+    expect(isConditionalOffer({
+      slack: [{ role: 'action', data: { type: 'interview_done', conditional: true } }],
+    })).toBe(false)
   })
 })

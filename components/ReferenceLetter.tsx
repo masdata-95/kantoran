@@ -1,6 +1,6 @@
 'use client'
 
-import { countRevisions, computeGrade, GRADE_LABEL, getWorkStyle, type PerfHistory } from '@/lib/performance'
+import { countRevisions, computeGrade, GRADE_LABEL, getWorkStyle, isConditionalOffer, type PerfHistory } from '@/lib/performance'
 import type { Position } from '@/lib/positions'
 
 // Surat referensi yang terlihat sejak hari pertama diterima kerja.
@@ -18,22 +18,26 @@ export default function ReferenceLetter({ firstName, bgRole, step, tasksDone, tr
   const revisions = countRevisions(history)
   const grade = computeGrade(revisions)
   const workStyle = getWorkStyle(history)
+  const conditional = isConditionalOffer(history)
   const taskDone = tasksDone > 0
 
   const milestones: { done: boolean; text: string }[] = [
-    { done: step >= 2, text: 'Lulus proses seleksi dan interview HR' },
+    { done: step >= 2, text: conditional ? 'Lulus proses seleksi (dengan catatan evaluasi HR)' : 'Lulus proses seleksi dan interview HR' },
     { done: step >= 3, text: `Menandatangani kontrak kerja sebagai ${bgRole}` },
     // Training kini opsional — baris ini hanya terisi kalau benar-benar diselesaikan
     { done: trainingDone, text: `Menyelesaikan training onboarding tim ${pos?.dept || ''}` },
     { done: taskDone, text: `Menyelesaikan task "${pos?.taskTitle || 'task pertama'}" dengan status APPROVED` },
   ]
 
+  // Redemption arc: masuk dengan catatan lalu Exceeds = kutipan paling kuat di surat
   const supQuote = taskDone
-    ? grade === 'exceeds'
-      ? `${firstName} menyelesaikan task pertamanya tanpa revisi. Itu jarang terjadi di hari pertama.`
-      : grade === 'meets'
-        ? `${firstName} menunjukkan hasil kerja yang solid dan responsif terhadap feedback.`
-        : `${firstName} membutuhkan beberapa revisi, tapi menunjukkan kemauan kuat untuk memperbaiki. Itu modal yang tidak semua orang punya.`
+    ? conditional && grade === 'exceeds'
+      ? `${firstName} masuk dengan catatan dari seleksi, dan menepisnya lewat hasil kerja di hari pertama. Saya yang tadinya ragu.`
+      : grade === 'exceeds'
+        ? `${firstName} menyelesaikan task pertamanya tanpa revisi. Itu jarang terjadi di hari pertama.`
+        : grade === 'meets'
+          ? `${firstName} menunjukkan hasil kerja yang solid dan responsif terhadap feedback.`
+          : `${firstName} membutuhkan beberapa revisi, tapi menunjukkan kemauan kuat untuk memperbaiki. Itu modal yang tidak semua orang punya.`
     : null
 
   return (
