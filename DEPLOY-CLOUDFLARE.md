@@ -19,6 +19,7 @@ npx wrangler secret put GEMINI_API_KEY_1          # key PAID yang sudah aktif di
 npx wrangler secret put OPENROUTER_API_KEY        # last resort fallback
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put SUPABASE_JWT_SECRET       # disarankan: verifikasi JWT lokal = auth tercepat
+npx wrangler secret put ADMIN_EMAILS              # email founder untuk dashboard /admin
 ```
 
 Catatan:

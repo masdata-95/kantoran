@@ -168,6 +168,10 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - components/ReferenceLetter.tsx — surat referensi live (room 'reference', terbuka setelah kontrak; baris terisi per milestone, bunyi surat ikut grade)
 - lib/performance.ts — grade & gaya kerja diturunkan dari chat_history (countRevisions/computeGrade/getWorkStyle) — SENGAJA tanpa kolom DB baru
 - app/api/stats/route.ts — jumlah user aktif 7 hari (kehadiran sosial di job listing)
+- app/admin/page.tsx + app/api/admin/stats/route.ts — dashboard founder (15 Juli 2026):
+  users/funnel hari-1/aktif/churn proxy/waitlist/estimasi biaya Gemini dari api_usage/
+  revenue placeholder (menunggu Xendit). Akses via env ADMIN_EMAILS (comma separated,
+  kosong = semua ditolak). Buka /admin setelah login.
 - app/api/chat/route.ts — AI chat endpoint (cap 40 pesan × 2000 char, userContext dibangun ulang server-side)
 - app/api/review/route.ts — task review endpoint (submission di-cap 15rb char)
 - app/api/progress/route.ts — save/load progress (angka di-clamp, step tidak boleh mundur → 409)
