@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { authFetch } from '@/lib/supabase'
+import { track } from '@/lib/track'
 
 interface Props {
   user: User
@@ -60,6 +62,7 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
           positionTried,
         })
       })
+      track('waitlist_submitted', { rating, positionTried })
       setDone(true)
     } catch (e) {
       console.error(e)
@@ -88,7 +91,7 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
           {/* Share card */}
           <div className="bg-white border border-[#E5E3DC] rounded-2xl p-5 mb-6 text-left">
             <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Bagikan pengalaman kamu</p>
-            <p className="text-sm text-[#444441] leading-relaxed mb-4">"{share}"</p>
+            <p className="text-sm text-[#444441] leading-relaxed mb-4">&ldquo;{share}&rdquo;</p>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(share).catch(() => {})
@@ -111,9 +114,9 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
               </p>
             </div>
           ) : (
-            <a href="/" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
+            <Link href="/" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
               Kembali ke Kantoran →
-            </a>
+            </Link>
           )}
         </div>
       </div>

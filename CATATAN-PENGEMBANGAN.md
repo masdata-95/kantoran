@@ -26,13 +26,17 @@ Sudah di kode (lihat CLAUDE.md section User Flow & Database), TAPI:
 Verdict: konsep sudah benar; yang kurang adalah loop di sekelilingnya. Urut prioritas:
 
 **P0 — sebelum dorong traffic:**
-- [ ] Beresin env Gemini production (item #2 di bawah) — titik gagal paling kritis.
-- [ ] Pasang analytics — saat ini NOL instrumentasi (tidak ada Vercel Analytics/PostHog).
-      Metrik utama "% selesai hari-1" tidak bisa diukur; minimal event per transisi stage
-      (landing→login→profile→apply→interview→task→gate).
-- [ ] Halaman Privacy Policy (`/privacy`) + link di landing & LoginPage — UU PDP berlaku
-      sejak data pribadi + chat history disimpan, bukan sejak monetisasi.
-- [ ] Tes serius di mobile (390px) — traffic dari IG/TikTok = HP.
+- [x] ~~Env Gemini production~~ — paid, dikonfirmasi 12 Juli.
+- [x] ~~Analytics~~ — SELESAI 19 Juli 2026 (first-party): tabel events + /api/track +
+      instrumentasi funnel lengkap + kartu di /admin. **WAJIB: jalankan
+      supabase-migrations/005_observability.sql di Studio** (kode aman sebelum itu,
+      event hanya belum tercatat). PostHog opsional menyusul.
+- [x] ~~Error tracking~~ — SELESAI 19 Juli 2026 (first-party): ClientMonitor +
+      app/error.tsx → event client_error → kartu /admin. Sentry opsional menyusul.
+- [x] ~~Privacy Policy~~ — SELESAI 19 Juli 2026: /privacy + /terms, link dari landing
+      & LoginPage. **Email kontak legal masih placeholder halo.kantoran@gmail.com —
+      buat inbox-nya atau ganti.**
+- [ ] Tes serius di mobile (390px) — traffic dari IG/TikTok = HP. (menunggu sesi testing founder)
 
 **P1 — penggerak funnel:**
 - [ ] Share card personal (nama, posisi, gaji nego, coin) sebagai halaman share dengan

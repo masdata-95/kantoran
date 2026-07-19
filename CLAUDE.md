@@ -144,7 +144,24 @@ Tables:
 - waitlist: email, name, rating, feedback, wishlist, position_tried
 - api_usage: rate limiting harian (user_id, bucket, day, count) + RPC bump_usage
 - lesson_modules / lessons / lesson_progress: Vantara Academy (lihat section di bawah)
+- events: analytics + error tracking first-party (migration 005 — WAJIB dijalankan;
+  kode aman sebelum migration: insert gagal diabaikan, /admin menampilkan catatan)
 Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio SQL Editor.
+
+## Observability (first-party, 19 Juli 2026)
+- lib/track.ts → POST /api/track (whitelist type, auth, cap meta, selalu 200) → tabel events.
+- Event funnel: profile_done, apply, interview_start/done/rejected, offer_signed,
+  training_done, task_submitted/revision, day1_done, waitlist_submitted, sql_challenge_done.
+- Error client: components/ClientMonitor.tsx (window error + unhandledrejection, max
+  5/sesi) + app/error.tsx (error boundary) → event 'client_error' → kartu di /admin.
+- PostHog/Sentry opsional menyusul; first-party ini berjalan tanpa akun eksternal.
+
+## Legal & SEO (19 Juli 2026)
+- /privacy + /terms (UU PDP; disclosure pemrosesan AI) — link dari landing footer & LoginPage.
+  Email kontak legal masih PLACEHOLDER halo.kantoran@gmail.com — buat/ganti sebelum ramai.
+- OG tags di layout.tsx (metadataBase kantoran.vercel.app — ganti saat cutover domain)
+  + landing.html; gambar share public/og-image.png (1200x630).
+- robots.txt (disallow /admin, /api), app/sitemap.ts, app/error.tsx, app/not-found.tsx.
 
 ## Key Files
 - components/SimulatorApp.tsx — main simulator (~2000 lines)
@@ -196,6 +213,10 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - DEPLOY-CLOUDFLARE.md — rencana pindah deploy Vercel → Cloudflare Workers (step-by-step). Vercel masih live sampai cutover.
 
 ## Common Issues & Solutions
+- Excel upload: parser client-side pakai exceljs (xlsx punya CVE tanpa patch; xlsx kini
+  devDependency, hanya untuk scripts/generate-universe). Upload menerima .xlsx saja.
+- Lint: 0 error; 3 rule React Compiler diturunkan ke warning KHUSUS SimulatorApp/
+  GuidedTour/SqlEditor (eslint.config.mjs) sampai refactor besar — file baru wajib lolos penuh.
 - Tailwind v4: tidak pakai tailwind.config.ts, semua lewat @import di globals.css
 - Supabase RLS: pakai SUPABASE_SERVICE_ROLE_KEY untuk server-side, bukan anon key
 - addMsg race condition: untuk pesan kritis (inbox email), langsung update setState, jangan pakai addMsg lewat setTimeout

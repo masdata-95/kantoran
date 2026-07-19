@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -54,7 +55,10 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-5 text-center text-xs text-[#AAAAAA]">
-            Dengan login, kamu menyetujui syarat penggunaan Kantoran.
+            Dengan login, kamu menyetujui{' '}
+            <Link href="/terms" className="underline hover:text-[#0F6E56]" style={{ cursor: 'pointer' }}>Syarat &amp; Ketentuan</Link>
+            {' '}dan{' '}
+            <Link href="/privacy" className="underline hover:text-[#0F6E56]" style={{ cursor: 'pointer' }}>Kebijakan Privasi</Link>.
             <br />Progress tersimpan otomatis di akun kamu.
           </p>
         </div>

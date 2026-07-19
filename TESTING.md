@@ -200,6 +200,20 @@ curl -s $BASE/api/stats -H "Authorization: Bearer $TOKEN"
 
 - [ ] 13a=401, 13b=409, 13c=400, 13d=400, 13e=JSON angka.
 
+## 13b. Produksi & Observability (baru, 19 Juli 2026)
+
+- [ ] Jalankan `supabase-migrations/005_observability.sql` di Supabase Studio (sekali).
+- [ ] /privacy dan /terms terbuka; link dari footer landing dan halaman login berfungsi.
+- [ ] Paste link kantoran ke WhatsApp/Telegram → kartu preview muncul (gambar hijau
+      "Belajar kerja, sambil kerja beneran"), bukan URL telanjang.
+- [ ] Buka /halaman-ngasal → halaman 404 bermerek "Ruangan ini tidak ada".
+- [ ] Mainkan 1 alur (apply → interview start) → /admin kartu "Event Funnel (7 hari)"
+      menunjukkan angka naik (apply, interview_start, dst).
+- [ ] Kartu "Error Client Terbaru" di /admin: "Tidak ada error" (atau daftar error
+      kalau memang ada — itu artinya fiturnya bekerja).
+- [ ] Upload .xlsx di Workspace masih terbaca (parser baru exceljs); file .xls lama
+      ditolak dengan pesan "pastikan format .xlsx".
+
 ## 14. Mobile (390px, WAJIB — traffic IG/TikTok)
 
 - [ ] Guided tour: spotlight & drawer mulus.

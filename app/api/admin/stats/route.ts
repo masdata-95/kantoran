@@ -119,8 +119,41 @@ export async function GET(req: NextRequest) {
     const calls7d = sumCalls(7)
     const calls30d = sumCalls(30)
 
+    // Event funnel 7 hari + error client terbaru (tabel events, migration 005) —
+    // toleran kalau migration belum jalan: field null + catatan
+    let events7d: Record<string, number> | null = null
+    let clientErrors: { at: string; message: string; path?: string }[] | null = null
+    try {
+      const { data: evts, error: evErr } = await db.from('events')
+        .select('type, meta, created_at')
+        .gt('created_at', daysAgoIso(7))
+        .order('created_at', { ascending: false })
+        .limit(5000)
+      if (!evErr && evts) {
+        events7d = {}
+        clientErrors = []
+        for (const e of evts) {
+          events7d[e.type] = (events7d[e.type] || 0) + 1
+          const meta = (e.meta || {}) as Record<string, unknown>
+          if (e.type === 'client_error' && clientErrors.length < 10) {
+            clientErrors.push({
+              at: e.created_at,
+              message: String(meta.message || '').slice(0, 200),
+              path: meta.path ? String(meta.path) : undefined,
+            })
+          }
+        }
+      }
+    } catch { /* tabel events belum ada */ }
+
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
+      events: {
+        available: events7d !== null,
+        counts7d: events7d,
+        clientErrors,
+        note: events7d === null ? 'Jalankan supabase-migrations/005_observability.sql di Supabase Studio.' : undefined,
+      },
       users: {
         total: profilesTotal ?? 0,
         new7d: profilesNew7d ?? 0,

@@ -8,6 +8,12 @@ import { authFetch } from '@/lib/supabase'
 
 interface Stats {
   generatedAt: string
+  events: {
+    available: boolean
+    counts7d: Record<string, number> | null
+    clientErrors: { at: string; message: string; path?: string }[] | null
+    note?: string
+  }
   users: { total: number; new7d: number; withRun: number; active1d: number; active7d: number; dormant14d: number; churnProxyPct: number }
   funnel: { runStarted: number; interviewDone: number; hired: number; taskReceived: number; day1Done: number; completionPct: number }
   byPosition: Record<string, { runs: number; done: number }>
@@ -158,6 +164,40 @@ export default function AdminPage() {
               ))}
             </div>
             <p className="text-[10px] text-[#888780]">{stats.ai.note}</p>
+          </Card>
+
+          {/* Event funnel granular (tabel events) */}
+          <Card title="Event Funnel (7 hari)">
+            {!stats.events.available ? (
+              <p className="text-xs text-[#854F0B] bg-[#FAEEDA] rounded-lg px-2.5 py-1.5">{stats.events.note}</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {['profile_done', 'apply', 'interview_start', 'interview_done', 'interview_rejected', 'offer_signed', 'training_done', 'task_submitted', 'task_revision', 'day1_done', 'waitlist_submitted', 'sql_challenge_done'].map(t => (
+                  <div key={t} className="flex justify-between text-xs border-b border-[#F1EFE8] last:border-0 py-0.5">
+                    <span className="text-[#444441]">{t}</span>
+                    <span className="font-semibold text-[#111111]">{stats.events.counts7d?.[t] || 0}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Error client terbaru (Sentry-lite) */}
+          <Card title="Error Client Terbaru">
+            {!stats.events.available ? (
+              <p className="text-xs text-[#888780]">Butuh migration 005.</p>
+            ) : (stats.events.clientErrors || []).length === 0 ? (
+              <p className="text-xs text-[#0F6E56] font-medium">Tidak ada error client 7 hari terakhir.</p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {(stats.events.clientErrors || []).map((e, i) => (
+                  <div key={i} className="text-[11px] border-b border-[#F1EFE8] last:border-0 pb-1.5">
+                    <p className="text-[#9A3412] font-mono leading-snug">{e.message || '(tanpa pesan)'}</p>
+                    <p className="text-[#888780]">{e.path || ''} · {new Date(e.at).toLocaleString('id-ID')}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           {/* Kesehatan sistem */}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Database } from 'sql.js'
 import { resultsMatch, type QueryResult } from '@/lib/sqlCompare'
+import { track } from '@/lib/track'
 
 // "Database Vantara" — SQL editor in-story untuk Data Analyst.
 // Seluruh database berjalan DI BROWSER (sql.js WASM + public/data/vantara.db) —
@@ -146,6 +147,7 @@ export default function SqlEditor({ userId, onCoins }: {
         setDone(newDone)
         try { localStorage.setItem(doneKey, JSON.stringify(newDone)) } catch { /* abaikan */ }
         onCoins(ch.reward)
+        track('sql_challenge_done', { challenge: ch.id })
       }
       setChallengeMsg({ [ch.id]: `Benar! +${ch.reward} coin.` })
     } else {
@@ -287,7 +289,7 @@ export default function SqlEditor({ userId, onCoins }: {
           ))}
         </div>
         <p className="text-[10px] text-[#888780] mt-2">
-          Tulis query-mu di editor di atas, lalu klik "Cek query-ku" pada latihan yang sedang kamu kerjakan.
+          Tulis query-mu di editor di atas, lalu klik &ldquo;Cek query-ku&rdquo; pada latihan yang sedang kamu kerjakan.
         </p>
       </div>
     </div>

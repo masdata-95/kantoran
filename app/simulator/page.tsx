@@ -10,6 +10,7 @@ import SimulatorApp from '@/components/SimulatorApp'
 import WishlistForm from '@/components/WishlistForm'
 import type { UserProfile } from '@/lib/profile'
 import type { BackgroundType, LevelType } from '@/lib/positions'
+import { track } from '@/lib/track'
 
 type AppStage =
   | 'loading'
@@ -145,6 +146,7 @@ export default function SimulatorPage() {
         const profileWithCat = p as UserProfile & { category?: string }
         setProfile(p)
         setBackground((profileWithCat.category || '') as BackgroundType | '')
+        track('profile_done', { category: profileWithCat.category || '' })
         setStage('job_listing')
       }}
     />
@@ -157,6 +159,7 @@ export default function SimulatorPage() {
       onApply={(positionId, level) => {
         setSelectedPosition(positionId)
         setSelectedLevel(level)
+        track('apply', { position: positionId, level })
         try { sessionStorage.setItem(activePosKey(user.id), JSON.stringify({ position: positionId, level })) } catch { /* abaikan */ }
         setStage('simulator')
       }}

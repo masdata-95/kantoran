@@ -16,6 +16,7 @@ const SqlEditor = dynamicImport(() => import('@/components/SqlEditor'), { ssr: f
 import GuidedTour, { type TourStep } from '@/components/GuidedTour'
 import ReferenceLetter from '@/components/ReferenceLetter'
 import { countRevisions, computeGrade, GRADE_LABEL, GRADE_REVIEW, getWorkStyle, isConditionalOffer } from '@/lib/performance'
+import { track } from '@/lib/track'
 
 // Tur pengenalan UI untuk user yang baru pertama kali masuk simulasi.
 // Selector menunjuk atribut data-tour di elemen bersangkutan.
@@ -334,7 +335,6 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     try { localStorage.setItem(tourKey, '1') } catch { /* abaikan */ }
     setShowTour(false)
     setSidebarOpen(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tourKey])
 
   // Step tur yang menyorot elemen di dalam sidebar butuh drawer terbuka di mobile
@@ -434,6 +434,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         text: `Btw aku lihat training module kamu kelar, termasuk misinya. Bagus, itu bakal kepake banget di task-mu.`
       }, viewRef.current === 'sup_chat')
       addCoins(10)
+      track('training_done', { position: stateRef.current.position })
     }, 2000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trainingDone, state.step])
@@ -723,6 +724,7 @@ PT Vantara Nusantara`
     // Interview DITOLAK: bukan pintu keluar, tapi cabang cerita — Sinta sudah memberi
     // alasan spesifik; tawarkan belajar (Academy) + interview ulang
     if (npcId === 'sinta' && interviewOutcome === 'rejected' && !state.interviewDone) {
+      track('interview_rejected', { position: state.position, level: state.level })
       setTimeout(() => {
         addMsg('hr_office', {
           role: 'action',
@@ -764,6 +766,7 @@ PT Vantara Nusantara`
           const isDone = salaryDiscussed && (serverSaysDone ||
             (userMsgCount >= 8 && !endsWithQuestion && doneSignals.some(s => reply.toLowerCase().includes(s))))
           if (isDone) {
+            track('interview_done', { position: prev.position, level: prev.level, conditional })
             setTimeout(() => {
               addMsg('hr_office', {
                 role: 'action',
@@ -796,6 +799,11 @@ PT Vantara Nusantara`
 
     const npcId = ROOM_NPC[view] || 'sinta'
     const room = view
+
+    // Analytics: pesan pertama user ke Sinta = interview benar-benar dimulai
+    if (room === 'hr_office' && !(state.chatHistory['hr_office'] || []).some(m => m.role === 'user')) {
+      track('interview_start', { position: state.position, level: state.level })
+    }
 
     addMsg(room, { role: 'user', text: msg }, true)
     await deliverReply(npcId, msg, room)
@@ -863,7 +871,7 @@ PT Vantara Nusantara`
     return `Hari pertamaku sebagai ${state.bgRole} di simulasi Kantoran: lulus interview HR, ${salary}, task pertama APPROVED dengan penilaian "${grade}"${ws ? ` dan gaya kerja "${ws.label}"` : ''}. ${state.coins} Kantor Coin terkumpul. Rasain juga jadi anak kantoran: kantoran.vercel.app`
   }
 
-  const handleNextStep = async (step: number, data?: Record<string, unknown>) => {
+  const handleNextStep = async (step: number, _data?: Record<string, unknown>) => {
     // Special case: go to day 2 / wishlist
     if (step === 99) {
       if (onWishlist) {
@@ -1002,6 +1010,7 @@ PT Vantara Nusantara`
 
     if (step === 3) {
       setState(prev => ({ ...prev, step: 3, phaseUnlocked: 1 }))
+      track('offer_signed', { position: state.position, level: state.level, salary: state.salaryOffered })
       const pos = POSITIONS[state.position]
       const channelName = pos?.dept.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/-$/g, '') || 'general'
 
@@ -1177,28 +1186,33 @@ PT Vantara Nusantara`
     // File baru = review lama tidak berlaku lagi — tanpa ini tombol submit tertahan
     setReviewResult(null)
     try {
-      const XLSX = await import('xlsx')
-      const buf = await file.arrayBuffer()
-      const wb = XLSX.read(buf, { type: 'array' })
-      let extracted = `File: ${file.name}\n`
-      extracted += `Sheets: ${wb.SheetNames.join(', ')}\n\n`
+      // exceljs menggantikan xlsx (CVE tanpa patch di npm); parsing tetap di browser,
+      // terhadap file milik user sendiri. Konsekuensi: hanya .xlsx (bukan .xls lama).
+      const ExcelJS = await import('exceljs')
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.load(await file.arrayBuffer())
 
-      wb.SheetNames.forEach(sheetName => {
-        const ws = wb.Sheets[sheetName]
-        const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][]
-        extracted += `=== Sheet: ${sheetName} ===\n`
-        // Take first 50 rows for analysis
-        const rows = data.slice(0, 50)
-        rows.forEach((row: unknown[]) => {
-          extracted += row.join('\t') + '\n'
-        })
+      let extracted = `File: ${file.name}\n`
+      extracted += `Sheets: ${wb.worksheets.map(ws => ws.name).join(', ')}\n\n`
+
+      for (const ws of wb.worksheets) {
+        extracted += `=== Sheet: ${ws.name} ===\n`
+        // 50 baris pertama per sheet cukup untuk review (ringkasan user yang dinilai)
+        const maxRows = Math.min(ws.rowCount, 50)
+        for (let r = 1; r <= maxRows; r++) {
+          const cells: string[] = []
+          ws.getRow(r).eachCell({ includeEmpty: true }, cell => {
+            cells.push(cell.value === null || cell.value === undefined ? '' : cell.text)
+          })
+          extracted += cells.join('\t') + '\n'
+        }
         extracted += '\n'
-      })
+      }
 
       setExtractedData(extracted)
     } catch (e) {
       console.error('Excel read error:', e)
-      setExtractedData(`File: ${file.name}\n[Tidak bisa membaca file, pastikan format .xlsx atau .xls]`)
+      setExtractedData(`File: ${file.name}\n[Tidak bisa membaca file, pastikan format .xlsx]`)
     }
   }
 
@@ -1230,6 +1244,7 @@ PT Vantara Nusantara`
         throw new Error(data?.error || 'Review gagal')
       }
       setReviewResult({ review: data.review, isApproved: data.isApproved })
+      track('task_submitted', { position: state.position, approved: data.isApproved })
 
       // Add feedback to supervisor chat
       const pos = POSITIONS[state.position]
@@ -1252,6 +1267,7 @@ PT Vantara Nusantara`
       // progress, tapi mengubah cerita — dan tercatat di penilaian + surat referensi.
       if (!data.isApproved) {
         const revCount = countRevisions(state.chatHistory) + 1 // + revisi yang baru saja terjadi
+        track('task_revision', { position: state.position, revCount })
         if (revCount === 1 && !trainingDone) {
           // Just-in-time learning: Academy ditawarkan sebagai penyelamat, bukan gerbang
           setTimeout(() => {
@@ -1277,6 +1293,10 @@ PT Vantara Nusantara`
         const newCoins = state.coins + 30
         const newTasksDone = state.tasksDone + 1
         setState(prev => ({ ...prev, tasksDone: newTasksDone, step: 10 }))
+        track('day1_done', {
+          position: state.position, level: state.level,
+          revisions: countRevisions(state.chatHistory), coins: newCoins,
+        })
 
         // Update simulation experience in profile
         const pos = POSITIONS[state.position]
@@ -2275,7 +2295,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
 }
 
 // ── INBOX GMAIL STYLE ────────────────────────────
-function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
+function InboxView({ messages, onNextStep, onViewChange, state }: {
   messages: Message[]
   onNextStep: (step: number, data?: Record<string, unknown>) => void
   onViewChange: (view: string) => void
@@ -2288,7 +2308,6 @@ function InboxView({ messages, onNextStep, onViewChange, state, pos }: {
   const selected = emails.find(e => e.id === selectedId)
 
   const getTimeLabel = (idx: number) => {
-    const now = new Date()
     const times = ['08.00', '09.30', '10.15', '14.00', '15.30', '16.00']
     return times[idx] || `${8 + idx}.00`
   }
@@ -2541,11 +2560,11 @@ function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, 
           >
             <div className="text-3xl mb-2">📊</div>
             <p className="text-sm font-medium text-[#111111]">Klik untuk upload file Excel</p>
-            <p className="text-xs text-[#888780] mt-1">Format: .xlsx atau .xls</p>
+            <p className="text-xs text-[#888780] mt-1">Format: .xlsx</p>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx"
               className="hidden"
               onChange={e => { if (e.target.files?.[0]) onFileUpload(e.target.files[0]) }}
             />
