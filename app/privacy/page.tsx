@@ -88,7 +88,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-semibold text-[#111111] mb-1.5">Kontak</h2>
             <p>
-              Pertanyaan atau permintaan terkait privasi: <strong>halo.kantoran@gmail.com</strong>
+              Pertanyaan atau permintaan terkait privasi: <strong>masdata.business@gmail.com</strong>
             </p>
           </section>
 

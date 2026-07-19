@@ -158,7 +158,8 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 
 ## Legal & SEO (19 Juli 2026)
 - /privacy + /terms (UU PDP; disclosure pemrosesan AI) — link dari landing footer & LoginPage.
-  Email kontak legal masih PLACEHOLDER halo.kantoran@gmail.com — buat/ganti sebelum ramai.
+  Email kontak legal: masdata.business@gmail.com (nanti ganti halo@kantoran.id setelah
+  domain dibeli + Cloudflare Email Routing di-set).
 - OG tags di layout.tsx (metadataBase kantoran.vercel.app — ganti saat cutover domain)
   + landing.html; gambar share public/og-image.png (1200x630).
 - robots.txt (disallow /admin, /api), app/sitemap.ts, app/error.tsx, app/not-found.tsx.
