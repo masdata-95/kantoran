@@ -144,9 +144,27 @@ Tables:
 - waitlist: email, name, rating, feedback, wishlist, position_tried
 - api_usage: rate limiting harian (user_id, bucket, day, count) + RPC bump_usage
 - lesson_modules / lessons / lesson_progress: Vantara Academy (lihat section di bawah)
-- events: analytics + error tracking first-party (migration 005 — WAJIB dijalankan;
-  kode aman sebelum migration: insert gagal diabaikan, /admin menampilkan catatan)
+- events: analytics + error tracking first-party (migration 005 — sudah dijalankan 19 Juli)
+- tasks + entitlements + user_progress.sim_day + bucket privat 'task-files'
+  (migration 006 — jalankan di Studio; kode toleran sebelum itu)
 Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio SQL Editor.
+
+## Sistem Task Season (19 Juli 2026 — fondasi konten day 2+)
+- Authoring: content/tasks/<slug>.md (frontmatter: slug/position_id/day/task_type/
+  file_name/teaser/cross_ref/rubric per LEVEL intern|junior|mid + reaksi NPC; body =
+  brief suara supervisor) → `npm run seed:tasks` (validasi keras + upsert by slug +
+  upload file premium ke bucket privat task-files).
+- File task dari generator: `npm run generate:universe` juga menghasilkan file premium
+  ke content/task-files/ (BUKAN public/ — file day >= 2 di public bisa diunduh gratis).
+- API: GET /api/tasks?position=... (locked day>=2 tanpa entitlement → hanya
+  {day,title,teaser}; rubric TIDAK PERNAH ke client); GET /api/task-file?slug=...
+  (cek hasSeasonAccess lalu stream dari bucket).
+- lib/entitlements.ts: hasSeasonAccess() — diisi webhook Xendit nanti, atau MANUAL
+  untuk pre-sale: INSERT INTO entitlements (user_id, product, expires_at, source) di Studio.
+- Contoh lengkap/template: content/tasks/da-day2-dashboard.md (insight margin Lumière
+  ditanam di data task_da_day2.xlsx: revenue kuat, margin 42%→33%).
+- BELUM di-wire ke gameplay: SimulatorApp masih pakai task day-1 hardcoded
+  (lib/positions.ts); wiring sim_day + task room menyusul bersama pembayaran.
 
 ## Observability (first-party, 19 Juli 2026)
 - lib/track.ts → POST /api/track (whitelist type, auth, cap meta, selalu 200) → tabel events.

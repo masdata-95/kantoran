@@ -12,7 +12,8 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf:tail": "wrangler tail kantoran",
-    "generate:universe": "tsx scripts/generate-universe.ts"
+    "generate:universe": "tsx scripts/generate-universe.ts",
+    "seed:tasks": "tsx scripts/seed-tasks.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

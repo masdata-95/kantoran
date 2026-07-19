@@ -375,6 +375,57 @@ async function main() {
   XLSX.writeFile(wb, path.join(tasksDir, 'task_admin_ops.xlsx'))
   console.log(`task_admin_ops.xlsx: ${invoiceRows.length} baris invoice (2 dobel + 3 tanpa jatuh tempo ditanam)`)
 
+  // ── Task file DA day-2 (PREMIUM): dashboard direksi ──
+  // Output ke content/task-files/ (BUKAN public/) — di-upload ke bucket privat
+  // oleh `npm run seed:tasks`, disajikan via /api/task-file setelah cek entitlement.
+  // Insight non-obvious ditanam: revenue Lumière NAIK sepanjang H1 2026,
+  // tapi margin-nya TURUN (±42% → ±33%) — hanya kelihatan lewat pivot.
+  const brandBySku = new Map(products.map(p => [p.sku, p.brand]))
+  const nameBySku = new Map(products.map(p => [p.sku, p.name]))
+  const marginBase: Record<string, number> = { 'Lumière': 42, 'Roots&Co': 34, 'Vanta Glow': 30 }
+  const seenOrders = new Set<string>()
+  const day2Rows: Record<string, unknown>[] = []
+  for (const s of sales) {
+    // "Data bersih hasil task 1": tanpa duplikat, tanpa region kosong, tanpa revenue 0
+    if (s.order_date < '2026-01' || !s.region || s.revenue === 0) continue
+    if (seenOrders.has(s.order_id)) continue
+    seenOrders.add(s.order_id)
+    const sku = s.sku.toUpperCase()
+    const brand = brandBySku.get(sku) || 'Lainnya'
+    const monthIdx = Number(s.order_date.slice(5, 7)) - 1 // 0 (Jan) .. 5 (Jun)
+    let margin = marginBase[brand] ?? 32
+    if (brand === 'Lumière') margin = 42 - monthIdx * 1.8   // menurun per bulan
+    margin += (rand() - 0.5) * 2                             // noise wajar
+    day2Rows.push({
+      order_id: s.order_id, tanggal: s.order_date, sku,
+      produk: nameBySku.get(sku) || sku, brand,
+      qty: s.qty, revenue: s.revenue, region: s.region, channel: s.channel,
+      margin_pct: Math.round(margin * 10) / 10,
+    })
+  }
+  const wb2 = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet([
+    ['TASK: Dashboard Penjualan untuk Rapat Direksi'],
+    [''],
+    ['Dari: Rizky (Senior Data Analyst)'],
+    ['Data H1 2026 ini sudah bersih (hasil kerjamu kemarin). Ada kolom baru: margin_pct.'],
+    ['Buat SATU halaman ringkas untuk direksi: tren per brand, top 5 SKU,'],
+    ['dan satu insight yang menurutmu direksi HARUS tahu. Jangan kirim tabel mentah.'],
+    [''],
+    ['Kumpulkan sebagai sheet "Ringkasan" berisi temuanmu, lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.json_to_sheet(day2Rows), 'Data H1 2026')
+  const premiumDir = path.join(root, 'content', 'task-files')
+  fs.mkdirSync(premiumDir, { recursive: true })
+  XLSX.writeFile(wb2, path.join(premiumDir, 'task_da_day2.xlsx'))
+
+  // Sanity check insight: revenue LUM naik, margin LUM turun (Jan vs Jun)
+  const lumJan = day2Rows.filter(r => r.brand === 'Lumière' && String(r.tanggal).startsWith('2026-01'))
+  const lumJun = day2Rows.filter(r => r.brand === 'Lumière' && String(r.tanggal).startsWith('2026-06'))
+  const sum = (rows: Record<string, unknown>[], k: string) => rows.reduce((a, r) => a + Number(r[k]), 0)
+  const avgMargin = (rows: Record<string, unknown>[]) => rows.length ? (sum(rows, 'margin_pct') / rows.length).toFixed(1) : '0'
+  console.log(`task_da_day2.xlsx: ${day2Rows.length} baris | LUM revenue Jan→Jun: ${Math.round(sum(lumJan, 'revenue') / 1e6)}jt → ${Math.round(sum(lumJun, 'revenue') / 1e6)}jt | LUM margin: ${avgMargin(lumJan)}% → ${avgMargin(lumJun)}%`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya

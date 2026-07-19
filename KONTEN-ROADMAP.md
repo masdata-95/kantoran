@@ -85,8 +85,11 @@ Dipakai untuk mengisi arc 2-4. Semua punya komplikasi, bukan soal latihan.
 
 ## 5. Mekanik produk yang perlu dibangun (urutan)
 
-1. **Task per hari pindah ke Supabase** — sekarang task hardcoded 1 per posisi di `lib/positions.ts`. Buat tabel `tasks` (position_id, day, title, body, context, file_url, rubric JSONB, sort_order) mengikuti pola `lessons` (RLS sama, rubric tidak pernah ke client, review lewat `lib/reviewTask.ts` yang sudah ada). Konten bisa dirilis tanpa deploy.
-2. **State "hari" per run** — `user_progress` tambah kolom `sim_day` (default 1). Selesai semua task hari itu → hari berikutnya terbuka. Gate premium = `sim_day > 1` butuh langganan.
+1. ~~**Task per hari pindah ke Supabase**~~ — SELESAI 19 Juli 2026 (migration 006: tabel
+   tasks + rubric per level, pipeline content/tasks + seed:tasks, file premium di bucket
+   privat via /api/task-file, contoh template da-day2-dashboard.md). Sisa: wiring gameplay.
+2. **State "hari" per run** — kolom `sim_day` SUDAH ada (migration 006); logika naik hari
+   + task room yang membaca /api/tasks belum di-wire (menyusul bersama pembayaran).
 3. **Cross-run awareness** — helper server yang membaca run posisi lain milik user (data sudah ada di `user_progress`) dan menyuntikkan 1 kalimat konteks ke prompt NPC.
 4. **Event feed perusahaan** — pesan broadcast di Slack room per arc ("All-hands jam 4: update region timur") supaya kantor terasa hidup di semua posisi. Cukup tabel `events` (day, position_id nullable, text) atau hardcode per arc dulu.
 5. **Academy day 2+** — modul lanjutan mengikuti arc (SQL dasar saat arc 1 butuh investigasi; storytelling with data saat arc 2). Skema sudah mendukung (`day >= 2` = terkunci/premium).
