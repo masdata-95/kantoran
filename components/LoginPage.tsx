@@ -78,7 +78,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-[#AAAAAA]">
-          Bisa dicoba gratis · Tidak perlu kartu kredit
+          Hari pertama gratis · Tidak perlu kartu kredit
         </p>
       </div>
     </div>
