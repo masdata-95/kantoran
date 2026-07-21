@@ -13,3 +13,5 @@ node_modules/
 
 # Agent skills terpasang lokal (npx skills) — tidak dibagikan lewat repo
 .agents/
+.claude/skills/
+skills-lock.json
