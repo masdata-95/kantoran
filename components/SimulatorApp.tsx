@@ -22,11 +22,11 @@ import { track } from '@/lib/track'
 // Selector menunjuk atribut data-tour di elemen bersangkutan.
 const TOUR_STEPS: TourStep[] = [
   { title: 'Selamat datang di kantor barumu', body: 'Semua yang terjadi di sini berjalan seperti kantor sungguhan: ada email, chat tim, interview, sampai nego gaji. Sebelum mulai, kenalan dulu sama ruangannya sebentar.' },
-  { target: '[data-tour="inbox-list"]', title: 'Inbox', body: 'Email undangan interview dari HR sudah masuk di sini. Dokumen penting lain seperti offering letter juga akan datang lewat inbox ini.' },
+  { title: 'Inbox', body: 'Dokumen penting seperti undangan interview dan offering letter masuk ke menu Inbox di daftar ruangan. Sekarang kamu langsung di HR Office, tempat interview berlangsung.' },
   { target: '[data-tour="team"]', title: 'Tim kamu', body: 'Orang-orang yang bisa kamu ajak bicara. Klik nama untuk buka chat. Untuk sekarang baru Sinta dari HR yang aktif, sisanya terbuka setelah kamu diterima kerja.', needsSidebar: true },
   { target: '[data-tour="rooms"]', title: 'Ruangan kantor', body: 'Pindah ruangan lewat menu ini. Ruangan yang terkunci akan terbuka seiring perjalananmu. Langkah pertamamu nanti: HR Office untuk interview.', needsSidebar: true },
   { target: '[data-tour="coins"]', title: 'Kantor Coin', body: 'Poin yang kamu kumpulkan dari setiap aktivitas dan task yang selesai.' },
-  { title: 'Mulai dari email Sinta', body: 'Buka email undangan di Inbox, lalu masuk ke HR Office dan sapa Sinta. Sisanya akan mengalir seperti hari pertama kerja beneran. Semoga lancar!' },
+  { title: 'Sinta sudah menunggu', body: 'Sinta, HR kami, sudah menyapamu di layar ini. Balas saja pesannya untuk mulai interview, ketik seperti kamu ngobrol beneran. Sisanya akan mengalir seperti hari pertama kerja. Semoga lancar!' },
 ]
 
 // ── TYPES ─────────────────────────────────────────
@@ -574,10 +574,12 @@ PT Vantara Nusantara`
 
       setState(initState)
       setShowApp(true)
-      setView('inbox')
-      // Show notification after mount
+      // Daratkan langsung di HR Office: Sinta sudah menyapa + kolom ketik terlihat,
+      // hilangkan friksi navigasi inbox->email->HR Office yang membakar apply->interview.
+      // Email undangan tetap di Inbox (badge unread) untuk imersi, tapi bukan penghalang.
+      setView('hr_office')
       setTimeout(() => {
-        showNotif('inbox', 'Inbox', 'Ada email undangan seleksi dari Sinta Maharani')
+        showNotif('hr_office', 'Sinta Maharani', 'Sinta sudah menyapamu, balas untuk mulai interview')
       }, 800)
     }
   }, [progLoading, showApp, initialPosition])
