@@ -890,7 +890,7 @@ footer{
     <a href="#how" class="nav-link">Cara kerja</a>
     <a href="#npc" class="nav-link">Tim NPC</a>
     <a href="/cv" class="nav-link">Cek CV</a>
-    <a href="#waitlist" class="btn-nav">Daftar Waitlist</a>
+    <a href="/simulator" class="btn-nav">Coba Sekarang</a>
   </div>
 </nav>
 
@@ -1309,9 +1309,9 @@ footer{
 <section id="waitlist">
   <div class="section-inner">
     <div class="waitlist-wrap">
-      <div class="section-label" style="text-align:center">Early Access</div>
-      <h2 class="section-title" style="text-align:center">Kamu yang <em>pertama tahu.</em></h2>
-      <p class="section-sub" style="text-align:center;margin:0 auto">Kantoran sedang dalam tahap pengembangan. Daftar sekarang dan dapatkan akses pertama saat platform live.</p>
+      <div class="section-label" style="text-align:center">Versi Lengkap</div>
+      <h2 class="section-title" style="text-align:center">Hari pertama gratis. <em>Sisanya menyusul.</em></h2>
+      <p class="section-sub" style="text-align:center;margin:0 auto">Hari pertama sudah bisa kamu coba sekarang lewat tombol "Coba Sekarang" di atas. Tinggalkan email kalau mau dikabari duluan saat versi lengkapnya rilis: simulasi 3 bulan, task lanjutan, dan surat referensi kerja nyata.</p>
 
       <div class="waitlist-form" id="wl-form">
         <div class="form-group">
@@ -1333,9 +1333,9 @@ footer{
           </select>
         </div>
         <button class="btn-submit" onclick="submitWL()">
-          Daftarkan Saya ke Waitlist →
+          Kabari Saya Saat Versi Lengkap Rilis →
         </button>
-        <p class="form-note">Tidak ada spam. Kamu yang pertama tahu kalau Kantoran live. ☑</p>
+        <p class="form-note">Tidak ada spam. Cuma satu email saat versi lengkap siap. ☑</p>
       </div>
     </div>
   </div>
@@ -1917,11 +1917,11 @@ function submitWL() {
   document.getElementById('wl-form').innerHTML = `
     <div class="success-state">
       <div class="success-icon">🎉</div>
-      <div class="success-title">Kamu sudah masuk waitlist!</div>
+      <div class="success-title">Sip, kamu bakal dikabari!</div>
       <div class="success-sub">
-        Halo <strong>${name.split(' ')[0]}</strong>! Kami akan kirim notifikasi ke <strong>${email}</strong> begitu Kantoran siap.<br><br>
+        Halo <strong>${name.split(' ')[0]}</strong>! Kami kirim email ke <strong>${email}</strong> begitu versi lengkap Kantoran rilis.<br><br>
         <span style="display:inline-block;margin-top:12px;padding:12px 16px;background:var(--teal-light);border-radius:var(--radius-sm);font-size:13px;color:var(--teal);line-height:1.65">
-          Sambil menunggu: ajak teman yang juga butuh simulasi kerja nyata untuk daftar bersama. Semakin banyak yang join, semakin cepat kami launch!
+          Ngomong-ngomong, hari pertama udah bisa kamu coba sekarang juga, gratis. Klik "Coba Sekarang" di atas dan langsung mulai!
         </span>
       </div>
     </div>`;
