@@ -85,6 +85,17 @@ export default function SqlEditor({ userId, onCoins }: {
         const db = new SQL.Database(new Uint8Array(buf))
         dbRef.current = db
 
+        // Fungsi kompatibilitas: banyak yang datang dari MySQL/Postgres menulis
+        // YEAR()/MONTH(). SQLite tak punya (tanggal = teks ISO), jadi kita daftarkan
+        // supaya query natural mereka tetap jalan. Kembalikan INTEGER agar
+        // perbandingan seperti YEAR(order_date)=2026 cocok. EXTRACT tak bisa dishim
+        // karena itu sintaks ("YEAR FROM"), bukan fungsi biasa.
+        try {
+          const dbFn = db as unknown as { create_function: (n: string, f: (...a: unknown[]) => unknown) => void }
+          dbFn.create_function('YEAR', (d: unknown) => d ? parseInt(String(d).slice(0, 4), 10) : null)
+          dbFn.create_function('MONTH', (d: unknown) => d ? parseInt(String(d).slice(5, 7), 10) : null)
+        } catch { /* versi sql.js lama tanpa create_function → user pakai substr/strftime */ }
+
         // Schema browser: daftar tabel + kolom
         const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         const schemaList: { table: string; columns: string[] }[] = []
@@ -116,10 +127,10 @@ export default function SqlEditor({ userId, onCoins }: {
       return { columns: out[0].columns, values: out[0].values as unknown[][] }
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Query error'
-      // Bantu user yang menulis sintaks PostgreSQL/MySQL — database ini SQLite
+      // Bantu user yang menulis sintaks PostgreSQL — database ini SQLite
       const up = sql.toUpperCase()
-      if (/EXTRACT\s*\(|DATE_TRUNC|\bYEAR\s*\(|\bMONTH\s*\(|\bDAY\s*\(/.test(up)) {
-        msg += ". Catatan: database ini SQLite. Untuk ambil tahun/bulan dari tanggal, pakai substr(order_date,1,4) atau substr(order_date,1,7), atau saring dengan order_date LIKE '2026-01%'. Fungsi EXTRACT/YEAR/MONTH tidak ada di SQLite."
+      if (/EXTRACT\s*\(|DATE_TRUNC/.test(up)) {
+        msg += ". Catatan: database ini SQLite, EXTRACT tidak didukung. Untuk ambil tahun/bulan pakai YEAR(order_date), strftime('%Y',order_date), atau saring dengan order_date LIKE '2026-01%'."
       } else if (/\bNOW\s*\(|GETDATE|CURRENT_DATE/.test(up)) {
         msg += ". Untuk tanggal sekarang di SQLite pakai date('now')."
       }
@@ -189,9 +200,10 @@ export default function SqlEditor({ userId, onCoins }: {
           Akses <strong>read-only</strong> ke database penjualan internal Vantara. Semua query berjalan di komputermu, bebas bereksperimen.
         </p>
         <p className="text-[11px] text-[#085041]/85 leading-relaxed">
-          Database ini <strong>SQLite</strong>. Kolom tanggal (order_date) disimpan sebagai teks &lsquo;YYYY-MM-DD&rsquo;, jadi saring pakai{' '}
-          <code className="bg-white/70 px-1 rounded">order_date LIKE &lsquo;2026-01%&rsquo;</code> atau{' '}
-          <code className="bg-white/70 px-1 rounded">substr(order_date,1,7)</code>, bukan EXTRACT/YEAR.
+          Database ini <strong>SQLite</strong>. Tanggal (order_date) berformat &lsquo;YYYY-MM-DD&rsquo;. Untuk saring tahun/bulan bisa pakai{' '}
+          <code className="bg-white/70 px-1 rounded">YEAR(order_date)=2026</code>,{' '}
+          <code className="bg-white/70 px-1 rounded">order_date LIKE &lsquo;2026-01%&rsquo;</code>, atau{' '}
+          <code className="bg-white/70 px-1 rounded">strftime(&lsquo;%Y&rsquo;,order_date)</code>. Fungsi <code className="bg-white/70 px-1 rounded">EXTRACT</code> tidak didukung SQLite.
         </p>
       </div>
 
