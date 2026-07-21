@@ -115,7 +115,15 @@ export default function SqlEditor({ userId, onCoins }: {
       if (!out.length) return { columns: [], values: [] }
       return { columns: out[0].columns, values: out[0].values as unknown[][] }
     } catch (e) {
-      return { error: e instanceof Error ? e.message : 'Query error' }
+      let msg = e instanceof Error ? e.message : 'Query error'
+      // Bantu user yang menulis sintaks PostgreSQL/MySQL — database ini SQLite
+      const up = sql.toUpperCase()
+      if (/EXTRACT\s*\(|DATE_TRUNC|\bYEAR\s*\(|\bMONTH\s*\(|\bDAY\s*\(/.test(up)) {
+        msg += ". Catatan: database ini SQLite. Untuk ambil tahun/bulan dari tanggal, pakai substr(order_date,1,4) atau substr(order_date,1,7), atau saring dengan order_date LIKE '2026-01%'. Fungsi EXTRACT/YEAR/MONTH tidak ada di SQLite."
+      } else if (/\bNOW\s*\(|GETDATE|CURRENT_DATE/.test(up)) {
+        msg += ". Untuk tanggal sekarang di SQLite pakai date('now')."
+      }
+      return { error: msg }
     }
   }
 
@@ -151,7 +159,7 @@ export default function SqlEditor({ userId, onCoins }: {
       }
       setChallengeMsg({ [ch.id]: `Benar! +${ch.reward} coin.` })
     } else {
-      setChallengeMsg({ [ch.id]: 'Belum cocok. Cek lagi filter, grouping, atau jumlah kolomnya. Jalankan query-mu dulu untuk melihat hasilnya.' })
+      setChallengeMsg({ [ch.id]: 'Belum cocok. Pastikan filternya sesuai soal (bulan/tahun/region yang diminta), grouping, dan kolomnya benar. Klik Jalankan Query dulu untuk melihat hasil query-mu.' })
     }
   }
 
@@ -177,9 +185,13 @@ export default function SqlEditor({ userId, onCoins }: {
   return (
     <div className="flex flex-col gap-4 pb-4">
       <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-xl px-4 py-3">
-        <p className="text-xs text-[#085041] leading-relaxed">
-          Akses <strong>read-only</strong> ke database penjualan internal Vantara.
-          Semua query berjalan di komputermu, silakan bereksperimen sebebasnya.
+        <p className="text-xs text-[#085041] leading-relaxed mb-1.5">
+          Akses <strong>read-only</strong> ke database penjualan internal Vantara. Semua query berjalan di komputermu, bebas bereksperimen.
+        </p>
+        <p className="text-[11px] text-[#085041]/85 leading-relaxed">
+          Database ini <strong>SQLite</strong>. Kolom tanggal (order_date) disimpan sebagai teks &lsquo;YYYY-MM-DD&rsquo;, jadi saring pakai{' '}
+          <code className="bg-white/70 px-1 rounded">order_date LIKE &lsquo;2026-01%&rsquo;</code> atau{' '}
+          <code className="bg-white/70 px-1 rounded">substr(order_date,1,7)</code>, bukan EXTRACT/YEAR.
         </p>
       </div>
 
@@ -253,14 +265,21 @@ export default function SqlEditor({ userId, onCoins }: {
       {/* Tantangan dari supervisor — dinilai otomatis, tanpa AI */}
       <div className="bg-white border border-[#E5E3DC] rounded-xl p-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">
-          Latihan dari supervisormu ({Object.values(done).filter(Boolean).length}/{CHALLENGES.length})
+          Latihan dari supervisormu ({Object.values(done).filter(Boolean).length}/{CHALLENGES.length} selesai)
         </p>
+        <div className="bg-[#FAFAF7] border border-[#E5E3DC] rounded-lg px-3 py-2.5 mb-3">
+          <p className="text-[11px] text-[#444441] leading-relaxed">
+            <strong>Cara mengerjakan:</strong> baca soal di bawah, tulis query jawabanmu di <strong>editor di atas</strong>,
+            klik <strong>Jalankan Query</strong> untuk lihat hasilnya, lalu klik <strong>Cek Jawaban</strong> di soal yang kamu
+            kerjakan. Tombol Cek menilai query yang sedang ada di editor.
+          </p>
+        </div>
         <div className="flex flex-col gap-3">
-          {CHALLENGES.map(ch => (
+          {CHALLENGES.map((ch, idx) => (
             <div key={ch.id} className={`border rounded-xl p-3 ${done[ch.id] ? 'border-[#0F6E56]/30 bg-[#E1F5EE]/40' : 'border-[#E5E3DC]'}`}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-xs font-semibold text-[#111111]">
-                  {done[ch.id] ? '✓ ' : ''}{ch.title}
+                  {done[ch.id] ? '✓ ' : `Soal ${idx + 1}. `}{ch.title}
                 </p>
                 <span className="text-[10px] font-semibold text-[#854F0B] bg-[#FAEEDA] px-2 py-0.5 rounded-full flex-shrink-0">
                   +{ch.reward} coin
@@ -268,17 +287,20 @@ export default function SqlEditor({ userId, onCoins }: {
               </div>
               <p className="text-xs text-[#444441] leading-relaxed mb-1.5">{ch.brief}</p>
               <details className="mb-2">
-                <summary className="text-[10px] text-[#0F6E56] font-medium" style={{ cursor: 'pointer' }}>Petunjuk</summary>
+                <summary className="text-[10px] text-[#0F6E56] font-medium" style={{ cursor: 'pointer' }}>Lihat petunjuk</summary>
                 <p className="text-[11px] text-[#888780] mt-1 font-mono">{ch.hint}</p>
               </details>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => handleCheck(ch)}
                   style={{ cursor: 'pointer' }}
-                  className="text-xs font-semibold text-[#0F6E56] border border-[#0F6E56]/30 rounded-lg px-3 py-1.5 hover:bg-[#E1F5EE]"
+                  className="text-xs font-semibold text-white bg-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-[#085041]"
                 >
-                  Cek query-ku
+                  Cek Jawaban
                 </button>
+                {done[ch.id] && !challengeMsg[ch.id] && (
+                  <p className="text-[11px] text-[#0F6E56] font-medium">Sudah kamu selesaikan.</p>
+                )}
                 {challengeMsg[ch.id] && (
                   <p className={`text-[11px] ${challengeMsg[ch.id].startsWith('Benar') ? 'text-[#0F6E56] font-medium' : 'text-[#854F0B]'}`}>
                     {challengeMsg[ch.id]}
@@ -288,9 +310,6 @@ export default function SqlEditor({ userId, onCoins }: {
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-[#888780] mt-2">
-          Tulis query-mu di editor di atas, lalu klik &ldquo;Cek query-ku&rdquo; pada latihan yang sedang kamu kerjakan.
-        </p>
       </div>
     </div>
   )
