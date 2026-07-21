@@ -14,6 +14,12 @@ interface Stats {
     clientErrors: { at: string; message: string; path?: string }[] | null
     note?: string
   }
+  review: {
+    submissions7d: number
+    avgScore: number | null
+    passRatePct: number | null
+    passScore: number
+  }
   users: { total: number; new7d: number; withRun: number; active1d: number; active7d: number; dormant14d: number; churnProxyPct: number }
   funnel: { runStarted: number; interviewDone: number; hired: number; taskReceived: number; day1Done: number; completionPct: number }
   byPosition: Record<string, { runs: number; done: number }>
@@ -180,6 +186,23 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+          </Card>
+
+          {/* Kalibrasi review task — apakah ambang lulus (default 70) sudah pas */}
+          <Card title={`Review Task (7 hari) · lulus ≥ ${stats.review.passScore}`}>
+            {stats.review.submissions7d === 0 ? (
+              <p className="text-xs text-[#888780]">Belum ada submission task 7 hari terakhir.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                <Stat label="Submission" value={stats.review.submissions7d} />
+                <Stat label="Rata-rata skor" value={stats.review.avgScore ?? '-'} sub="disembunyikan dari user" />
+                <Stat label="Lolos" value={stats.review.passRatePct !== null ? `${stats.review.passRatePct}%` : '-'} />
+              </div>
+            )}
+            <p className="text-[10px] text-[#888780] mt-2">
+              Kalau pass rate terlalu rendah (banyak yang frustrasi), turunkan ambang lewat env
+              KANTORAN_PASS_SCORE lalu redeploy. Tanpa deploy kode.
+            </p>
           </Card>
 
           {/* Error client terbaru (Sentry-lite) */}

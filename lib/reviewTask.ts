@@ -16,13 +16,19 @@ export interface ReviewArgs {
 export interface ReviewResult {
   review: string
   isApproved: boolean
+  score: number  // INTERNAL — jangan pernah dikirim ke client; untuk kalibrasi founder
 }
 
 interface ReviewJSON {
-  status?: string
+  score?: number
   feedback?: string
   revisionNote?: string | null
+  status?: string  // toleransi output lama (pra-sistem skor)
 }
+
+// Batas lulus review — hasil >= ini diterima meski belum sempurna ("cukup untuk
+// karyawan baru"). Bisa di-tune lewat env tanpa deploy kode saat kalibrasi MVP.
+const PASS_SCORE = Math.min(Math.max(Number(process.env.KANTORAN_PASS_SCORE) || 70, 1), 100)
 
 // Ambil objek JSON pertama dari teks model (toleran terhadap pagar kode / teks nyasar)
 export function extractJSON(text: string): unknown {
@@ -50,8 +56,18 @@ export async function reviewSubmission(args: ReviewArgs): Promise<ReviewResult |
   if (jsonResult) {
     try {
       const parsed = extractJSON(jsonResult.text) as ReviewJSON
-      if (parsed.feedback && (parsed.status === 'APPROVED' || parsed.status === 'REVISION_NEEDED')) {
-        const isApproved = parsed.status === 'APPROVED'
+      // Lulus ditentukan skor >= PASS_SCORE (sumber kebenaran ada di server, bukan model).
+      // Fallback ke field status lama kalau model belum mengirim skor.
+      const rawScore = typeof parsed.score === 'number' ? parsed.score : NaN
+      const hasScore = Number.isFinite(rawScore)
+      const score = hasScore ? Math.min(Math.max(Math.round(rawScore), 0), 100) : NaN
+
+      let isApproved: boolean | null = null
+      if (hasScore) isApproved = score >= PASS_SCORE
+      else if (parsed.status === 'APPROVED') isApproved = true
+      else if (parsed.status === 'REVISION_NEEDED') isApproved = false
+
+      if (parsed.feedback && isApproved !== null) {
         // cleanResponse hanya pada feedback — jaga tone anti AI-slop di path JSON
         let review = cleanResponse(parsed.feedback)
         if (!isApproved && parsed.revisionNote) {
@@ -60,7 +76,9 @@ export async function reviewSubmission(args: ReviewArgs): Promise<ReviewResult |
             review = `${review} ${note}`.trim()
           }
         }
-        return { review, isApproved }
+        // Skor untuk kalibrasi: kalau model tak kirim skor, pakai proxy dari keputusan
+        const finalScore = hasScore ? score : (isApproved ? PASS_SCORE : PASS_SCORE - 15)
+        return { review, isApproved, score: finalScore }
       }
       console.warn('Review JSON shape tidak valid:', jsonResult.text.slice(0, 150))
     } catch {
@@ -87,5 +105,5 @@ export async function reviewSubmission(args: ReviewArgs): Promise<ReviewResult |
     .replace(/Status: REVISION NEEDED.*$/gm, '')
     .trim()
 
-  return { review: cleanReview, isApproved }
+  return { review: cleanReview, isApproved, score: isApproved ? PASS_SCORE : PASS_SCORE - 15 }
 }

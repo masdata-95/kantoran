@@ -123,6 +123,8 @@ export async function GET(req: NextRequest) {
     // toleran kalau migration belum jalan: field null + catatan
     let events7d: Record<string, number> | null = null
     let clientErrors: { at: string; message: string; path?: string }[] | null = null
+    const taskScores: number[] = []
+    let taskPassCount = 0
     try {
       const { data: evts, error: evErr } = await db.from('events')
         .select('type, meta, created_at')
@@ -142,9 +144,16 @@ export async function GET(req: NextRequest) {
               path: meta.path ? String(meta.path) : undefined,
             })
           }
+          // Skor review task (server-side) — untuk kalibrasi ambang lulus
+          if (e.type === 'task_scored' && typeof meta.score === 'number') {
+            taskScores.push(meta.score)
+            if (meta.approved === true) taskPassCount++
+          }
         }
       }
     } catch { /* tabel events belum ada */ }
+    const avgTaskScore = taskScores.length
+      ? Math.round(taskScores.reduce((a, b) => a + b, 0) / taskScores.length) : null
 
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
@@ -153,6 +162,12 @@ export async function GET(req: NextRequest) {
         counts7d: events7d,
         clientErrors,
         note: events7d === null ? 'Jalankan supabase-migrations/005_observability.sql di Supabase Studio.' : undefined,
+      },
+      review: {
+        submissions7d: taskScores.length,
+        avgScore: avgTaskScore,
+        passRatePct: taskScores.length ? Math.round((taskPassCount / taskScores.length) * 100) : null,
+        passScore: Math.min(Math.max(Number(process.env.KANTORAN_PASS_SCORE) || 70, 1), 100),
       },
       users: {
         total: profilesTotal ?? 0,

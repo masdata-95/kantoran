@@ -190,7 +190,12 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - components/WishlistForm.tsx — ending form
 - components/OnboardingSlides.tsx — 4 slide sebelum login
 - lib/ai.ts — multi-provider AI system (Gemini primary, json mode, deadline budget)
-- lib/reviewTask.ts — engine review terstruktur (dipakai /api/review + misi Academy)
+- lib/reviewTask.ts — engine review terstruktur (dipakai /api/review + misi Academy).
+  Sistem SKOR (21 Juli 2026): model beri skor 0-100 internal; lulus = skor >= PASS_SCORE
+  (env KANTORAN_PASS_SCORE, default 70) — "cukup untuk karyawan baru", TIDAK menuntut
+  sempurna. Skor tak pernah ke client (user cuma lihat feedback bahasa manusia). Skor
+  dicatat server ke events (type task_scored) untuk kalibrasi ambang di /admin. Revisi
+  hanya menuntut 1-2 hal terpenting, tidak membanjiri.
 - lib/rateLimit.ts — rate limit harian per user (Postgres RPC)
 - lib/lessons.ts — tipe DTO Academy
 - lib/prompts.ts — system prompts semua NPC (+ getTaskReviewPromptJSON, token [SELESAI] Sinta)

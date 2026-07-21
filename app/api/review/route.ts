@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { reviewSubmission } from '@/lib/reviewTask'
 import { POSITIONS } from '@/lib/positions'
-import { getAuthUser } from '@/lib/serverAuth'
+import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
 import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 
 export const maxDuration = 30
@@ -47,6 +47,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Catat skor mentah di server untuk kalibrasi ambang lulus (best-effort, TIDAK
+    // pernah dikirim ke client — user hanya melihat feedback bahasa manusia)
+    try {
+      await getServiceClient().from('events').insert({
+        user_id: user.id, type: 'task_scored',
+        meta: { position: positionId, score: result.score, approved: result.isApproved },
+      })
+    } catch { /* events belum ada / gagal → abaikan */ }
+
+    // Skor sengaja TIDAK disertakan di respons
     return NextResponse.json({
       review: result.review,
       isApproved: result.isApproved,

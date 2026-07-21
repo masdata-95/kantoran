@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
       lesson_id: lessonId,
       attempts: (existing?.attempts || 0) + 1,
       ...(result.isApproved
-        ? { status: 'completed', score: 100, completed_at: new Date().toISOString() }
+        ? { status: 'completed', score: result.score, completed_at: new Date().toISOString() }
         : alreadyCompleted ? {} : { status: 'in_progress' }),
     }, { onConflict: 'user_id,lesson_id' })
 

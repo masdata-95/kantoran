@@ -132,6 +132,20 @@ di-host Supabase, yang tampil adalah `<project-ref>.supabase.co`. Perbaikan bert
       Kerjakan BERSAMAAN dengan cutover domain Cloudflare (DEPLOY-CLOUDFLARE.md Step 4)
       supaya konfigurasi OAuth cuma disentuh sekali.
 
+## 2c. Task review terlalu ketat → sistem skor (21 Juli 2026)
+
+**Temuan MVP komunitas (20 Juli):** dari 4 user baru, 0 selesai hari-1. Yang paling jauh
+(Muhammad, Finance) submit 3x, tiap kali supervisor nemu koreksi BARU, akhirnya menyerah
+setelah 46 menit. Bukan bug (file Excel kebaca sempurna) — rubric lama menuntut SEMUA
+mustFind sempurna baru APPROVED.
+
+**Fix:** review kini pakai skor 0-100 internal (lib/reviewTask.ts + getTaskReviewPromptJSON).
+Lulus = skor >= KANTORAN_PASS_SCORE (default 70). Skor disembunyikan dari user, diterjemahkan
+jadi feedback bahasa manusia ("oke aku terima dulu, tapi catatanku..."). Revisi hanya
+menyorot 1-2 hal terpenting. Skor dicatat ke events (task_scored) → kartu kalibrasi di /admin.
+- [ ] Pantau pass rate di /admin setelah gelombang tester berikutnya; tune KANTORAN_PASS_SCORE
+      via env kalau perlu (tanpa deploy kode).
+
 ## 3. Backlog kecil terkait (sudah diketahui, belum urgent)
 
 - [x] ~~Nego gaji bisa ter-skip~~ — SELESAI (Juli 2026): guard `salaryDiscussed` di
