@@ -667,6 +667,37 @@ async function main() {
   XLSX.writeFile(wbA, path.join(premiumDir, 'task_admin_day2.xlsx'))
   console.log(`task_admin_day2.xlsx: ${bookRows.length} booking (5 bentrok ditanam)`)
 
+  // ── Task file Finance day-3 (PREMIUM): selisih Rp 80jt, jejak ke distributor timur ──
+  // Rekonsiliasi payments (invoice vs paid). Anomali (buildPayments): UD Berkah Jaya (D07,
+  // Jatim) mulai seret Maret 2026 lalu berhenti bayar, outstanding ~Rp 77jt, dan HANYA dia.
+  // Timing = collapse penjualan Jatim (DA day-3) → payoff arc. Reuse `payments`, TANPA rand().
+  const dNameF = new Map(DISTRIBUTORS.map(d => [d.id, d.name]))
+  const dRegF = new Map(DISTRIBUTORS.map(d => [d.id, d.region]))
+  const payRows = payments.map(p => ({
+    invoice_id: p.invoice_id,
+    distributor: dNameF.get(p.distributor_id) || p.distributor_id,
+    region: dRegF.get(p.distributor_id) || '',
+    period: p.period, invoice_amount: p.invoice_amount,
+    due_date: p.due_date, paid_date: p.paid_date, paid_amount: p.paid_amount,
+  }))
+  const wbF3 = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wbF3, XLSX.utils.aoa_to_sheet([
+    ['TASK: Selisih Rp 80 Juta, Temukan Sumbernya'],
+    [''],
+    ['Dari: Andi (Senior Finance Analyst)'],
+    ['Closing nggak balance, ada selisih hampir Rp 80 juta antara yang ditagih dan yang'],
+    ['beneran masuk. CFO udah nanya dua kali. Aku butuh kamu temukan sumbernya, cepat.'],
+    ['Data pembayaran distributor (2025-2026) ada di sheet "Data". Cari:'],
+    ['1) Total selisih antara invoice_amount dan paid_amount.'],
+    ['2) Selisihnya numpuk di SIAPA, rekonsiliasi per distributor.'],
+    ['3) Sejak KAPAN mulai dan polanya. Ini telat biasa atau berhenti bayar?'],
+    [''],
+    ['Tulis temuan + rekomendasi tindakan sebagai sheet "Temuan", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wbF3, XLSX.utils.json_to_sheet(payRows), 'Data')
+  XLSX.writeFile(wbF3, path.join(premiumDir, 'task_finance_day3.xlsx'))
+  console.log(`task_finance_day3.xlsx: ${payRows.length} invoice (outstanding numpuk di Berkah Jaya)`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya
