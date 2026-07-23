@@ -468,6 +468,43 @@ async function main() {
     .reduce((a, r) => a + r.total_revenue, 0)
   console.log(`task_da_day3.xlsx: ${day3Rows.length} baris agregat | Jatim H1 rev 2025 vs 2026: ${Math.round(jtRev('2025')/1e6)}jt vs ${Math.round(jtRev('2026')/1e6)}jt`)
 
+  // ── Task file DA day-5 (PREMIUM): forecast Q3 2026 ──
+  // Rekap bulanan revenue+order per region (2025-2026). Dua jebakan forecast: lonjakan
+  // Maret 2026 (outlier, ~2.1M vs ~1.4M) + Jatim yang terus turun. Forecast bagus =
+  // buang outlier + jadikan Jatim skenario. TANPA rand() → data lain tidak berubah.
+  const agg5 = new Map<string, { region: string; bulan: string; jml_order: number; total_revenue: number }>()
+  const seen5 = new Set<string>()
+  for (const s of sales) {
+    if (!s.region || s.revenue === 0) continue
+    if (seen5.has(s.order_id)) continue
+    seen5.add(s.order_id)
+    const bulan = s.order_date.slice(0, 7)
+    const k = `${s.region}|${bulan}`
+    let a = agg5.get(k)
+    if (!a) { a = { region: s.region, bulan, jml_order: 0, total_revenue: 0 }; agg5.set(k, a) }
+    a.jml_order += 1; a.total_revenue += s.revenue
+  }
+  const day5Rows = [...agg5.values()].sort((a, b) => a.bulan.localeCompare(b.bulan) || a.region.localeCompare(b.region))
+  const wb5 = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb5, XLSX.utils.aoa_to_sheet([
+    ['TASK: Forecast Penjualan Q3 2026'],
+    [''],
+    ['Dari: Rizky (Senior Data Analyst)'],
+    ['Budget semua tim buat Q3 nunggu angka forecast ini. Salah sedikit, semua kena.'],
+    ['Rekap bulanan revenue & order per region (2025-2026) ada di sheet "Data". Buat:'],
+    ['1) Proyeksi total revenue Q3 2026 (Jul-Sep), dengan metode yang jelas.'],
+    ['2) Hati-hati: Maret 2026 ada lonjakan yang bukan pola normal, jangan sampai itu'],
+    ['   menggelembungkan rata-ratamu.'],
+    ['3) Jawa Timur masih terus turun (temuanmu kemarin). Jadikan skenario risiko,'],
+    ['   jangan diam-diam mengasumsikan dia balik normal.'],
+    [''],
+    ['Tulis angka + metode + asumsi/risiko sebagai sheet "Forecast", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wb5, XLSX.utils.json_to_sheet(day5Rows), 'Data')
+  XLSX.writeFile(wb5, path.join(premiumDir, 'task_da_day5.xlsx'))
+  const totRange = (from: string, to: string) => day5Rows.filter(r => r.bulan >= from && r.bulan <= to).reduce((a, r) => a + r.total_revenue, 0)
+  console.log(`task_da_day5.xlsx: ${day5Rows.length} baris | Q2-2026 run-rate ${Math.round(totRange('2026-04','2026-06')/1e6)}jt | Mar-2026 spike ${Math.round(totRange('2026-03','2026-03')/1e6)}jt`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya

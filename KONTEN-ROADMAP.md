@@ -4,6 +4,13 @@
 > Dokumen ini adalah desain "Season 1" (3 bulan cerita) untuk kelima posisi,
 > termasuk cara semua posisi saling berhubungan dalam satu perusahaan yang hidup.
 
+> **Status produksi (23 Juli 2026):** Loop hari day-2+ LIVE di simulator (deploy, _pending play-test_).
+> **Data Analyst**: day-1 (2 task: kualitas data + rangkuman) + day-2 (Dashboard Direksi) +
+> day-3 (Investigasi Region Timur) sudah di-seed & jalan lewat loop. **Sisa DA:** day-5 Forecast Q3,
+> day-7 Review Bulan 1 (task `chat`). Lalu fan-out day 2-7 ke 5 posisi lain (mekanis, ikut template).
+> Pola task berfile: blok di `generate-universe` (agregat dari `sales`, deterministik → `vantara.db`
+> tak berubah) → verifikasi anomali via Python → rubrik 3 level di `content/tasks/*.md` → `seed:tasks`.
+
 ## 1. Prinsip desain konten
 
 1. **Experience, bukan materi.** Setiap konten dibungkus kejadian: task datang dari orang, dengan deadline, dengan konsekuensi. Tidak pernah "modul 3: pivot table" telanjang.
