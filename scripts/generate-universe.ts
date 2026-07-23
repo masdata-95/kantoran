@@ -505,6 +505,29 @@ async function main() {
   const totRange = (from: string, to: string) => day5Rows.filter(r => r.bulan >= from && r.bulan <= to).reduce((a, r) => a + r.total_revenue, 0)
   console.log(`task_da_day5.xlsx: ${day5Rows.length} baris | Q2-2026 run-rate ${Math.round(totRange('2026-04','2026-06')/1e6)}jt | Mar-2026 spike ${Math.round(totRange('2026-03','2026-03')/1e6)}jt`)
 
+  // ── Task file Marketing day-2 (PREMIUM): alokasi budget Lebaran Rp 2M ──
+  // 24 campaign (spend/impressions/clicks/conversions per channel). Anomali: TikTok Ads
+  // CPA ~Rp 531rb (konversi 0.44%) vs Google Ads ~Rp 29rb — reach menipu, CPA jujur.
+  // Jebakan: YouTube Ads konversi tertinggi TAPI hanya 2 campaign (sampel kecil). TANPA rand().
+  const wbM = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wbM, XLSX.utils.aoa_to_sheet([
+    ['TASK: Alokasi Budget Campaign Lebaran'],
+    [''],
+    ['Dari: Dinda (Senior Marketing Analyst)'],
+    ['Kita dapat budget Rp 2 miliar buat campaign Lebaran. Aku mau kamu yang usulin'],
+    ['alokasinya ke channel, berbasis data bukan feeling.'],
+    ['Data 24 campaign terakhir (2025-2026) ada di sheet "Data". Buat:'],
+    ['1) Efisiensi tiap channel. Reach (impressions) menipu, yang penting berapa rupiah'],
+    ['   untuk dapat satu konversi (CPA = spend dibagi conversions).'],
+    ['2) Rekomendasi pembagian Rp 2 miliar ke channel, dengan alasan angka.'],
+    ['3) Channel mana yang dipotong, dan hati-hati sama channel yang datanya sedikit.'],
+    [''],
+    ['Tulis alokasi + alasan sebagai sheet "Rekomendasi", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wbM, XLSX.utils.json_to_sheet(campaigns as unknown as Record<string, unknown>[]), 'Data')
+  XLSX.writeFile(wbM, path.join(premiumDir, 'task_marketing_day2.xlsx'))
+  console.log(`task_marketing_day2.xlsx: ${campaigns.length} campaign (TikTok CPA jauh di atas Google)`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya
