@@ -9,7 +9,7 @@ file_name: task_da_day5.xlsx
 teaser: Budget semua tim Q3 bergantung pada forecast-mu. Salah sedikit, satu kantor merasakan akibatnya.
 context: Angka forecast-mu jadi dasar budget lintas tim. Jatim yang masih turun (temuanmu kemarin) dan lonjakan Maret yang tak biasa bikin ini tidak sesederhana menarik garis tren.
 cross_ref: Finance (Andi) menyusun proyeksi cashflow pakai angka totalmu, jadi harus bisa dipertanggungjawabkan.
-approved_reaction: Ini yang aku butuh. Kamu kasih angka, tapi jujur soal asumsinya, dan nggak ketipu lonjakan Maret. Yang bikin kuat: Jatim kamu taruh sebagai skenario, bukan diabaikan. Aku bawa ke Diana buat budget.
+approved_reaction: Ini yang aku butuh. Kamu kasih angka, tapi jujur soal asumsinya, dan nggak ketipu lonjakan Maret. Yang bikin kuat, Jatim kamu taruh sebagai skenario bukan diabaikan. Aku bawa ke Diana buat budget.
 revision_reaction: Angka doang nggak cukup, dan aku nggak mau ketipu satu bulan yang aneh. Forecast tanpa asumsi itu tebakan. Lihat lagi lonjakan Maret itu apa, dan Jatim mau kamu apakan. Kirim ulang.
 rubric:
   intern:
