@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import type { Database } from 'sql.js'
 import { resultsMatch, type QueryResult } from '@/lib/sqlCompare'
 import { track } from '@/lib/track'
@@ -10,8 +10,11 @@ import { track } from '@/lib/track'
 // tidak pernah menyentuh database asli. Tantangan dinilai otomatis dengan
 // membandingkan hasil query user vs query referensi (lib/sqlCompare.ts), tanpa AI.
 
+type ChLevel = 'intern' | 'junior' | 'mid'
+
 interface Challenge {
   id: string
+  level: ChLevel
   title: string
   brief: string
   hint: string
@@ -19,30 +22,91 @@ interface Challenge {
   reward: number
 }
 
+// Label kelompok tingkat untuk header di daftar soal.
+const LEVEL_GROUP: Record<ChLevel, string> = {
+  intern: 'Dasar · cocok untuk Intern',
+  junior: 'Menengah · cocok untuk Junior',
+  mid: 'Lanjutan · investigasi kasus (Mid)',
+}
+
+// Semua soal tampil untuk SEMUA level (latihan opsional, boleh lompat tingkat).
+// Tiap query referensi (ref) SUDAH diverifikasi jalan terhadap public/data/vantara.db.
+// Tingkat mid langsung menyambung investigasi task day 2-3 (Jatim anjlok, tunggakan Berkah Jaya).
 const CHALLENGES: Challenge[] = [
+  // ── Dasar (Intern): SELECT, WHERE, satu agregat ──
   {
-    id: 'c1',
+    id: 'c1', level: 'intern',
     title: 'Pemanasan: total revenue Januari 2026',
-    brief: 'Berapa total revenue (satu angka) dari semua baris sales di Januari 2026?',
-    hint: 'SUM(revenue), lalu saring bulannya: WHERE order_date LIKE \'2026-01%\'',
+    brief: 'Berapa total revenue (satu angka) dari semua penjualan di Januari 2026?',
+    hint: "SUM(revenue), lalu saring bulannya: WHERE order_date LIKE '2026-01%'",
     ref: "SELECT SUM(revenue) FROM sales WHERE order_date LIKE '2026-01%'",
     reward: 15,
   },
   {
-    id: 'c2',
-    title: 'Top 5 SKU sepanjang 2025',
-    brief: 'Tampilkan 5 SKU dengan total revenue terbesar di 2025. Hati-hati: penulisan SKU tidak konsisten (ada yang huruf kecil), satukan dulu sebelum grouping.',
-    hint: 'UPPER(sku), GROUP BY, ORDER BY ... DESC, LIMIT 5',
-    ref: "SELECT UPPER(sku) AS sku, SUM(revenue) AS total FROM sales WHERE order_date LIKE '2025%' GROUP BY UPPER(sku) ORDER BY total DESC LIMIT 5",
-    reward: 20,
+    id: 'in2', level: 'intern',
+    title: 'Berapa order lewat E-commerce di 2026?',
+    brief: 'Hitung jumlah baris order (satu angka) yang channel-nya E-commerce sepanjang tahun 2026.',
+    hint: "COUNT(*) dengan dua filter digabung AND: channel = 'E-commerce' dan order_date LIKE '2026%'",
+    ref: "SELECT COUNT(*) FROM sales WHERE channel = 'E-commerce' AND order_date LIKE '2026%'",
+    reward: 15,
   },
   {
-    id: 'c3',
+    id: 'in3', level: 'intern',
+    title: 'Channel mana penyumbang terbesar (2026)?',
+    brief: 'Tampilkan total revenue per channel sepanjang 2026, urut dari terbesar.',
+    hint: 'GROUP BY channel, lalu ORDER BY totalnya DESC',
+    ref: "SELECT channel, SUM(revenue) AS revenue FROM sales WHERE order_date LIKE '2026%' GROUP BY channel ORDER BY revenue DESC",
+    reward: 20,
+  },
+  // ── Menengah (Junior): JOIN sederhana, kebersihan data ──
+  {
+    id: 'jr1', level: 'junior',
+    title: 'Revenue per brand (2026)',
+    brief: 'Tabel sales hanya punya SKU, bukan nama brand. Gabungkan dengan tabel products untuk menghitung total revenue per brand di 2026, urut terbesar.',
+    hint: 'JOIN products ON products.sku = sales.sku, lalu GROUP BY brand',
+    ref: "SELECT p.brand AS brand, SUM(s.revenue) AS revenue FROM sales s JOIN products p ON p.sku = s.sku WHERE s.order_date LIKE '2026%' GROUP BY p.brand ORDER BY revenue DESC",
+    reward: 25,
+  },
+  {
+    id: 'c2', level: 'junior',
+    title: 'Top 5 SKU sepanjang 2025',
+    brief: 'Tampilkan 5 SKU dengan total revenue terbesar di 2025. Hati-hati: penulisan SKU tidak konsisten (ada yang huruf kecil), satukan dulu sebelum grouping.',
+    hint: 'UPPER(sku) supaya lum-001 dan LUM-001 terhitung satu, lalu GROUP BY, ORDER BY ... DESC, LIMIT 5',
+    ref: "SELECT UPPER(sku) AS sku, SUM(revenue) AS total FROM sales WHERE order_date LIKE '2025%' GROUP BY UPPER(sku) ORDER BY total DESC LIMIT 5",
+    reward: 25,
+  },
+  {
+    id: 'jr3', level: 'junior',
+    title: 'Revenue per region (2026) — ada yang janggal',
+    brief: 'Hitung total revenue per region sepanjang 2026, urut terbesar. Perhatikan: ada baris yang region-nya kosong. Jangan dibuang, justru itu temuan yang perlu dilaporkan.',
+    hint: 'GROUP BY region akan menampilkan baris region kosong (NULL) sebagai kelompok tersendiri',
+    ref: "SELECT region, SUM(revenue) AS revenue FROM sales WHERE order_date LIKE '2026%' GROUP BY region ORDER BY revenue DESC",
+    reward: 30,
+  },
+  // ── Lanjutan (Mid): investigasi Kasus Region Timur (nyambung task day 2-3) ──
+  {
+    id: 'c3', level: 'mid',
     title: 'Kapan Jawa Timur mulai anjlok?',
     brief: 'Tampilkan revenue per bulan (format YYYY-MM) untuk region Jawa Timur sepanjang 2026. Dari hasilnya kamu akan lihat sendiri bulan mulai anjloknya, simpan temuan ini.',
-    hint: "substr(order_date, 1, 7) menghasilkan 'YYYY-MM'",
+    hint: "substr(order_date, 1, 7) menghasilkan 'YYYY-MM' untuk dikelompokkan per bulan",
     ref: "SELECT substr(order_date,1,7) AS bulan, SUM(revenue) AS revenue FROM sales WHERE region = 'Jawa Timur' AND order_date LIKE '2026%' GROUP BY bulan ORDER BY bulan",
-    reward: 25,
+    reward: 30,
+  },
+  {
+    id: 'md2', level: 'mid',
+    title: 'Distributor mana yang menunggak?',
+    brief: 'Dari tabel payments, cari distributor yang tagihannya belum lunas (invoice_amount lebih besar dari paid_amount). Tampilkan nama distributor dan total tunggakannya, hanya yang masih punya tunggakan.',
+    hint: 'JOIN distributors untuk ambil nama, SUM(invoice_amount - paid_amount) sebagai tunggakan, lalu saring dengan HAVING ... > 0',
+    ref: "SELECT d.name AS distributor, SUM(p.invoice_amount - p.paid_amount) AS tunggakan FROM payments p JOIN distributors d ON d.distributor_id = p.distributor_id GROUP BY d.name HAVING SUM(p.invoice_amount - p.paid_amount) > 0 ORDER BY tunggakan DESC",
+    reward: 40,
+  },
+  {
+    id: 'md3', level: 'mid',
+    title: 'Seberapa dalam Jawa Timur turun (YoY)?',
+    brief: 'Bandingkan total revenue Jawa Timur tahun 2025 vs 2026. Tampilkan dua baris (tahun dan revenue) supaya besar penurunannya kelihatan.',
+    hint: 'substr(order_date, 1, 4) mengambil tahun dari tanggal; lalu GROUP BY tahun',
+    ref: "SELECT substr(order_date,1,4) AS tahun, SUM(revenue) AS revenue FROM sales WHERE region = 'Jawa Timur' GROUP BY tahun ORDER BY tahun",
+    reward: 40,
   },
 ]
 
@@ -288,7 +352,11 @@ export default function SqlEditor({ userId, onCoins }: {
         </div>
         <div className="flex flex-col gap-3">
           {CHALLENGES.map((ch, idx) => (
-            <div key={ch.id} className={`border rounded-xl p-3 ${done[ch.id] ? 'border-[#0F6E56]/30 bg-[#E1F5EE]/40' : 'border-[#E5E3DC]'}`}>
+            <Fragment key={ch.id}>
+            {(idx === 0 || CHALLENGES[idx - 1].level !== ch.level) && (
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] mt-1">{LEVEL_GROUP[ch.level]}</p>
+            )}
+            <div className={`border rounded-xl p-3 ${done[ch.id] ? 'border-[#0F6E56]/30 bg-[#E1F5EE]/40' : 'border-[#E5E3DC]'}`}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-xs font-semibold text-[#111111]">
                   {done[ch.id] ? '✓ ' : `Soal ${idx + 1}. `}{ch.title}
@@ -320,6 +388,7 @@ export default function SqlEditor({ userId, onCoins }: {
                 )}
               </div>
             </div>
+            </Fragment>
           ))}
         </div>
       </div>

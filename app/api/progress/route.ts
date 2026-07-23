@@ -39,13 +39,19 @@ export async function POST(req: NextRequest) {
     // run yang sudah lebih maju. Mundur yang sah hanya lewat /api/reset (hapus baris).
     const { data: existing } = await supabase
       .from('user_progress')
-      .select('step')
+      .select('step, sim_day')
       .eq('user_id', user.id)
       .eq('position', progress.position)
       .maybeSingle()
 
-    if (existing && step < existing.step) {
-      return NextResponse.json({ error: 'Stale progress', currentStep: existing.step }, { status: 409 })
+    // Hari simulasi (day 2+). Default ke nilai tersimpan supaya save yang tidak mengirim
+    // simDay tidak pernah memundurkan hari; step & hari sama-sama tak boleh mundur (stale tab).
+    const simDay = clampInt(progress.simDay, 1, 400, existing?.sim_day ?? 1)
+    if (existing && (step < existing.step || simDay < (existing.sim_day ?? 1))) {
+      return NextResponse.json(
+        { error: 'Stale progress', currentStep: existing.step, currentDay: existing.sim_day ?? 1 },
+        { status: 409 }
+      )
     }
 
     const { data, error } = await supabase
@@ -62,6 +68,7 @@ export async function POST(req: NextRequest) {
         coins: clampInt(progress.coins, 0, 100000),
         tasks_done: clampInt(progress.tasksDone, 0, 1000),
         streak: clampInt(progress.streak, 0, 10000),
+        sim_day: simDay,
         last_active: new Date().toISOString(),
         chat_history: chatHistory,
       }, {
