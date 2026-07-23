@@ -67,13 +67,30 @@ interface SimState {
   chatHistory: Record<string, Message[]>
   unreadCounts: Record<string, number>
   interviewDone: boolean
+  simDay: number // hari simulasi; day-1 = alur scripted, day 2+ dari pipeline /api/tasks
 }
 
 const INITIAL: SimState = {
   firstName: '', email: '', background: '', bgRole: '', level: '', position: '',
   experience: '', motivation: '', step: 0, coins: 0, tasksDone: 0,
   streak: 0, phaseUnlocked: 0, salaryExpected: 0, salaryOffered: 0,
-  chatHistory: {}, unreadCounts: {}, interviewDone: false,
+  chatHistory: {}, unreadCounts: {}, interviewDone: false, simDay: 1,
+}
+
+// Task season dari /api/tasks (day 2+ premium; terkunci hanya kirim {slug,day,title,teaser}).
+// Task-1 day-1 TIDAK ada di sini (tetap hardcoded di POSITIONS) — daftar ini task ke-2 dst.
+interface SeasonTask {
+  slug: string
+  day: number
+  sort_order?: number
+  title: string
+  teaser?: string
+  brief?: string
+  context?: string
+  task_type?: string
+  file_name?: string
+  cross_ref?: string
+  locked?: boolean
 }
 
 // ── NPC CONFIG ────────────────────────────────────
@@ -137,6 +154,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [extractedData, setExtractedData] = useState<string>('')
   const [reviewResult, setReviewResult] = useState<{ review: string; isApproved: boolean } | null>(null)
+  // Daftar task pipeline (task-2 day-1, lalu day 2+). Task terkunci hanya bawa {slug,day,title,teaser}.
+  const [seasonTasks, setSeasonTasks] = useState<SeasonTask[]>([])
   const [isSubmittingTask, setIsSubmittingTask] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(userProfile || null)
   const [showProfile, setShowProfile] = useState(false)
@@ -235,6 +254,21 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   // Mirror state ke ref supaya interval auto-save tidak perlu dibuat ulang tiap render
   const stateRef = useRef(state)
   useEffect(() => { stateRef.current = state }, [state])
+
+  // Muat daftar task pipeline begitu app siap. Gagal/kosong → day 2 tetap jatuh ke
+  // wishlist seperti sebelumnya (aman, tidak menghalangi day-1).
+  useEffect(() => {
+    if (!showApp || !state.position) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await authFetch(`/api/tasks?position=${encodeURIComponent(state.position)}`)
+        const data = await res.json()
+        if (!cancelled && Array.isArray(data.tasks)) setSeasonTasks(data.tasks as SeasonTask[])
+      } catch { /* biarkan kosong */ }
+    })()
+    return () => { cancelled = true }
+  }, [showApp, state.position])
 
   // Auto-save every 30s — interval dibuat SEKALI; dirty-check di saveProgress
   // memastikan user idle tidak menghasilkan write ke database sama sekali
@@ -468,6 +502,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           phaseUnlocked: progress.step >= 3 ? 1 : 0,
           chatHistory: loadedHistory,
           interviewDone: progress.step >= 2 || hasDoneCard,
+          simDay: progress.sim_day || 1,
         }))
         // Refresh harus mendarat kembali di room terakhir yang dibuka, bukan reset ke slack/inbox
         let initialView = progress.step >= 3 ? 'slack' : 'inbox'
@@ -600,6 +635,7 @@ PT Vantara Nusantara`
           coins: s.coins,
           tasksDone: s.tasksDone,
           streak: s.streak,
+          simDay: s.simDay,
           chatHistory: s.chatHistory,
         }
       })
@@ -633,6 +669,78 @@ PT Vantara Nusantara`
   const addCoins = useCallback((n: number) => {
     setState(prev => ({ ...prev, coins: prev.coins + n }))
   }, [])
+
+  // Antar satu task pipeline: brief ke sup_chat + kartu file di file_manager.
+  // File day 1 dari /tasks (public); day >= 2 dari /api/task-file (bucket, cek entitlement).
+  const deliverTask = (task: SeasonTask, num: number) => {
+    const p = POSITIONS[stateRef.current.position]
+    const ctx = [task.context, task.cross_ref].filter(Boolean).join(' ')
+    addMsg('sup_chat', {
+      role: 'task',
+      data: {
+        num, title: task.title,
+        deadline: task.day === 1 ? 'Sore ini' : 'Besok jam 09.00',
+        dept: `Dept. ${p?.dept}`, body: task.brief, ctx,
+      }
+    })
+    addMsg('sup_chat', { role: 'action', data: { label: 'Buka File Manager →', goTo: 'file_manager' } })
+    if (task.file_name) {
+      addMsg('file_manager', {
+        role: 'task',
+        data: {
+          title: task.title,
+          body: 'Download file di bawah, kerjakan, lalu upload hasilnya di Workspace.',
+          file: task.file_name,
+          href: task.day >= 2 ? `/api/task-file?slug=${task.slug}` : `/tasks/${task.file_name}`,
+          isDownload: true,
+        }
+      }, true)
+    }
+    showNotif('sup_chat', p?.supervisor.name || 'Supervisor', `Task baru: ${task.title}`)
+  }
+
+  // Hari kerja selesai (task terakhir hari itu approved) → beat penutup + gerbang hari
+  // berikutnya. Hari berikutnya terbuka (entitlement) → tombol advance (nextStep 97);
+  // terkunci / konten habis → gerbang wishlist (nextStep 99, perilaku lama).
+  const finishDay = (newCoins: number, newTasksDone: number, next?: SeasonTask) => {
+    const p = POSITIONS[stateRef.current.position]
+    const day = stateRef.current.simDay
+    const name = stateRef.current.firstName
+    if (day === 1) {
+      track('day1_done', {
+        position: stateRef.current.position, level: stateRef.current.level,
+        revisions: countRevisions(stateRef.current.chatHistory), coins: newCoins,
+      })
+    }
+    const canAdvance = !!next && !next.locked && next.day > day
+    const dayAction: Omit<Message, 'id'> = {
+      role: 'action',
+      data: canAdvance
+        ? { label: `Selesai hari ini, lanjut ke Hari ke-${next!.day}`, nextStep: 97, type: 'day_done', coins: newCoins, tasksDone: newTasksDone }
+        : { label: 'Selesai untuk hari ini, Lanjut ke Hari Kedua', nextStep: 99, type: 'day_done', coins: newCoins, tasksDone: newTasksDone },
+    }
+    setTimeout(() => {
+      if (day === 1) {
+        addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `${name}! Denger-denger task pertamamu approved ya, selamat! Aku dulu sampe minggu kedua baru approved wkwk` })
+        setTimeout(() => {
+          addMsg('jnr', { role: 'npc', npcId: 'jnr', text: p?.teachBack || 'eh btw, ajarin dong tadi lo ngerjainnya gimana?' })
+          showNotif('jnr', p?.junior.name || 'Teman tim', `${(p?.junior.name || 'Junior').split(' ')[0]} minta tolong diajari sesuatu`)
+        }, 12000)
+      }
+      setTimeout(() => {
+        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Good work hari ini ${name}. Sudah jam 5, bisa pulang dulu.${canAdvance ? ' Besok standup jam 9, ada lanjutannya.' : ''}` })
+        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Kebiasaan tim tiap pulang: sebut satu hal yang paling kamu pelajari hari ini. Apa punyamu?` })
+        addMsg('sup_chat', dayAction)
+        showNotif('sup_chat', p?.supervisor.name || 'Supervisor', 'Hari ini selesai! Ada pesan dari supervisor.')
+        if (day === 1) {
+          setTimeout(() => {
+            addMsg('mgr_chat', { role: 'npc', npcId: 'mgr', text: `${name}, ${p?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya, ada hal yang mau aku diskusikan soal kamu.` })
+            showNotif('mgr_chat', p?.manager.name || 'Manager', 'Manager mengirim DM untukmu')
+          }, 3500)
+        }
+      }, 2000)
+    }, 1500)
+  }
 
   // Build full conversation history from chat messages for AI memory
   const buildHistory = useCallback((room: string, npcId: string) => {
@@ -879,6 +987,22 @@ PT Vantara Nusantara`
       if (onWishlist) {
         await saveProgress()
         onWishlist(state.coins, state.tasksDone, buildRecap())
+      }
+      return
+    }
+
+    // Maju ke hari berikutnya (day 2+): naikkan simDay, bersihkan workspace, antar task pipeline.
+    if (step === 97) {
+      const next = seasonTasks[stateRef.current.tasksDone - 1]
+      if (next && !next.locked) {
+        setState(prev => ({ ...prev, simDay: next.day }))
+        setExtractedData(''); setUploadedFile(null); setReviewResult(null)
+        setView('sup_chat')
+        setTimeout(() => {
+          addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Pagi ${stateRef.current.firstName}. Hari baru, langsung ada yang perlu kita kerjain. Ini brief-nya.` })
+          deliverTask(next, stateRef.current.tasksDone + 1)
+          saveProgress()
+        }, 400)
       }
       return
     }
@@ -1223,10 +1347,15 @@ PT Vantara Nusantara`
       alert('Upload file Excel hasil kerjamu dulu ya.')
       return
     }
-    // Task hari ini sudah APPROVED → jangan bisa disubmit ulang (dobel coin/tasksDone)
-    if (state.step >= 10) return
+    // Task yang sudah APPROVED tidak bisa disubmit ulang (dobel coin/tasksDone) sampai
+    // pindah ke task berikutnya — reviewResult di-reset saat handoff/advance hari.
+    if (reviewResult?.isApproved) return
     setIsSubmittingTask(true)
     try {
+      // Day 1 task-1 = rubrik hardcoded (POSITIONS). Task pipeline (task-2 day-1, day 2+)
+      // kirim slug supaya server memakai rubrik tabel tasks per level.
+      const active = state.step >= 10 && state.tasksDone >= 1 ? seasonTasks[state.tasksDone - 1] : null
+      const taskSlug = active && !active.locked ? active.slug : undefined
       const res = await authFetch('/api/review', {
         method: 'POST',
         body: JSON.stringify({
@@ -1238,7 +1367,8 @@ PT Vantara Nusantara`
             level: state.level,
             position: state.position,
           },
-          submission: extractedData
+          submission: extractedData,
+          taskSlug,
         })
       })
       const data = await res.json()
@@ -1295,10 +1425,6 @@ PT Vantara Nusantara`
         const newCoins = state.coins + 30
         const newTasksDone = state.tasksDone + 1
         setState(prev => ({ ...prev, tasksDone: newTasksDone, step: 10 }))
-        track('day1_done', {
-          position: state.position, level: state.level,
-          revisions: countRevisions(state.chatHistory), coins: newCoins,
-        })
 
         // Update simulation experience in profile
         const pos = POSITIONS[state.position]
@@ -1326,47 +1452,19 @@ PT Vantara Nusantara`
           }
         }
 
-        setTimeout(() => {
-          addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `${state.firstName}! Denger-denger task pertamamu approved ya, selamat! Aku dulu sampe minggu kedua baru approved wkwk` })
-
-          // Teach-back: junior gantian minta diajari — mengajar adalah bentuk
-          // belajar terdalam, dan membuat user merasa sudah "naik level"
+        // Task berikutnya di pipeline (task-2 day-1, lalu day 2+). Cursor = tasks_done.
+        const next = seasonTasks[newTasksDone - 1]
+        if (next && !next.locked && next.day === state.simDay) {
+          // Masih hari yang sama (mis. task-2 day-1) → handoff ringan, langsung antar
           setTimeout(() => {
-            addMsg('jnr', { role: 'npc', npcId: 'jnr', text: pos?.teachBack || 'eh btw, ajarin dong tadi lo ngerjainnya gimana?' })
-            showNotif('jnr', pos?.junior.name || 'Teman tim', `${(pos?.junior.name || 'Junior').split(' ')[0]} minta tolong diajari sesuatu`)
-          }, 12000)
-
-          setTimeout(() => {
-            addMsg('sup_chat', {
-              role: 'npc', npcId: 'sup',
-              text: `Good work hari ini ${state.firstName}. Sudah jam 5, bisa pulang dulu. Besok standup jam 9, ada task lanjutan yang perlu kita bahas.`
-            })
-            // Ritual refleksi akhir hari — konsolidasi belajar + ritme pulang yang sehat
-            addMsg('sup_chat', {
-              role: 'npc', npcId: 'sup',
-              text: `Oh satu lagi, kebiasaan tim ini tiap pulang: sebut satu hal yang paling kamu pelajari hari ini. Apa punyamu?`
-            })
-            addMsg('sup_chat', {
-              role: 'action',
-              data: {
-                label: 'Selesai untuk hari ini, Lanjut ke Hari Kedua',
-                nextStep: 99,
-                type: 'day_done',
-                coins: newCoins,
-                tasksDone: newTasksDone,
-              }
-            })
-            showNotif('sup_chat', POSITIONS[state.position]?.supervisor.name || 'Supervisor', 'Hari pertama selesai! Ada pesan dari supervisor.')
-            // Cliffhanger: DM dari manager, bikin penasaran tepat sebelum gate waitlist
-            setTimeout(() => {
-              addMsg('mgr_chat', {
-                role: 'npc', npcId: 'mgr',
-                text: `${state.firstName}, ${pos?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya, ada hal yang mau aku diskusikan soal kamu.`
-              })
-              showNotif('mgr_chat', pos?.manager.name || 'Manager', 'Manager mengirim DM untukmu')
-            }, 3500)
-          }, 2000)
-        }, 1500)
+            addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Mantap ${state.firstName}, satu kelar. Mumpung masih on, ada satu lagi buat hari ini, nggak berat kok.` })
+            setExtractedData(''); setUploadedFile(null); setReviewResult(null)
+            deliverTask(next, newTasksDone + 1)
+          }, 1500)
+        } else {
+          // Hari ini selesai → beat penutup + gerbang hari berikutnya
+          finishDay(newCoins, newTasksDone, next)
+        }
       }
     } catch (e) {
       console.error('Review error:', e)
@@ -2260,7 +2358,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
         {!!d.ctx && <p className="mt-2 text-xs text-[#888780] italic">{String(d.ctx)}</p>}
         {!!d.isDownload && !!d.file && (
           <a
-            href={`/tasks/${String(d.file)}`}
+            href={String(d.href || `/tasks/${String(d.file)}`)}
             download={String(d.file)}
             style={{ cursor: 'pointer' }}
             className="mt-3 inline-flex items-center gap-2 btn-teal text-sm"
