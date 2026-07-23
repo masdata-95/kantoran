@@ -51,7 +51,15 @@ async function main() {
   let uploaded = 0
   for (const file of files) {
     const raw = readFileSync(join(TASKS_DIR, file), 'utf8')
-    const { data: fm, content } = matter(raw)
+    let parsed: ReturnType<typeof matter>
+    try {
+      parsed = matter(raw)
+    } catch (e) {
+      console.error(`❌ ${file}: frontmatter YAML tidak valid — ${(e as Error).message}`)
+      console.error(`   Hint umum: nilai yang memuat ": " (titik dua + spasi) dibaca YAML sebagai mapping. Kutip nilainya atau ganti tanda lain.`)
+      process.exit(1)
+    }
+    const { data: fm, content } = parsed
 
     // Validasi authoring — gagal keras supaya typo ketahuan saat seed, bukan saat user main
     for (const req of ['slug', 'position_id', 'day', 'title', 'task_type', 'rubric']) {
