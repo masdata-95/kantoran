@@ -528,6 +528,61 @@ async function main() {
   XLSX.writeFile(wbM, path.join(premiumDir, 'task_marketing_day2.xlsx'))
   console.log(`task_marketing_day2.xlsx: ${campaigns.length} campaign (TikTok CPA jauh di atas Google)`)
 
+  // ── Task file Finance day-2 (PREMIUM): materialitas anggaran ──
+  // Budget 6 dept x 18 bulan (2025 + H1 2026). Angle day-2 = MATERIALITAS: Marketing
+  // overrun ~Rp 1M (material) vs HR/Ops/Finance selisih kecil (noise); overrun Q4 2025
+  // TIDAK berlanjut ke 2026 (one-off). Reuse array `budget`, TANPA rand().
+  const wbF = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wbF, XLSX.utils.aoa_to_sheet([
+    ['TASK: Materialitas Anggaran, Mana yang Layak ke CFO'],
+    [''],
+    ['Dari: Andi (Senior Finance Analyst)'],
+    ['CFO nggak punya waktu buat semua selisih. Pisahkan overrun yang BENERAN penting'],
+    ['dari yang cuma noise.'],
+    ['Anggaran vs realisasi per dept (2025 - H1 2026) ada di sheet "Data". Buat:'],
+    ['1) Variance (actual - budget) per dept, urut dari rupiah terbesar. Rupiah yang'],
+    ['   bicara, bukan persen kecil yang naik-turun wajar.'],
+    ['2) Pisahkan yang material dari yang tidak. Selisih kecil dua arah itu noise.'],
+    ['3) Cek apakah masalahnya berlanjut ke 2026 atau sudah reda.'],
+    [''],
+    ['Tulis ringkasan + rekomendasi fokus CFO sebagai sheet "Ringkasan", upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wbF, XLSX.utils.json_to_sheet(budget as unknown as Record<string, unknown>[]), 'Data')
+  XLSX.writeFile(wbF, path.join(premiumDir, 'task_finance_day2.xlsx'))
+  console.log(`task_finance_day2.xlsx: ${budget.length} baris budget`)
+
+  // ── Task file BizDev day-2 (PREMIUM): skor kinerja distributor ──
+  // Agregat TOTAL revenue+order per distributor (2025-2026) — sengaja BUKAN bulanan
+  // supaya tidak spoiler collapse Berkah Jaya (jatah arc day-3). Insight: revenue
+  // terpusat di Jabodetabek/Jawa, Indonesia Timur (Papua/Sulawesi) tipis. TANPA rand().
+  const distAgg = new Map<string, { distributor: string; region: string; total_revenue: number; jml_order: number }>()
+  for (const s of sales) {
+    if (s.distributor_id === 'D18' || s.revenue === 0) continue
+    const d = DISTRIBUTORS.find(x => x.id === s.distributor_id)
+    if (!d) continue
+    let a = distAgg.get(d.id)
+    if (!a) { a = { distributor: d.name, region: d.region, total_revenue: 0, jml_order: 0 }; distAgg.set(d.id, a) }
+    a.total_revenue += s.revenue; a.jml_order += 1
+  }
+  const bizRows = [...distAgg.values()].sort((a, b) => b.total_revenue - a.total_revenue)
+  const wbB = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wbB, XLSX.utils.aoa_to_sheet([
+    ['TASK: Skor Kinerja Distributor untuk Rencana Ekspansi'],
+    [''],
+    ['Dari: Reza (BD Manager)'],
+    ['Pak Anton lagi mikirin ekspansi, dan dia butuh gambaran jujur distributor kita.'],
+    ['Rekap total revenue & order per distributor (2025-2026) ada di sheet "Data". Buat:'],
+    ['1) Ranking distributor berdasarkan kinerja, sebut yang terkuat dan terlemah.'],
+    ['2) Pola per region, di mana penjualan terpusat dan di mana masih tipis.'],
+    ['3) Untuk region yang tipis, apakah itu peluang (belum tergarap) atau risiko'],
+    ['   (potensi memang kecil)? Jujur soal apa yang data ini bisa dan tidak bisa jawab.'],
+    [''],
+    ['Tulis penilaian + rekomendasi sebagai sheet "Penilaian", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wbB, XLSX.utils.json_to_sheet(bizRows as unknown as Record<string, unknown>[]), 'Data')
+  XLSX.writeFile(wbB, path.join(premiumDir, 'task_bizdev_day2.xlsx'))
+  console.log(`task_bizdev_day2.xlsx: ${bizRows.length} distributor`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya
