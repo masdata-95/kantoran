@@ -583,6 +583,90 @@ async function main() {
   XLSX.writeFile(wbB, path.join(premiumDir, 'task_bizdev_day2.xlsx'))
   console.log(`task_bizdev_day2.xlsx: ${bizRows.length} distributor`)
 
+  // ── Task file HR day-2 (PREMIUM): audit keadilan gaji ──
+  // Dataset karyawan di-generate DI SINI (tidak masuk vantara.db). Anomali: di Sales,
+  // perempuan dibayar ~18% lebih rendah untuk level yang SAMA (gender pay gap findable).
+  // rand() dipanggil di ujung pipeline → data lain tidak bergeser.
+  const hrLevels = ['intern', 'junior', 'mid', 'senior']
+  const hrBand: Record<string, number> = { intern: 2.5, junior: 5, mid: 7.5, senior: 12 }
+  const hrNamaL = ['Budi', 'Andi', 'Rizal', 'Doni', 'Fajar', 'Bayu', 'Eko', 'Galih', 'Hadi', 'Irfan', 'Joko', 'Aditya', 'Reza', 'Hendra', 'Tomi']
+  const hrNamaP = ['Dinda', 'Nisa', 'Ratna', 'Lili', 'Maya', 'Rina', 'Sari', 'Wulan', 'Ayu', 'Citra', 'Dewi', 'Fitri', 'Indah', 'Kirana', 'Bunga']
+  const empRows: Record<string, unknown>[] = []
+  let empSeq = 1
+  const mkEmp = (dept: string, level: string, gender: string) => {
+    const nama = gender === 'L' ? hrNamaL[randInt(0, hrNamaL.length - 1)] : hrNamaP[randInt(0, hrNamaP.length - 1)]
+    const tenure = randInt(3, 60)
+    let gaji = hrBand[level] * 1e6 * (0.96 + rand() * 0.12) + tenure * 15000
+    if (dept === 'Sales' && gender === 'P') gaji *= 0.82 // anomali gender pay gap (level sama)
+    empRows.push({ emp_id: `EMP-${String(empSeq).padStart(3, '0')}`, nama, dept, level, gender, tenure_bulan: tenure, gaji_bulanan: Math.round(gaji / 1000) * 1000 })
+    empSeq++
+  }
+  for (const dept of ['Data', 'Marketing', 'Finance', 'HR', 'Operations', 'BD']) {
+    const n = randInt(5, 7)
+    for (let i = 0; i < n; i++) mkEmp(dept, hrLevels[randInt(0, 3)], rand() < 0.5 ? 'L' : 'P')
+  }
+  // Sales: struktur terkontrol, 3 pasang L/P per level supaya gap gender jelas & findable
+  for (const level of ['junior', 'mid', 'senior']) {
+    for (let k = 0; k < 3; k++) { mkEmp('Sales', level, 'L'); mkEmp('Sales', level, 'P') }
+  }
+  const wbH = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wbH, XLSX.utils.aoa_to_sheet([
+    ['TASK: Audit Keadilan Gaji'],
+    [''],
+    ['Dari: Bu Ratna (Senior HR Business Partner)'],
+    ['Ada bisik-bisik soal gaji yang nggak adil, dan aku nggak mau itu jadi bola liar.'],
+    ['Data karyawan (level, gender, tenure, gaji) ada di sheet "Data". Buat:'],
+    ['1) Bandingkan gaji dalam level yang sama, siapa yang jauh di bawah wajar.'],
+    ['2) Cek apakah ada POLA, bukan cuma kasus per orang. Misal per dept atau per gender.'],
+    ['3) Bedakan selisih yang wajar (tenure, level) dari yang tidak bisa dijelaskan.'],
+    [''],
+    ['Tulis temuan + rekomendasi sebagai sheet "Temuan", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wbH, XLSX.utils.json_to_sheet(empRows), 'Data')
+  XLSX.writeFile(wbH, path.join(premiumDir, 'task_hr_day2.xlsx'))
+  const sL = empRows.filter(r => r.dept === 'Sales' && r.gender === 'L')
+  const sP = empRows.filter(r => r.dept === 'Sales' && r.gender === 'P')
+  const avgG = (a: Record<string, unknown>[]) => a.length ? Math.round(a.reduce((s, r) => s + Number(r.gaji_bulanan), 0) / a.length / 1e5) / 10 : 0
+  console.log(`task_hr_day2.xlsx: ${empRows.length} karyawan | Sales avg L ${avgG(sL)}jt vs P ${avgG(sP)}jt (gap gender ditanam)`)
+
+  // ── Task file Admin day-2 (PREMIUM): deteksi bentrok jadwal ruang meeting ──
+  // Jadwal booking seminggu, 45 unik + 5 bentrok ditanam (duplikat persis ruang+tanggal+jam).
+  const rooms = ['Garuda', 'Rajawali', 'Merpati', 'Cendrawasih']
+  const reqDepts = ['Marketing', 'Sales', 'Finance', 'HR', 'Data', 'BD', 'Operations']
+  const bkDates = ['2026-07-20', '2026-07-21', '2026-07-22', '2026-07-23', '2026-07-24']
+  const bkSlots = [['09:00', '10:00'], ['10:00', '11:00'], ['11:00', '12:00'], ['13:00', '14:00'], ['14:00', '15:00'], ['15:00', '16:00']]
+  const bookRows: Record<string, unknown>[] = []
+  let bkSeq = 1
+  const usedSlot = new Set<string>()
+  while (bookRows.length < 45) {
+    const room = rooms[randInt(0, rooms.length - 1)], date = bkDates[randInt(0, bkDates.length - 1)], slot = bkSlots[randInt(0, bkSlots.length - 1)]
+    const key = `${room}|${date}|${slot[0]}`
+    if (usedSlot.has(key)) continue
+    usedSlot.add(key)
+    bookRows.push({ booking_id: `BK-${String(bkSeq).padStart(3, '0')}`, ruangan: room, tanggal: date, mulai: slot[0], selesai: slot[1], pemesan: `Tim ${reqDepts[randInt(0, reqDepts.length - 1)]}`, dept: reqDepts[randInt(0, reqDepts.length - 1)] })
+    bkSeq++
+  }
+  bookRows.slice(0, 5).forEach((b, idx) => {
+    bookRows.push({ booking_id: `BK-${String(bkSeq).padStart(3, '0')}`, ruangan: b.ruangan, tanggal: b.tanggal, mulai: b.mulai, selesai: b.selesai, pemesan: `Tim ${reqDepts[idx]}`, dept: reqDepts[idx] })
+    bkSeq++
+  })
+  const wbA = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wbA, XLSX.utils.aoa_to_sheet([
+    ['TASK: Deteksi Bentrok Jadwal Ruang Meeting'],
+    [''],
+    ['Dari: Mbak Sari (Office & Admin Lead)'],
+    ['Minggu ini banyak komplain ruang meeting dobel-booking. Aku butuh kamu rapiin.'],
+    ['Semua booking minggu ini ada di sheet "Data". Buat:'],
+    ['1) Temukan SEMUA bentrok, ruang sama, tanggal sama, jam yang sama tercatat dua kali.'],
+    ['2) Buat daftar bentrok yang jelas, sebut booking mana lawan mana.'],
+    ['3) Usulkan cara merapikan, misal ruang mana yang paling sering rebutan.'],
+    [''],
+    ['Tulis daftar bentrok + usulan sebagai sheet "Bentrok", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wbA, XLSX.utils.json_to_sheet(bookRows), 'Data')
+  XLSX.writeFile(wbA, path.join(premiumDir, 'task_admin_day2.xlsx'))
+  console.log(`task_admin_day2.xlsx: ${bookRows.length} booking (5 bentrok ditanam)`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya
