@@ -426,6 +426,48 @@ async function main() {
   const avgMargin = (rows: Record<string, unknown>[]) => rows.length ? (sum(rows, 'margin_pct') / rows.length).toFixed(1) : '0'
   console.log(`task_da_day2.xlsx: ${day2Rows.length} baris | LUM revenue Jan→Jun: ${Math.round(sum(lumJan, 'revenue') / 1e6)}jt → ${Math.round(sum(lumJun, 'revenue') / 1e6)}jt | LUM margin: ${avgMargin(lumJan)}% → ${avgMargin(lumJun)}%`)
 
+  // ── Task file DA day-3 (PREMIUM): investigasi anomali Region Timur ──
+  // Ekstrak AGREGAT bulanan region x channel dari `sales` (grain ringkas ~600 baris,
+  // bukan 26rb order mentah — file kecil, tetap butuh analisis nyata). Anomali cerita:
+  // Jawa Timur ambruk setelah ~Maret 2026, MERATA di semua channel (petunjuk masalah
+  // distribusi). TANPA rand() → vantara.db & file lain tidak berubah.
+  type Agg3 = { region: string; bulan: string; channel: string; jml_order: number; total_qty: number; total_revenue: number }
+  const agg3 = new Map<string, Agg3>()
+  const seen3 = new Set<string>()
+  for (const s of sales) {
+    if (!s.region || s.revenue === 0) continue          // sudah bersih (hasil task day-1)
+    if (seen3.has(s.order_id)) continue
+    seen3.add(s.order_id)
+    const bulan = s.order_date.slice(0, 7)
+    const k = `${s.region}|${bulan}|${s.channel}`
+    let a = agg3.get(k)
+    if (!a) { a = { region: s.region, bulan, channel: s.channel, jml_order: 0, total_qty: 0, total_revenue: 0 }; agg3.set(k, a) }
+    a.jml_order += 1; a.total_qty += s.qty; a.total_revenue += s.revenue
+  }
+  const day3Rows = [...agg3.values()].sort((a, b) =>
+    a.region.localeCompare(b.region) || a.bulan.localeCompare(b.bulan) || a.channel.localeCompare(b.channel))
+  const wb3 = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb3, XLSX.utils.aoa_to_sheet([
+    ['TASK: Investigasi Anomali Region Timur'],
+    [''],
+    ['Dari: Rizky (Senior Data Analyst)'],
+    ['Direksi dengar penjualan Jawa Timur turun drastis dan mereka minta jawaban.'],
+    ['Rekap bulanan penjualan per region & channel (2025-2026) ada di sheet "Data". Cari:'],
+    ['1) Tren Jawa Timur per bulan sepanjang 2026 — ada titik di mana arahnya berubah.'],
+    ['2) Seberapa dalam penurunannya dan sejak kapan. Bandingkan bulan-bulan terakhir'],
+    ['   dengan periode yang sama di 2025 (jangan H1 penuh vs separuh tahun, itu menyesatkan).'],
+    ['3) Semua channel kena atau cuma satu? Merata atau terfokus itu petunjuk penyebabnya.'],
+    ['Tim Finance menemukan selisih pembayaran di distributor region yang sama, ini serius.'],
+    [''],
+    ['Tulis temuan + dugaan penyebab sebagai sheet "Temuan", lalu upload di Workspace.'],
+  ]), 'Petunjuk')
+  XLSX.utils.book_append_sheet(wb3, XLSX.utils.json_to_sheet(day3Rows), 'Data')
+  XLSX.writeFile(wb3, path.join(premiumDir, 'task_da_day3.xlsx'))
+  const jtRev = (year: string) => day3Rows
+    .filter(r => r.region === 'Jawa Timur' && r.bulan >= `${year}-01` && r.bulan <= `${year}-06`)
+    .reduce((a, r) => a + r.total_revenue, 0)
+  console.log(`task_da_day3.xlsx: ${day3Rows.length} baris agregat | Jatim H1 rev 2025 vs 2026: ${Math.round(jtRev('2025')/1e6)}jt vs ${Math.round(jtRev('2026')/1e6)}jt`)
+
   // ── Sanity check anomali cerita ──
   // Drop Jatim diukur year-over-year (Mei-Jun 2025 vs Mei-Jun 2026) supaya bersih
   // dari efek musiman — cara analis sungguhan menemukannya
