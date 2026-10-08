@@ -43,9 +43,9 @@
 
 ## D. Domain & infrastruktur (BLOKER #4)
 
-- [ ] **[kamu]** Beli **kantoran.id** (masih tersedia per cek terakhir — jangan tunda).
-- [ ] **[kamu+saya]** Cutover domain: DNS → Vercel, lalu update **Google OAuth** (origins + redirect) & **Supabase** (Site URL + Redirect URLs). Footgun paling sering, kerjakan sekali & teliti.
-- [ ] **[saya]** Ganti semua URL hardcoded `kantoran.vercel.app` → `kantoran.id` (layout OG, sitemap, share text, HTTP-Referer OpenRouter).
+- [x] **[kamu]** Beli **kantoran.id** — dibeli 8 Okt 2026 (Hostinger), DNS di Cloudflare.
+- [x] **[kamu+saya]** (8 Okt 2026: Supabase Site URL + Redirect URLs beres; Google OAuth tidak perlu diubah karena callback lewat supabase.co) Cutover domain: DNS → Vercel, lalu update **Google OAuth** (origins + redirect) & **Supabase** (Site URL + Redirect URLs). Footgun paling sering, kerjakan sekali & teliti.
+- [x] **[saya]** Ganti semua URL hardcoded `kantoran.vercel.app` → `kantoran.id` (layout OG, sitemap, share text, HTTP-Referer OpenRouter).
 - [ ] **[kamu]** (Opsional polish) Supabase Custom Domain `auth.kantoran.id` → hilangkan "...supabase.co" di layar login Google.
 - [ ] **[kamu]** Supabase: pertimbangkan paus paid tier (backup harian, tidak auto-pause) begitu ada user berbayar.
 - **Cloudflare: JANGAN migrasi tepat saat launch.** Vercel stabil & jalan. Migrasi menambah risiko di momen paling salah. Tunda sampai pasca-launch (runbook siap di DEPLOY-CLOUDFLARE.md).
@@ -54,7 +54,7 @@
 
 - [ ] **[kamu]** Akun Resend (gratis 3rb/bln) → `RESEND_API_KEY` di env.
 - [ ] **[saya]** Email: (1) struk/akses setelah bayar, (2) welcome signup, (3) verifikasi waitlist.
-- [ ] **[kamu]** Inbox `halo@kantoran.id` (Cloudflare Email Routing gratis) → ganti placeholder di halaman legal.
+- [x] **[kamu]** Inbox `halo@kantoran.id` (Cloudflare Email Routing gratis) → ganti placeholder di halaman legal.
 
 ## F. Growth readiness (baru digas SETELAH A-E hijau)
 

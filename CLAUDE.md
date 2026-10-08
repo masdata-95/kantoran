@@ -3,7 +3,7 @@
 ## Project Overview
 Kantoran adalah platform LMS berbasis simulasi dunia kerja (office roleplay) pertama di Indonesia.
 Tagline: "Belajar kerja, sambil kerja beneran."
-Live: https://kantoran.vercel.app
+Live: https://kantoran.id (domain aktif 8 Okt 2026; kantoran.vercel.app tetap hidup sebagai alias)
 Repo: github.com/masdata-95/kantoran (Private)
 
 ## Tech Stack
@@ -176,9 +176,9 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 
 ## Legal & SEO (19 Juli 2026)
 - /privacy + /terms (UU PDP; disclosure pemrosesan AI) — link dari landing footer & LoginPage.
-  Email kontak legal: masdata.business@gmail.com (nanti ganti halo@kantoran.id setelah
-  domain dibeli + Cloudflare Email Routing di-set).
-- OG tags di layout.tsx (metadataBase kantoran.vercel.app — ganti saat cutover domain)
+  Email kontak legal: halo@kantoran.id (Cloudflare Email Routing → kantoran.business@gmail.com;
+  DNS kantoran.id di Cloudflare (A @ → Vercel 76.76.21.21, DNS only); JANGAN pindah NS ke Vercel = email mati).
+- OG tags di layout.tsx (metadataBase https://kantoran.id — cutover 8 Okt 2026)
   + landing.html; gambar share public/og-image.png (1200x630).
 - robots.txt (disallow /admin, /api), app/sitemap.ts, app/error.tsx, app/not-found.tsx.
 
