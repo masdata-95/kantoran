@@ -978,7 +978,7 @@ PT Vantara Nusantara`
     const salary = state.salaryOffered > 0
       ? `nego gaji sampai Rp ${(state.salaryOffered / 1000000).toFixed(1).replace(/\.0$/, '')} juta`
       : 'nego gaji sendiri'
-    return `Hari pertamaku sebagai ${state.bgRole} di simulasi Kantoran: lulus interview HR, ${salary}, task pertama APPROVED dengan penilaian "${grade}"${ws ? ` dan gaya kerja "${ws.label}"` : ''}. ${state.coins} Kantor Coin terkumpul. Rasain juga jadi anak kantoran: kantoran.vercel.app`
+    return `Hari pertamaku sebagai ${state.bgRole} di simulasi Kantoran: lulus interview HR, ${salary}, task pertama APPROVED dengan penilaian "${grade}"${ws ? ` dan gaya kerja "${ws.label}"` : ''}. ${state.coins} Kantor Coin terkumpul. Rasain juga jadi anak kantoran: kantoran.id`
   }
 
   const handleNextStep = async (step: number, _data?: Record<string, unknown>) => {

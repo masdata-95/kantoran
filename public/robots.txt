@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://kantoran.vercel.app/sitemap.xml
+Sitemap: https://kantoran.id/sitemap.xml

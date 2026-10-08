@@ -18,7 +18,7 @@ export default function PrivacyPage() {
         </div>
 
         <h1 className="font-serif text-2xl font-bold text-[#111111] mb-1">Kebijakan Privasi</h1>
-        <p className="text-xs text-[#888780] mb-8">Berlaku sejak 19 Juli 2026 · Kantoran (kantoran.vercel.app)</p>
+        <p className="text-xs text-[#888780] mb-8">Berlaku sejak 19 Juli 2026 · Kantoran (kantoran.id)</p>
 
         <div className="flex flex-col gap-6 text-sm leading-relaxed text-[#444441]">
           <section>
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-semibold text-[#111111] mb-1.5">Kontak</h2>
             <p>
-              Pertanyaan atau permintaan terkait privasi: <strong>masdata.business@gmail.com</strong>
+              Pertanyaan atau permintaan terkait privasi: <strong>halo@kantoran.id</strong>
             </p>
           </section>
 

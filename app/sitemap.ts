@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const BASE = 'https://kantoran.vercel.app' // ganti saat cutover ke kantoran.id
+const BASE = 'https://kantoran.id'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

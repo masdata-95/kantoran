@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import ClientMonitor from '@/components/ClientMonitor'
 
-const SITE_URL = 'https://kantoran.vercel.app' // ganti ke https://kantoran.id saat cutover domain
+const SITE_URL = 'https://kantoran.id'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

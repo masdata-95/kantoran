@@ -228,7 +228,7 @@ async function callOpenRouter(
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_KEY}`,
-        'HTTP-Referer': 'https://kantoran.vercel.app',
+        'HTTP-Referer': 'https://kantoran.id',
         'X-Title': 'Kantoran',
       },
       body: JSON.stringify({

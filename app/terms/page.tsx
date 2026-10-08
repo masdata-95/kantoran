@@ -89,7 +89,7 @@ export default function TermsPage() {
             <h2 className="font-semibold text-[#111111] mb-1.5">8. Hukum yang berlaku &amp; kontak</h2>
             <p>
               Ketentuan ini diatur oleh hukum Republik Indonesia. Pertanyaan:
-              <strong> masdata.business@gmail.com</strong>
+              <strong> halo@kantoran.id</strong>
             </p>
           </section>
         </div>

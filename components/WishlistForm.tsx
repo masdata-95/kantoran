@@ -33,7 +33,7 @@ const WISHLIST_OPTIONS = [
 ]
 
 export default function WishlistForm({ user, positionTried, firstName, coins, tasksDone, shareText, onExplore }: Props) {
-  const defaultShare = `Baru coba Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.vercel.app`
+  const defaultShare = `Baru coba Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.id`
   const share = shareText || defaultShare
   const [step, setStep] = useState(1)
   const [rating, setRating] = useState(0)
