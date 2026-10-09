@@ -21,7 +21,7 @@ const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY
 
 // Nama model via env supaya migrasi model (mis. gemini-2.5-flash pensiun Okt 2026)
 // cukup ganti env + redeploy, tanpa ubah kode
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash'
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
 
 // Track which key was used last (round-robin)
@@ -119,8 +119,11 @@ async function callGemini(
         generationConfig: {
           maxOutputTokens: cfg.maxTokens,
           temperature: cfg.temperature,
-          // 2.5-flash default-nya "thinking" — matikan agar token output tidak habis untuk reasoning
-          thinkingConfig: { thinkingBudget: 0 },
+          // Model default-nya "thinking" — matikan/minimalkan agar token output tidak habis untuk reasoning.
+          // 2.5 pakai thinkingBudget, 3.x pakai thinkingLevel.
+          thinkingConfig: GEMINI_MODEL.startsWith('gemini-2.5')
+            ? { thinkingBudget: 0 }
+            : { thinkingLevel: 'MINIMAL' },
           ...(cfg.json ? { responseMimeType: 'application/json' } : {}),
         },
         safetySettings: [

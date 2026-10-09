@@ -104,7 +104,7 @@ dan key background lama (run pra-level), keduanya dinormalisasi.
 ## AI System (lib/ai.ts)
 Multi-provider dengan key rotation, urutan: Gemini (paid) → Groq → OpenRouter:
 - GEMINI_API_KEY_1 sampai _5 (key di header x-goog-api-key)
-- Model via env: GEMINI_MODEL (default gemini-2.5-flash) & GROQ_MODEL (default
+- Model via env: GEMINI_MODEL (default gemini-3.5-flash, thinkingLevel MINIMAL) & GROQ_MODEL (default
   llama-3.3-70b-versatile) — migrasi model cukup ganti env + redeploy
 - GROQ_API_KEY_1 sampai _5
 - OPENROUTER_API_KEY (last resort, model :free)
