@@ -32,6 +32,7 @@ export default function TermsPage() {
           <section>
             <h2 className="font-semibold text-[#111111] mb-1.5">2. Akun</h2>
             <ul className="list-disc pl-5 flex flex-col gap-1">
+              <li>Kantoran ditujukan untuk pengguna berusia minimal 18 tahun.</li>
               <li>Login menggunakan akun Google milikmu sendiri.</li>
               <li>Kamu bertanggung jawab atas aktivitas di akunmu.</li>
               <li>Satu orang satu akun, wajar dan tanpa otomasi/bot.</li>
