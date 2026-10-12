@@ -4,6 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Syarat & Ketentuan | Kantoran',
   description: 'Syarat dan ketentuan penggunaan Kantoran, platform simulasi dunia kerja.',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {

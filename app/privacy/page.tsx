@@ -4,6 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Kebijakan Privasi | Kantoran',
   description: 'Kebijakan privasi Kantoran: data apa yang kami simpan, untuk apa, dan hak kamu atasnya.',
+  alternates: { canonical: '/privacy' },
 }
 
 // Halaman legal — wajib UU PDP karena Kantoran menyimpan data pribadi + riwayat chat.

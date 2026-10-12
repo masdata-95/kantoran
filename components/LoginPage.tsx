@@ -32,7 +32,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#FAFAF7] flex flex-col">
       <header className="px-5 sm:px-8 h-14 flex items-center border-b border-[#E5E3DC] bg-white">
-        <a href="/landing.html" className="text-[15px] font-semibold text-[#0F6E56]" style={{ cursor: 'pointer' }}>
+        {/* <a> biasa, bukan <Link>: "/" adalah landing statis (rewrite ke public/landing.html),
+            butuh muat ulang penuh — client navigation akan masuk ke app/page.tsx */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/" className="text-[15px] font-semibold text-[#0F6E56]" style={{ cursor: 'pointer' }}>
           Kantoran
         </a>
       </header>
