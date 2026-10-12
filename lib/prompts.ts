@@ -1,4 +1,4 @@
-import { normalizeLevel, type LevelType } from '@/lib/positions'
+import { normalizeLevel, SALARY_RANGE, LEVEL_LABEL, type LevelType } from '@/lib/positions'
 
 export interface UserContext {
   firstName: string
@@ -14,11 +14,10 @@ export interface UserContext {
 
 // Salary ranges per level jenjang — Sinta harus tahu ini.
 // normalizeLevel menerima level lama (intern_magang) & key background lama (progress pra-level).
-const SALARY_CONTEXT: Record<LevelType, { min: number; max: number; ideal: number; label: string }> = {
-  intern: { min: 1800000,  max: 3000000,  ideal: 2500000,  label: 'Intern' },
-  junior: { min: 4000000,  max: 6000000,  ideal: 4500000,  label: 'Junior' },
-  mid:    { min: 6000000,  max: 9000000,  ideal: 7000000,  label: 'Mid-Level' },
-}
+const SALARY_CONTEXT: Record<LevelType, { min: number; max: number; ideal: number; label: string }> =
+  Object.fromEntries((Object.keys(SALARY_RANGE) as LevelType[]).map(lv => [
+    lv, { min: SALARY_RANGE[lv].min, max: SALARY_RANGE[lv].max, ideal: SALARY_RANGE[lv].offer, label: LEVEL_LABEL[lv] },
+  ])) as Record<LevelType, { min: number; max: number; ideal: number; label: string }>
 
 // Universal style rules
 const STYLE_RULES = `

@@ -308,11 +308,14 @@ export const BACKGROUNDS: Record<BackgroundType, { label: string; role: string; 
   student: { label: 'Mahasiswa Tingkat Akhir', role: 'Intern', icon: '📚', desc: 'Masih kuliah, butuh pengalaman kerja lebih awal' },
 }
 
+// SATU-SATUNYA sumber rentang gaji: prompt Sinta, offering letter, lowongan, dan landing
+// membaca angka ini. Dulu prompt punya salinan sendiri (junior 4-6 jt) sementara di sini
+// 4-5,2 jt → offering letter memotong gaji yang sudah disepakati Sinta.
 // Keyed by LevelType — akses lewat getSalaryRange() supaya key background/level lama tetap jalan
 export const SALARY_RANGE: Record<LevelType, { min: number; offer: number; max: number }> = {
   intern: { min: 1800000, offer: 2500000, max: 3000000 },
-  junior: { min: 4000000, offer: 4500000, max: 5200000 },
-  mid:    { min: 6500000, offer: 7000000, max: 8000000 },
+  junior: { min: 4000000, offer: 4500000, max: 6000000 },
+  mid:    { min: 6000000, offer: 7000000, max: 9000000 },
 }
 
 export function getSalaryRange(levelOrBg: string | undefined | null) {

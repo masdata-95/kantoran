@@ -21,35 +21,33 @@
 <meta name="twitter:image" content="https://kantoran.id/og-image.png">
 <meta name="theme-color" content="#0F6E56">
 <link rel="icon" href="/favicon.svg">
+<link rel="preload" as="image" href="/images/hero.webp" type="image/webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Foto: Pexels (lisensi Pexels, bebas dipakai komersial). ID: hero 10041230, closing 4474047,
+     data 3184163, marketing 6476192, finance 33175649, hr 5439138, bizdev 7845344, admin 5915194 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --ink:#1A1A18;
-  --ink-2:#3A3A36;
-  --muted:#6B6A64;
-  --line:#E5E3DC;
-  --bg:#FAFAF7;
-  --paper:#FFFFFF;
-  --teal:#0F6E56;
-  --teal-dark:#085041;
-  --teal-tint:#E1F5EE;
-  --amber-tint:#FAEEDA;
-  --amber:#854F0B;
+  --ink:#1A1A18;--ink-2:#3A3A36;--muted:#6B6A64;--faint:#A3A19A;
+  --line:#E5E3DC;--line-2:#F1EFE8;--bg:#FAFAF7;--paper:#FFFFFF;--sand:#F4F2EC;
+  --teal:#0F6E56;--teal-dark:#085041;--teal-tint:#E1F5EE;
+  --amber:#854F0B;--amber-tint:#FAEEDA;--amber-cell:#FDF1DC;
+  --blue:#1A4A8A;--blue-tint:#E8F0FC;--purple:#5B2D8E;--purple-tint:#F0EAF9;
   --sans:'IBM Plex Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
 }
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{font-family:var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6;font-size:16px}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6;font-size:16px;overflow-x:hidden}
 a{color:inherit}
+img{display:block;max-width:100%}
 :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 @media (min-width:768px){.wrap{padding:0 32px}}
 
-/* nav */
+/* ── nav ── */
 .nav{position:sticky;top:0;z-index:10;background:rgba(250,250,247,.94);border-bottom:1px solid var(--line)}
 @supports (backdrop-filter:blur(8px)){.nav{background:rgba(250,250,247,.82);backdrop-filter:blur(8px)}}
 .nav .wrap{height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -58,8 +56,8 @@ a{color:inherit}
 .nav-links a{font-size:14px;color:var(--ink-2);text-decoration:none}
 .nav-links a:hover{color:var(--ink)}
 .nav-links a.btn-primary,.nav-links a.btn-primary:hover{color:#fff}
-.nav-links .hide-sm{display:none}
-@media (min-width:720px){.nav-links .hide-sm{display:inline}}
+.hide-sm{display:none}
+@media (min-width:720px){.hide-sm{display:inline}}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:500 15px/1 var(--sans);border-radius:8px;padding:13px 20px;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s}
 .btn-primary{background:var(--teal);color:#fff}
@@ -68,85 +66,199 @@ a{color:inherit}
 .btn-ghost{border-color:#C8C6BE;color:var(--ink)}
 .btn-ghost:hover{border-color:var(--ink)}
 
-/* hero */
-.hero{padding:56px 0 64px}
-@media (min-width:900px){.hero{padding:88px 0 96px}}
-.hero-grid{display:grid;gap:48px;align-items:start}
-@media (min-width:900px){.hero-grid{grid-template-columns:1.05fr .95fr;gap:64px}}
-.kicker{font-size:14px;color:var(--muted);margin-bottom:16px}
-h1{font-size:clamp(32px,5vw,50px);line-height:1.12;font-weight:600;letter-spacing:-.02em;max-width:15ch}
-.lede{margin-top:20px;font-size:18px;line-height:1.65;color:var(--ink-2);max-width:34em}
-.cta-row{margin-top:32px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.fine{margin-top:14px;font-size:14px;color:var(--muted)}
+/* ── hero ── */
+.hero{padding:44px 0 72px}
+@media (min-width:960px){.hero{padding:64px 0 96px}}
+.hero-grid{display:grid;gap:40px;align-items:center}
+@media (min-width:960px){.hero-grid{grid-template-columns:.85fr 1.15fr;gap:56px}}
+.kicker{font-size:14px;color:var(--muted);margin-bottom:14px}
+h1{font-size:clamp(32px,4.6vw,50px);line-height:1.1;font-weight:600;letter-spacing:-.02em;max-width:14ch}
+.lede{margin-top:18px;font-size:18px;line-height:1.6;color:var(--ink-2);max-width:30em}
+.cta-row{margin-top:28px;display:flex;flex-wrap:wrap;gap:12px}
+.facts{margin-top:24px;display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px;color:var(--ink-2)}
+.facts span{display:inline-flex;align-items:center;gap:7px}
+.facts span::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--teal)}
 
-/* chat excerpt */
-.chat{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.chat-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
-.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
-.av-t{background:var(--teal-tint);color:var(--teal)}
-.av-b{background:#E8F0FC;color:#1A4A8A}
-.chat-head b{display:block;font-size:14px;font-weight:600}
-.chat-head span{display:block;font-size:12px;color:var(--muted)}
-.chat-body{padding:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.55}
-.msg{display:flex;gap:10px;max-width:88%}
-.msg p{background:var(--paper);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:9px 12px}
-.me{align-self:flex-end;max-width:82%}
-.me p{background:var(--teal);color:#fff;border-radius:10px 0 10px 10px;padding:9px 12px}
-.offer{margin-left:44px;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px}
-.offer .row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid #F1EFE8}
-.offer .row:last-child{border-bottom:0}
-.offer .k{color:var(--muted)}
-.offer .v{font-variant-numeric:tabular-nums}
-.offer .v.strong{font-weight:600}
-.chat-cap{font-size:13px;color:var(--muted);margin-top:10px}
+.shot{position:relative;padding-bottom:64px}
+@media (min-width:560px){.shot{padding:0 0 40px 40px}}
+.shot-photo{border-radius:16px;overflow:hidden;aspect-ratio:3/2;background:#E9E4DA}
+.shot-photo img{width:100%;height:100%;object-fit:cover;object-position:60% 40%}
+.float{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px -16px rgba(26,26,24,.35);font-size:12.5px;line-height:1.5}
+.float-chat{left:0;bottom:0;width:min(320px,88%);padding:12px}
+@media (max-width:559px){
+  .shot{padding-bottom:0}
+  .float-chat{position:relative;left:auto;bottom:auto;margin:-44px 12px 0 auto;width:86%}
+}
+.float-offer{right:-6px;top:18px;padding:10px 12px;display:none}
+@media (min-width:560px){.float-offer{display:block}}
+.float-offer small{display:block;color:var(--muted);font-size:11px}
+.float-offer b{display:block;font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;margin-top:1px}
+.float-offer span{display:inline-block;margin-top:6px;font-size:11px;font-weight:500;color:var(--teal);background:var(--teal-tint);padding:2px 7px;border-radius:4px}
+.fc-h{display:flex;align-items:center;gap:8px;padding-bottom:8px;margin-bottom:9px;border-bottom:1px solid var(--line-2)}
+.fc-h p{font-weight:600;font-size:12.5px;line-height:1.2}.fc-h small{display:block;color:var(--muted);font-size:11px;font-weight:400}
+.fc-b{display:flex;flex-direction:column;gap:7px}
+.cap{font-size:13px;color:var(--muted);margin-top:12px}
 
-/* sections */
+/* ── shared mock pieces ── */
+.mock{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px;line-height:1.5;color:var(--ink);box-shadow:0 1px 2px rgba(26,26,24,.04),0 12px 32px -12px rgba(26,26,24,.18)}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;flex-shrink:0}
+.av-t{background:var(--teal-tint);color:var(--teal)}.av-b{background:var(--blue-tint);color:var(--blue)}
+.av-p{background:var(--purple-tint);color:var(--purple)}.av-a{background:var(--amber-tint);color:var(--amber)}
+.who{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px}
+.bub{background:#F7F6F2;border-radius:0 9px 9px 9px;padding:7px 10px}
+.mock .bub{background:var(--paper);border:1px solid var(--line)}
+.me{align-self:flex-end;max-width:82%;background:var(--teal);color:#fff;border-radius:9px 0 9px 9px;padding:7px 10px}
+.row-msg{display:flex;gap:8px;max-width:92%}
+.mono{font-family:var(--mono)}
+
+/* ── story rows ── */
 section{padding:72px 0;border-top:1px solid var(--line)}
 .sec-head{max-width:640px;margin-bottom:40px}
-h2{font-size:clamp(24px,3.2vw,32px);line-height:1.25;font-weight:600;letter-spacing:-.01em}
+h2{font-size:clamp(25px,3.2vw,34px);line-height:1.22;font-weight:600;letter-spacing:-.01em}
 .sec-head p{margin-top:12px;color:var(--ink-2);font-size:17px}
-
-/* timeline */
-.steps{list-style:none;display:grid;gap:0;counter-reset:s}
-@media (min-width:860px){.steps{grid-template-columns:repeat(3,1fr);gap:0 40px}}
-.steps li{counter-increment:s;padding:20px 0;border-top:1px solid var(--line)}
-.steps li::before{content:counter(s,decimal-leading-zero);display:block;font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:8px}
-.steps h3{font-size:17px;font-weight:600;margin-bottom:6px}
-.steps p{font-size:15px;color:var(--ink-2)}
-.steps .note{display:block;margin-top:8px;font-size:13px;color:var(--muted)}
-
-/* positions */
-.pos{width:100%;border-collapse:collapse;font-size:15px}
-.pos th{text-align:left;font-weight:500;font-size:13px;color:var(--muted);padding:0 16px 10px 0;border-bottom:1px solid var(--line)}
-.pos td{padding:14px 16px 14px 0;border-bottom:1px solid var(--line);vertical-align:top}
-.pos td:first-child{font-weight:600;white-space:nowrap}
-.pos td:last-child{color:var(--ink-2)}
-.pos .dept{display:block;font-weight:400;font-size:13px;color:var(--muted)}
-.table-wrap{overflow-x:auto}
-.pos-note{margin-top:16px;font-size:14px;color:var(--muted)}
-@media (max-width:640px){
-  .pos thead{display:none}
-  .pos tr{display:block;padding:14px 0;border-bottom:1px solid var(--line)}
-  .pos td{display:block;padding:0;border:0}
-  .pos td:last-child{margin-top:4px}
+.story{display:grid;gap:28px;align-items:center;padding:36px 0}
+.story + .story{border-top:1px dashed var(--line)}
+@media (min-width:900px){
+  .story{grid-template-columns:1fr 1.15fr;gap:64px;padding:48px 0}
+  .story.flip .story-text{order:2}
 }
+.step-no{font-family:var(--mono);font-size:13px;color:var(--teal);margin-bottom:10px}
+.story h3{font-size:clamp(21px,2.4vw,26px);line-height:1.25;font-weight:600;letter-spacing:-.01em}
+.story p{margin-top:10px;font-size:16px;color:var(--ink-2);max-width:30em}
+.gets{margin-top:16px;list-style:none;display:grid;gap:7px;font-size:15px;color:var(--ink-2)}
+.gets li{display:flex;gap:10px}
+.gets li::before{content:'';flex-shrink:0;width:14px;height:14px;margin-top:4px;border-radius:50%;background:var(--teal-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M4 7.2l2 2 4-4.2' fill='none' stroke='%230F6E56' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat}
+.stage{background:var(--sand);border-radius:16px;padding:28px 18px;display:flex;justify-content:center;position:relative}
+@media (min-width:640px){.stage{padding:40px 36px}}
+.stage-photo{position:relative;border-radius:16px;overflow:hidden;min-height:340px;display:flex;align-items:flex-end;justify-content:center;padding:24px 18px}
+.stage-photo > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.stage-photo::before{content:'';position:absolute;inset:0;background:rgba(26,26,24,.18);z-index:1}
+.stage-photo > .mock{position:relative;z-index:2}
 
-/* faq */
-.faq{display:grid;gap:0;max-width:760px}
+/* job card mock */
+.job{width:100%;max-width:400px}
+.job-img{height:120px;overflow:hidden}.job-img img{width:100%;height:100%;object-fit:cover}
+.job-h{padding:14px 18px;border-bottom:1px solid var(--line)}
+.job-h small{color:var(--muted);font-size:12px}
+.job-h p{font-size:16px;font-weight:600;margin-top:2px}
+.job-h span{display:block;color:var(--ink-2);font-size:12px;margin-top:3px}
+.lv{padding:14px 18px;display:grid;gap:7px}
+.lv-o{display:flex;align-items:center;gap:10px;border:1px solid #D8D6CE;border-radius:8px;padding:8px 11px}
+.lv-o.on{border-color:var(--teal);background:rgba(225,245,238,.6)}
+.radio{width:14px;height:14px;border-radius:50%;border:1px solid #B8B6AE;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.on .radio{border-color:var(--teal)}.on .radio::after{content:'';width:7px;height:7px;border-radius:50%;background:var(--teal)}
+.lv-o b{font-weight:500;font-size:13px}.lv-o em{font-style:normal;margin-left:auto;color:var(--ink-2);font-size:12px;font-variant-numeric:tabular-nums}
+.job-f{padding:0 18px 16px}
+.job-f span{display:block;text-align:center;background:var(--teal);color:#fff;border-radius:8px;padding:10px;font-weight:500}
+
+/* offer letter mock */
+.letter{width:100%;max-width:420px;padding:22px 24px;font-size:12.5px;color:#2B2B28}
+.letter-h{border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:12px}
+.letter-h b{font-weight:600;letter-spacing:.04em;font-size:13px;color:var(--ink)}
+.letter-h small{display:block;color:var(--muted);font-size:11px}
+.letter .meta{color:var(--muted);font-size:11.5px;line-height:1.6}
+.letter table{width:100%;border-collapse:collapse;margin:10px 0 6px}
+.letter td{padding:5px 0;border-bottom:1px solid var(--line-2);vertical-align:top;font-variant-numeric:tabular-nums}
+.letter td:first-child{color:var(--muted);width:44%}
+.letter tr.hl td:last-child{font-weight:600;color:var(--ink);background:linear-gradient(transparent 55%,#FBE7B8 55%)}
+.sign{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px}
+.check{display:flex;gap:8px;align-items:center;font-size:12px}
+.check i{width:14px;height:14px;border-radius:3px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sig-row{display:flex;gap:8px}
+.sig-row span{flex:1;border:1px solid #D8D6CE;border-radius:7px;padding:7px 10px;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sig-row b{background:var(--teal);color:#fff;border-radius:7px;padding:7px 12px;font-weight:500;font-size:12px;white-space:nowrap}
+.tag-note{position:absolute;right:14px;top:14px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;max-width:190px;display:none;z-index:3}
+@media (min-width:1100px){.tag-note{display:block}}
+.tag-note b{display:block;font-weight:600;font-size:12px}
+
+/* slack mock */
+.slack{width:100%;max-width:440px}
+.slack-h{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.slack-h b{font-weight:600}.slack-h small{color:var(--muted);font-size:11.5px;margin-left:auto}
+.slack-b{padding:14px;display:flex;flex-direction:column;gap:11px}
+.sys{align-self:center;background:var(--line-2);color:var(--muted);font-size:11px;padding:3px 10px;border-radius:12px}
+.learn{border-left:2px solid var(--teal);background:#F4F8F6;border-radius:0 7px 7px 0;padding:8px 11px;font-size:12px;color:#2E3B36}
+.learn b{display:block;color:var(--teal);font-weight:600;font-size:12px;margin-bottom:2px}
+
+/* spreadsheet mock */
+.xl-wrap{width:100%;max-width:560px;position:relative}
+.xl-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px}
+.xl-bar .ico{width:16px;height:16px;border-radius:3px;background:#1D6F42;color:#fff;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.xl-bar small{margin-left:auto;color:var(--muted)}
+.xl-scroll{overflow-x:auto}
+.xl table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11px;min-width:440px}
+.xl th{background:#F6F5F1;color:var(--muted);font-weight:500;text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);border-right:1px solid var(--line-2);white-space:nowrap}
+.xl td{padding:5px 7px;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);white-space:nowrap}
+.xl td.n{text-align:right;font-variant-numeric:tabular-nums}
+.xl td.bad{background:var(--amber-cell);box-shadow:inset 0 0 0 1px #E8B866;color:#7A4708}
+.xl td.note{font-family:var(--sans);font-size:11px;color:#7A4708}
+.xl .rn{color:var(--faint);background:#F6F5F1;width:24px;text-align:center}
+.xl .hide-xs{display:none}
+@media (min-width:520px){.xl .hide-xs{display:table-cell}}
+.review{margin-top:14px;margin-left:auto;max-width:360px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;box-shadow:0 10px 24px -14px rgba(26,26,24,.3)}
+@media (min-width:900px){.review{position:absolute;right:-18px;bottom:-34px;margin-top:0}}
+.review-h{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.review-h p{font-weight:600;font-size:12.5px;line-height:1.2}.review-h small{display:block;color:var(--muted);font-size:11px;font-weight:400}
+.pill{margin-left:auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px;background:var(--amber-tint);color:#7A4708}
+
+/* reference letter mock */
+.ref{width:100%;max-width:420px;padding:22px 24px;font-size:12.5px;color:#2B2B28}
+.ref .title{text-align:center;font-weight:600;letter-spacing:.04em;font-size:12.5px;color:var(--ink)}
+.ref .no{text-align:center;color:var(--muted);font-size:11px;margin-bottom:12px}
+.ms{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line-2)}
+.ms i{font-style:normal;color:var(--teal);width:12px;flex-shrink:0}
+.ms.todo{color:var(--faint)}.ms.todo i{color:var(--faint)}
+.grade{margin-top:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.grade small{color:var(--muted);font-size:11px}
+.grade b{display:block;color:var(--teal);font-weight:600;margin:1px 0 4px}
+.grade cite{display:block;font-style:normal;color:var(--muted);font-size:11px;margin-top:4px}
+
+/* ── positions ── */
+.pos-grid{display:grid;gap:14px}
+@media (min-width:640px){.pos-grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:980px){.pos-grid{grid-template-columns:repeat(3,1fr)}}
+.pos{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;transition:border-color .15s,transform .15s}
+.pos:hover{border-color:var(--teal)}
+.pos-img{aspect-ratio:16/9;overflow:hidden;background:#E9E4DA}
+.pos-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.pos:hover .pos-img img{transform:scale(1.03)}
+@media (prefers-reduced-motion:reduce){.pos:hover .pos-img img{transform:none}}
+.pos-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:9px;flex:1}
+.pos h3{font-size:16px;font-weight:600;line-height:1.3}
+.pos .dept{font-size:13px;color:var(--muted)}
+.pos p{font-size:14px;color:var(--ink-2);flex:1}
+.pos-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.file{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;color:#1D6F42;background:#EEF6F1;border:1px solid #D3E8DB;border-radius:6px;padding:4px 8px}
+.file::before{content:'X';font-family:var(--sans);font-weight:600;font-size:9px;color:#fff;background:#1D6F42;width:13px;height:13px;border-radius:2px;display:flex;align-items:center;justify-content:center}
+.sup{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
+.sup .av{width:24px;height:24px;font-size:9.5px}
+.pos-note{margin-top:18px;font-size:14px;color:var(--muted)}
+
+/* ── faq ── */
+.faq{max-width:760px}
 .faq details{border-bottom:1px solid var(--line)}
 .faq details:first-child{border-top:1px solid var(--line)}
-.faq summary{list-style:none;cursor:pointer;padding:18px 32px 18px 0;font-weight:500;font-size:16px;position:relative}
+.faq summary{list-style:none;cursor:pointer;padding:17px 32px 17px 0;font-weight:500;font-size:16px;position:relative}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';position:absolute;right:4px;top:16px;font-size:20px;color:var(--muted);font-weight:400}
+.faq summary::after{content:'+';position:absolute;right:4px;top:15px;font-size:20px;color:var(--muted);font-weight:400}
 .faq details[open] summary::after{content:'\2212'}
-.faq details p{padding:0 0 20px;color:var(--ink-2);font-size:15px;max-width:62ch}
+.faq details p{padding:0 0 18px;color:var(--ink-2);font-size:15px;max-width:62ch}
 
-/* closing */
-.closing{background:var(--paper)}
-.closing .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px}
-.closing h2{max-width:20ch}
+/* ── closing ── */
+.closing{background:var(--teal);color:#fff;border-top:0;padding:0;overflow:hidden}
+.closing-grid{display:grid;align-items:stretch}
+@media (min-width:860px){.closing-grid{grid-template-columns:1fr 1fr}}
+.closing-text{padding:56px 20px;display:flex;flex-direction:column;justify-content:center;gap:10px}
+@media (min-width:768px){.closing-text{padding:72px 48px 72px max(32px,calc((100vw - 1120px)/2 + 32px))}}
+.closing h2{max-width:16ch}
+.closing p{color:rgba(255,255,255,.85);font-size:16px;max-width:32ch}
+.closing .btn{align-self:flex-start;margin-top:14px}
+.closing-img{min-height:260px;position:relative}
+.closing-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.btn-light{background:#fff;color:var(--teal)}
+.btn-light:hover{background:var(--teal-tint)}
 
-footer{border-top:1px solid var(--line);padding:28px 0 40px;font-size:14px;color:var(--muted)}
+footer{padding:28px 0 40px;font-size:14px;color:var(--muted)}
 footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
 footer nav{display:flex;flex-wrap:wrap;gap:8px 20px}
 footer a{text-decoration:none}
@@ -155,11 +267,15 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chat" viewBox="0 0 16 16"><path d="M3 3.5h10v7H7l-3 2.5v-2.5H3z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+</svg>
+
 <header class="nav">
   <div class="wrap">
     <a href="/landing.html" class="brand">Kantoran</a>
     <nav class="nav-links" aria-label="Utama">
-      <a href="#alur" class="hide-sm">Alurnya</a>
+      <a href="#hari-pertama" class="hide-sm">Hari pertama</a>
       <a href="#posisi" class="hide-sm">Posisi</a>
       <a href="/cv" class="hide-sm">Cek CV</a>
       <a href="/simulator" class="btn btn-primary btn-small">Masuk</a>
@@ -168,127 +284,256 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 </header>
 
 <main>
+  <!-- ───────── HERO ───────── -->
   <div class="hero">
     <div class="wrap hero-grid">
       <div>
         <p class="kicker">Simulasi kerja kantoran, lewat chat</p>
-        <h1>Rasakan hari pertama kerja sebelum hari pertamamu yang sesungguhnya.</h1>
-        <p class="lede">
-          Kamu melamar ke perusahaan fiktif, diinterview HR, nego gaji, lalu tanda tangan offering letter. Setelah itu supervisor memberimu file Excel sungguhan, dan hasilnya ia baca sebelum memutuskan setuju atau minta revisi.
-        </p>
+        <h1>Rasakan hari pertama kerja, sebelum hari pertamamu yang sesungguhnya.</h1>
+        <p class="lede">Lamar posisi, diinterview HR, nego gaji, tanda tangan kontrak, lalu kerjakan file Excel dari supervisor. Semuanya dalam satu jam.</p>
         <div class="cta-row">
           <a href="/simulator" class="btn btn-primary">Mulai hari pertama</a>
-          <a href="#alur" class="btn btn-ghost">Lihat alurnya</a>
+          <a href="#hari-pertama" class="btn btn-ghost">Lihat isinya</a>
         </div>
-        <p class="fine">Gratis. Masuk dengan akun Google. Hari pertama butuh sekitar satu jam dan bisa dicicil.</p>
+        <div class="facts"><span>Gratis</span><span>Masuk dengan Google</span><span>Bisa dicicil</span></div>
       </div>
 
-      <div>
-        <div class="chat" aria-label="Cuplikan percakapan di dalam simulasi">
-          <div class="chat-head">
-            <div class="av av-t" aria-hidden="true">SM</div>
-            <div><b>Sinta Maharani</b><span>HR Business Partner, PT Vantara Nusantara</span></div>
-          </div>
-          <div class="chat-body">
-            <div class="msg"><div class="av av-t" aria-hidden="true">SM</div><p>Oke, terakhir soal gaji. Ekspektasi kamu untuk posisi ini berapa, dan dasarnya apa?</p></div>
-            <div class="me"><p>Saya berharap di 5,5 juta, Kak. Saya sudah dua kali magang pegang laporan penjualan, jadi bisa langsung jalan.</p></div>
-            <div class="msg"><div class="av av-t" aria-hidden="true">SM</div><p>Hmm, masuk akal. Aku bisa perjuangkan 5,2 juta ya, nanti tercantum di offering letter.</p></div>
-            <div class="offer" aria-label="Potongan offering letter">
-              <div class="row"><span class="k">Posisi</span><span class="v">Junior Data Analyst</span></div>
-              <div class="row"><span class="k">Gaji pokok</span><span class="v strong">Rp 5.200.000</span></div>
-              <div class="row"><span class="k">Sistem kerja</span><span class="v">Hybrid, 3 hari WFO</span></div>
-            </div>
+      <figure class="shot">
+        <div class="shot-photo">
+          <img src="/images/hero.webp" width="1400" height="935" alt="Karyawan muda bekerja dengan laptop di kantor" fetchpriority="high">
+        </div>
+        <div class="float float-offer" aria-hidden="true">
+          <small>Offering letter · Junior Data Analyst</small>
+          <b>Rp 5.200.000</b>
+          <span>Hasil nego dengan HR</span>
+        </div>
+        <div class="float float-chat" role="img" aria-label="Chat interview: Sinta dari HR membuka interview dengan menyebut isi CV kandidat">
+          <div class="fc-h"><span class="av av-t">SM</span><p>Sinta Maharani<small>HR · interview sekitar 15 menit</small></p></div>
+          <div class="fc-b">
+            <div class="bub">CV kamu udah aku baca, S1 Statistika ya. Ceritain dong, laporan apa yang kamu pegang waktu magang?</div>
+            <div class="me">Laporan penjualan mingguan, Kak. Saya yang rapikan datanya tiap Senin.</div>
           </div>
         </div>
-        <p class="chat-cap">Angka yang kamu sepakati dengan Sinta yang masuk ke offering letter.</p>
-      </div>
+      </figure>
     </div>
   </div>
 
-  <section id="alur">
+  <!-- ───────── HARI PERTAMA ───────── -->
+  <section id="hari-pertama">
     <div class="wrap">
       <div class="sec-head">
-        <h2>Yang terjadi di hari pertama</h2>
-        <p>Urutannya sama seperti melamar kerja sungguhan. Tidak ada video untuk ditonton atau kuis pilihan ganda.</p>
+        <h2>Hari pertamamu, dari lamaran sampai pulang kantor</h2>
+        <p>Ini yang akan kamu lihat dan kerjakan. Tidak ada video untuk ditonton atau kuis pilihan ganda.</p>
       </div>
-      <ol class="steps">
-        <li>
-          <h3>Pilih posisi dan jenjang</h3>
-          <p>Enam posisi di satu perusahaan: data, marketing, finance, HR, business development, dan admin. Jenjangnya intern, junior, atau mid.</p>
-        </li>
-        <li>
-          <h3>Interview dengan HR</h3>
-          <p>Sinta sudah membaca profilmu dan menggali pengalamanmu, satu pertanyaan demi satu pertanyaan, lalu menutup dengan nego gaji.</p>
-          <span class="note">Jawaban asal-asalan bisa ditolak. Kamu boleh mencoba lagi.</span>
-        </li>
-        <li>
-          <h3>Offering letter</h3>
-          <p>Gaji hasil nego tertulis di surat. Kamu baca, centang, lalu tanda tangan dengan mengetik nama.</p>
-        </li>
-        <li>
-          <h3>Masuk tim</h3>
-          <p>Diperkenalkan di channel tim, diajak standup oleh supervisor, dan diberi tahu cara kerja tim.</p>
-        </li>
-        <li>
-          <h3>Task pertama</h3>
-          <p>Unduh file Excel, cari masalahnya, upload hasilmu. Supervisor menyetujui atau menunjuk satu dua hal yang perlu diperbaiki.</p>
-        </li>
-        <li>
-          <h3>Surat referensi</h3>
-          <p>Terisi sepanjang hari: interview, kontrak, dan hasil task. Bunyinya ikut berubah kalau kamu butuh banyak revisi.</p>
-        </li>
-      </ol>
+
+      <div class="story">
+        <div class="story-text">
+          <p class="step-no">01 · Melamar</p>
+          <h3>Pilih posisi dan jenjang yang mau kamu coba</h3>
+          <p>Enam posisi di satu perusahaan. Jenjang menentukan rentang gaji yang bisa kamu nego dan seberapa dalam pertanyaannya.</p>
+          <ul class="gets"><li>Intern, junior, atau mid-level</li><li>Posisi lain tetap bisa dicoba setelahnya</li></ul>
+        </div>
+        <div class="stage">
+          <div class="mock job" role="img" aria-label="Kartu lowongan Junior Data Analyst dengan pilihan jenjang dan rentang gaji">
+            <div class="job-img"><img src="/images/pos-data_analyst.webp" width="900" height="600" alt="" loading="lazy"></div>
+            <div class="job-h"><small>PT Vantara Nusantara · Data &amp; Analytics</small><p>Junior Data Analyst</p><span>Jakarta Selatan · Hybrid 3 hari WFO</span></div>
+            <div class="lv">
+              <div class="lv-o"><span class="radio"></span><b>Intern</b><em>1,8–3 jt</em></div>
+              <div class="lv-o on"><span class="radio"></span><b>Junior</b><em>4–6 jt</em></div>
+              <div class="lv-o"><span class="radio"></span><b>Mid-Level</b><em>6–9 jt</em></div>
+            </div>
+            <div class="job-f"><span>Lamar sebagai Junior Data Analyst</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="story flip">
+        <div class="story-text">
+          <p class="step-no">02 · Interview dan offering letter</p>
+          <h3>Gaji yang kamu nego, itu yang tertulis di kontrak</h3>
+          <p>Sinta menggali pengalamanmu satu pertanyaan demi satu pertanyaan, lalu menanyakan ekspektasi gaji. Dia menilai alasanmu, bukan cuma angkanya.</p>
+          <ul class="gets"><li>Latihan menjawab interview tanpa risiko</li><li>Belajar membaca offering letter sebelum tanda tangan</li></ul>
+        </div>
+        <div class="stage-photo">
+          <img src="/images/pos-hr_generalist.webp" width="900" height="600" alt="" loading="lazy">
+          <div class="mock letter" role="img" aria-label="Offering letter dengan gaji pokok Rp 5.200.000 hasil negosiasi dan kolom tanda tangan">
+            <div class="letter-h"><b>PT VANTARA NUSANTARA</b><small>Personal care · Jakarta Selatan</small></div>
+            <p class="meta">Jakarta, 12 Oktober 2026 · Perihal: Penawaran kerja</p>
+            <table>
+              <tr><td>Posisi</td><td>Junior Data Analyst</td></tr>
+              <tr class="hl"><td>Gaji pokok</td><td>Rp 5.200.000 per bulan</td></tr>
+              <tr><td>Tunjangan</td><td>Makan + transport Rp 1.000.000</td></tr>
+              <tr><td>Masa percobaan</td><td>3 bulan</td></tr>
+            </table>
+            <div class="sign">
+              <div class="check"><i><svg width="9" height="9" viewBox="0 0 10 10"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></i>Saya sudah membaca penawaran ini dan menerimanya.</div>
+              <div class="sig-row"><span>Nadia Putri Anggraini</span><b>Tanda tangani</b></div>
+            </div>
+          </div>
+          <div class="tag-note"><b>Kamu minta 5,5 juta</b>Sinta setuju 5,2 juta setelah mendengar alasanmu.</div>
+        </div>
+      </div>
+
+      <div class="story">
+        <div class="story-text">
+          <p class="step-no">03 · Masuk tim</p>
+          <h3>Dikenalkan ke tim, lalu diajak standup</h3>
+          <p>Supervisor, manager, dan rekan satu tim punya nama, gaya bicara, dan kebiasaan masing-masing. Kamu bisa chat dengan siapa saja.</p>
+          <ul class="gets"><li>Orientasi singkat soal perusahaan dan cara kerja tim</li><li>Rekan yang bisa ditanya kalau bingung</li></ul>
+        </div>
+        <div class="stage-photo">
+          <img src="/images/pos-marketing_analyst.webp" width="900" height="601" alt="" loading="lazy">
+          <div class="mock slack" role="img" aria-label="Channel tim: Sinta memperkenalkan karyawan baru, supervisor dan rekan menyapa">
+            <div class="slack-h"><svg width="14" height="14" style="color:var(--muted)"><use href="#i-chat"/></svg><b>#data-analytics</b><small>5 anggota</small></div>
+            <div class="slack-b">
+              <span class="sys">Kamu ditambahkan ke #data-analytics</span>
+              <div class="row-msg"><span class="av av-t">SM</span><div><p class="who">Sinta Maharani</p><div class="bub">Hai tim! Perkenalkan Nadia, Junior Data Analyst yang mulai hari ini.</div></div></div>
+              <div class="row-msg"><span class="av av-b">RP</span><div><p class="who">Rizky Pratama</p><div class="bub">Welcome Nadia. Saya Rizky, supervisor langsungmu. Nanti kita standup.</div></div></div>
+              <div class="row-msg"><span class="av av-a">GA</span><div><p class="who">Galih Ananta</p><div class="bub">Heyy welcome!! Kalau butuh apa-apa DM aku ya</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="story flip">
+        <div class="story-text">
+          <p class="step-no">04 · Task pertama</p>
+          <h3>File Excel sungguhan, dibaca oleh supervisormu</h3>
+          <p>Unduh filenya, cari masalahnya, upload hasilmu. Supervisor membalas dengan feedback yang merujuk isi filemu: disetujui, atau satu dua hal yang perlu diperbaiki.</p>
+          <ul class="gets"><li>Data yang sengaja dibuat berantakan, seperti di kantor</li><li>Revisi tidak menghentikanmu, tapi tercatat</li></ul>
+        </div>
+        <div class="stage" style="padding-bottom:56px">
+          <div class="xl-wrap">
+            <div class="mock xl" role="img" aria-label="Potongan file task_data_analyst.xlsx dengan sel bermasalah yang ditandai dan catatan analisis">
+              <div class="xl-bar"><span class="ico">X</span><span class="mono">task_data_analyst.xlsx</span><small>Data Penjualan</small></div>
+              <div class="xl-scroll">
+                <table>
+                  <tr><th class="rn"></th><th>order_id</th><th>tanggal</th><th>region</th><th class="hide-xs">SKU</th><th>revenue</th><th>Analysis Notes</th></tr>
+                  <tr><td class="rn">3</td><td>ORD-001</td><td>2026-01-05</td><td>Jakarta</td><td class="hide-xs">LM-SERUM-30ML</td><td class="n">2.400.000</td><td></td></tr>
+                  <tr><td class="rn">4</td><td>ORD-002</td><td class="bad">05/01/2026</td><td>Surabaya</td><td class="hide-xs">LM-TONER-100ML</td><td class="n">960.000</td><td class="note">Format tanggal beda</td></tr>
+                  <tr><td class="rn">5</td><td>ORD-003</td><td>2026-01-07</td><td class="bad">NULL</td><td class="hide-xs">LM-SERUM-50ML</td><td class="n">1.750.000</td><td class="note">Region kosong</td></tr>
+                  <tr><td class="rn">6</td><td>ORD-004</td><td>2026-01-08</td><td>Bandung</td><td class="hide-xs">LM-MOISTURIZER</td><td class="n bad">0</td><td class="note">Qty 3, revenue 0</td></tr>
+                  <tr><td class="rn">7</td><td class="bad">ORD-002</td><td>2026-01-09</td><td>Surabaya</td><td class="hide-xs">LM-TONER-100ML</td><td class="n">960.000</td><td class="note">Duplikat baris 4</td></tr>
+                  <tr><td class="rn">9</td><td>ORD-006</td><td>2026-01-11</td><td>Jakarta</td><td class="hide-xs bad">lm-serum-30ml</td><td class="n">1.800.000</td><td class="note">SKU huruf kecil</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="review" role="img" aria-label="Review supervisor: perlu revisi, dampak ke total revenue belum dihitung">
+              <div class="review-h"><span class="av av-b">RP</span><p>Rizky Pratama<small>membalas di chat</small></p><span class="pill">Perlu revisi</span></div>
+              Duplikat sama revenue nol udah ketemu, bagus. Tapi dampaknya ke total revenue belum kamu hitung. Tambahin itu, terus kirim ulang.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="story">
+        <div class="story-text">
+          <p class="step-no">05 · Yang kamu bawa pulang</p>
+          <h3>Surat referensi yang terisi sesuai kerjamu</h3>
+          <p>Setiap langkah yang kamu lalui menambah satu baris. Penilaian dan kutipan supervisor ikut berubah kalau kamu butuh banyak revisi.</p>
+          <ul class="gets"><li>Cerita konkret untuk interview kerja sungguhan</li><li>Penilaian gaya kerjamu dari pilihan yang kamu ambil</li></ul>
+        </div>
+        <div class="stage">
+          <div class="mock ref" role="img" aria-label="Surat referensi kerja berisi pencapaian hari pertama dan penilaian supervisor">
+            <div class="letter-h"><b>PT VANTARA NUSANTARA</b><small>Personal care · Jakarta Selatan</small></div>
+            <p class="title">SURAT REFERENSI KERJA</p>
+            <p class="no">Terbit saat simulasi selesai</p>
+            <div class="ms"><i>✓</i>Lulus interview dan menegosiasikan paket remunerasinya sendiri</div>
+            <div class="ms"><i>✓</i>Menyelesaikan orientasi dan standup pertama bersama tim</div>
+            <div class="ms"><i>✓</i>Menemukan lima jenis masalah kualitas data penjualan</div>
+            <div class="ms todo"><i>○</i>Hari 2: Dashboard penjualan untuk rapat direksi</div>
+            <div class="grade"><small>Penilaian hari pertama</small><b>Memenuhi ekspektasi</b>“Teliti, mau menerima masukan, dan revisinya cepat.”<cite>Rizky Pratama, Senior Data Analyst</cite></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- ───────── POSISI ───────── -->
   <section id="posisi">
     <div class="wrap">
       <div class="sec-head">
-        <h2>Enam posisi, satu perusahaan</h2>
-        <p>PT Vantara Nusantara memproduksi skincare, perawatan rambut, dan body care. Tiap posisi punya supervisor, rekan, dan task pertamanya sendiri.</p>
+        <h2>Enam posisi, masing-masing dengan task pertamanya</h2>
+        <p>PT Vantara Nusantara memproduksi skincare, perawatan rambut, dan body care. Setiap divisi punya supervisor dan file kerjanya sendiri.</p>
       </div>
-      <div class="table-wrap">
-        <table class="pos">
-          <thead><tr><th scope="col">Posisi</th><th scope="col">Task pertama</th></tr></thead>
-          <tbody>
-            <tr><td>Data Analyst<span class="dept">Data &amp; Analytics</span></td><td>Cek kualitas data penjualan sebelum dipakai tim marketing: duplikat, tanggal berantakan, region kosong.</td></tr>
-            <tr><td>Marketing Analyst<span class="dept">Marketing &amp; Brand</span></td><td>Hitung CTR dan conversion rate tiap campaign, lalu tentukan yang layak dapat budget kuartal depan.</td></tr>
-            <tr><td>Finance Analyst<span class="dept">Finance &amp; Accounting</span></td><td>Bandingkan budget dan realisasi, temukan departemen yang paling boros, dan tulis ringkasan untuk CFO.</td></tr>
-            <tr><td>HR Generalist<span class="dept">Human Resources</span></td><td>Screening lima kandidat dan pilih dua untuk interview berikutnya, dengan alasan yang bisa dipertanggungjawabkan.</td></tr>
-            <tr><td>Business Development<span class="dept">Komersial &amp; Strategi</span></td><td>Evaluasi enam calon partner bisnis dan rekomendasikan tiga, lengkap dengan alasannya.</td></tr>
-            <tr><td>Admin Operasional<span class="dept">Operations &amp; Sales Support</span></td><td>Periksa daftar invoice distributor, temukan pencatatan yang janggal, dan rekap status pembayarannya.</td></tr>
-          </tbody>
-        </table>
+      <div class="pos-grid">
+        <a class="pos" href="/simulator">
+          <div class="pos-img"><img src="/images/pos-data_analyst.webp" width="900" height="600" alt="Analis bekerja di depan monitor" loading="lazy"></div>
+          <div class="pos-body">
+            <div><h3>Data Analyst</h3><span class="dept">Data &amp; Analytics</span></div>
+            <p>Cek kualitas data penjualan sebelum dipakai tim marketing.</p>
+            <div class="pos-foot"><span class="file">task_data_analyst.xlsx</span><span class="sup"><span class="av av-b">RP</span>Rizky Pratama</span></div>
+          </div>
+        </a>
+        <a class="pos" href="/simulator">
+          <div class="pos-img"><img src="/images/pos-marketing_analyst.webp" width="900" height="601" alt="Tim marketing berdiskusi di depan layar digital marketing" loading="lazy"></div>
+          <div class="pos-body">
+            <div><h3>Marketing Analyst</h3><span class="dept">Marketing &amp; Brand</span></div>
+            <p>Hitung CTR dan conversion rate tiap campaign, tentukan yang layak dapat budget.</p>
+            <div class="pos-foot"><span class="file">task_marketing_analyst.xlsx</span><span class="sup"><span class="av av-b">DP</span>Dinda Pratiwi</span></div>
+          </div>
+        </a>
+        <a class="pos" href="/simulator">
+          <div class="pos-img"><img src="/images/pos-finance_analyst.webp" width="900" height="600" alt="Kalkulator dan laporan keuangan di meja kerja" loading="lazy"></div>
+          <div class="pos-body">
+            <div><h3>Finance Analyst</h3><span class="dept">Finance &amp; Accounting</span></div>
+            <p>Bandingkan budget dan realisasi, temukan departemen paling boros.</p>
+            <div class="pos-foot"><span class="file">task_finance_analyst.xlsx</span><span class="sup"><span class="av av-b">AW</span>Andi Wijaya</span></div>
+          </div>
+        </a>
+        <a class="pos" href="/simulator">
+          <div class="pos-img"><img src="/images/pos-hr_generalist.webp" width="900" height="600" alt="Sesi interview kandidat di ruang kantor" loading="lazy"></div>
+          <div class="pos-body">
+            <div><h3>HR Generalist</h3><span class="dept">Human Resources</span></div>
+            <p>Screening lima kandidat dan pilih dua untuk interview berikutnya.</p>
+            <div class="pos-foot"><span class="file">task_hr_generalist.xlsx</span><span class="sup"><span class="av av-b">BR</span>Bu Ratna</span></div>
+          </div>
+        </a>
+        <a class="pos" href="/simulator">
+          <div class="pos-img"><img src="/images/pos-bizdev.webp" width="900" height="600" alt="Presentasi rencana bisnis di ruang rapat" loading="lazy"></div>
+          <div class="pos-body">
+            <div><h3>Business Development</h3><span class="dept">Komersial &amp; Strategi</span></div>
+            <p>Evaluasi enam calon partner bisnis dan rekomendasikan tiga.</p>
+            <div class="pos-foot"><span class="file">task_bizdev.xlsx</span><span class="sup"><span class="av av-b">RF</span>Reza Firmansyah</span></div>
+          </div>
+        </a>
+        <a class="pos" href="/simulator">
+          <div class="pos-img"><img src="/images/pos-admin_ops.webp" width="900" height="600" alt="Karyawan memeriksa dokumen di meja kerja" loading="lazy"></div>
+          <div class="pos-body">
+            <div><h3>Admin Operasional</h3><span class="dept">Operations &amp; Sales Support</span></div>
+            <p>Periksa invoice distributor, temukan pencatatan janggal, rekap pembayarannya.</p>
+            <div class="pos-foot"><span class="file">task_admin_ops.xlsx</span><span class="sup"><span class="av av-b">SW</span>Mbak Sari</span></div>
+          </div>
+        </a>
       </div>
-      <p class="pos-note">Gaji yang bisa dinego: Rp 1,8 sampai 3 juta untuk intern, 4 sampai 6 juta untuk junior, 6 sampai 9 juta untuk mid.</p>
+      <p class="pos-note">Gaji yang bisa dinego: Rp 1,8–3 juta untuk intern, 4–6 juta untuk junior, 6–9 juta untuk mid-level.</p>
     </div>
   </section>
 
+  <!-- ───────── FAQ ───────── -->
   <section id="tanya">
     <div class="wrap">
-      <div class="sec-head">
-        <h2>Yang biasanya ditanyakan</h2>
-      </div>
+      <div class="sec-head"><h2>Yang biasanya ditanyakan</h2></div>
       <div class="faq">
         <details>
           <summary>Apakah gratis?</summary>
-          <p>Hari pertama gratis dan lengkap, dari interview sampai task disetujui. Hari kedua dan seterusnya sedang disiapkan. Setelah menyelesaikan hari pertama, kamu bisa meninggalkan email untuk dikabari.</p>
+          <p>Hari pertama gratis dan lengkap, dari interview sampai task disetujui. Hari kedua dan seterusnya sedang disiapkan; kamu bisa minta dikabari setelah hari pertama selesai.</p>
         </details>
         <details>
           <summary>Perusahaannya nyata?</summary>
-          <p>Tidak. PT Vantara Nusantara dan semua orang di dalamnya fiktif. Yang dibuat semirip mungkin dengan aslinya adalah alurnya, bentuk tugasnya, dan cara orang kantor berbicara.</p>
+          <p>Tidak. PT Vantara Nusantara dan orang-orangnya fiktif. Yang dibuat semirip mungkin dengan aslinya adalah alurnya, bentuk tugasnya, dan cara orang kantor berbicara.</p>
         </details>
         <details>
           <summary>Siapa yang membalas chat dan menilai task?</summary>
-          <p>AI yang berperan sebagai HR, supervisor, dan rekan kerja. Feedback-nya merujuk ke isi filemu, jadi dua orang yang mengumpulkan hasil berbeda akan mendapat komentar berbeda.</p>
+          <p>AI yang berperan sebagai HR, supervisor, dan rekan kerja. Feedback-nya merujuk isi filemu, jadi hasil yang berbeda mendapat komentar yang berbeda.</p>
         </details>
         <details>
           <summary>Apa yang perlu disiapkan?</summary>
-          <p>Interview bisa dari HP. Untuk task, kamu butuh Excel atau Google Sheets dan bisa menyimpan file sebagai .xlsx, jadi laptop akan lebih nyaman.</p>
+          <p>Interview bisa dari HP. Untuk task, kamu butuh Excel atau Google Sheets dan bisa menyimpan file sebagai .xlsx, jadi laptop lebih nyaman.</p>
         </details>
         <details>
           <summary>Surat referensinya bisa dipakai melamar kerja?</summary>
-          <p>Surat itu menjelaskan apa yang kamu kerjakan di simulasi. Itu bukan pengalaman kerja resmi, jadi jangan ditulis sebagai pekerjaan di CV. Pakai sebagai bahan cerita saat interview: kamu sudah pernah membersihkan data penjualan, menegosiasikan gaji, dan menerima revisi dari atasan.</p>
+          <p>Surat itu menjelaskan apa yang kamu kerjakan di simulasi, bukan pengalaman kerja resmi, jadi jangan ditulis sebagai pekerjaan di CV. Pakai sebagai bahan cerita saat interview.</p>
         </details>
         <details>
           <summary>Datanya aman?</summary>
@@ -299,9 +544,13 @@ footer a:hover{color:var(--ink);text-decoration:underline}
   </section>
 
   <section class="closing">
-    <div class="wrap">
-      <h2>Lamaran pertamamu di Vantara bisa dikirim sekarang.</h2>
-      <a href="/simulator" class="btn btn-primary">Mulai hari pertama</a>
+    <div class="closing-grid">
+      <div class="closing-text">
+        <h2>Sinta sudah siap mewawancaraimu.</h2>
+        <p>Isi profil tiga menit, lalu interview dimulai. Bisa dari kamar kos, bisa dicicil.</p>
+        <a href="/simulator" class="btn btn-light">Mulai hari pertama</a>
+      </div>
+      <div class="closing-img"><img src="/images/closing.webp" width="1200" height="800" alt="Perempuan tersenyum mengerjakan sesuatu di laptop dari rumah" loading="lazy"></div>
     </div>
   </section>
 </main>
@@ -314,6 +563,7 @@ footer a:hover{color:var(--ink);text-decoration:underline}
       <a href="/privacy">Kebijakan Privasi</a>
       <a href="/terms">Syarat &amp; Ketentuan</a>
       <span>halo@kantoran.id</span>
+      <span>Foto: Pexels</span>
       <span>&copy; 2026</span>
     </nav>
   </div>

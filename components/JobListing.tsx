@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { POSITIONS, SALARY_RANGE, LEVELS, LEVEL_FOR_BG, normalizeLevel } from '@/lib/positions'
 import type { BackgroundType, LevelType } from '@/lib/positions'
 import { supabase, authFetch } from '@/lib/supabase'
@@ -25,6 +26,16 @@ const runStatusLabel = (step: number) => {
   if (step >= 3) return 'Hari pertama'
   if (step >= 2) return 'Offering letter'
   return 'Tahap interview'
+}
+
+// Foto per divisi (Pexels, disimpan lokal di public/images — sama dengan landing)
+const POSITION_PHOTO: Record<string, { src: string; alt: string }> = {
+  data_analyst: { src: '/images/pos-data_analyst.webp', alt: 'Analis bekerja di depan monitor' },
+  marketing_analyst: { src: '/images/pos-marketing_analyst.webp', alt: 'Tim marketing berdiskusi di depan layar' },
+  finance_analyst: { src: '/images/pos-finance_analyst.webp', alt: 'Kalkulator dan laporan keuangan di meja kerja' },
+  hr_generalist: { src: '/images/pos-hr_generalist.webp', alt: 'Sesi interview kandidat di kantor' },
+  bizdev: { src: '/images/pos-bizdev.webp', alt: 'Presentasi rencana bisnis di ruang rapat' },
+  admin_ops: { src: '/images/pos-admin_ops.webp', alt: 'Karyawan memeriksa dokumen di meja kerja' },
 }
 
 const POSITION_DETAILS: Record<string, {
@@ -232,7 +243,7 @@ export default function JobListing({ background, onApply }: Props) {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-          {Object.entries(POSITIONS).map(([key, pos]) => {
+          {Object.entries(POSITIONS).map(([key, pos], idx) => {
             const detail = POSITION_DETAILS[key]
             const run = runs[key]
             const role = run?.level ? pos.getRole(run.level) : pos.title
@@ -244,23 +255,37 @@ export default function JobListing({ background, onApply }: Props) {
                 key={key}
                 onClick={() => openJobModal(key)}
                 style={{ cursor: 'pointer' }}
-                className={`text-left p-4 rounded-xl border bg-white hover:border-[#0F6E56] transition-colors ${
+                className={`group text-left rounded-xl border bg-white overflow-hidden flex flex-col hover:border-[#0F6E56] transition-colors ${
                   isActive ? 'border-[#0F6E56]/60' : 'border-[#E5E3DC]'
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-semibold text-[#1A1A18]">{role}</p>
-                    <p className="text-[13px] text-[#6B6A64]">{pos.dept}</p>
+                {POSITION_PHOTO[key] && (
+                  <div className="relative w-full aspect-[16/9] bg-[#E9E4DA] overflow-hidden">
+                    <Image
+                      src={POSITION_PHOTO[key].src}
+                      alt={POSITION_PHOTO[key].alt}
+                      fill
+                      sizes="(min-width: 640px) 360px, 100vw"
+                      loading={idx < 2 ? 'eager' : 'lazy'}
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                    />
+                    {(isDone || isActive) && (
+                      <span className={`absolute top-2.5 left-2.5 text-[11px] font-medium px-2 py-0.5 rounded shadow-sm ${
+                        isDone ? 'bg-white text-[#0F6E56]' : 'bg-white text-[#854F0B]'
+                      }`}>
+                        {isDone ? 'Hari 1 selesai' : runStatusLabel(run.step)}
+                      </span>
+                    )}
                   </div>
-                  {isDone ? (
-                    <span className="text-[11px] font-medium bg-[#E1F5EE] text-[#0F6E56] px-2 py-0.5 rounded flex-shrink-0">Hari 1 selesai</span>
-                  ) : isActive ? (
-                    <span className="text-[11px] font-medium bg-[#FAEEDA] text-[#854F0B] px-2 py-0.5 rounded flex-shrink-0">{runStatusLabel(run.step)}</span>
-                  ) : null}
+                )}
+
+                <div className="p-4 flex flex-col flex-1">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-[#1A1A18]">{role}</p>
+                  <p className="text-[13px] text-[#6B6A64]">{pos.dept}</p>
                 </div>
 
-                <p className="text-[13px] text-[#4A4A45] mt-3 line-clamp-2">{detail?.responsibilities[0]}.</p>
+                <p className="text-[13px] text-[#4A4A45] mt-2.5 line-clamp-2 flex-1">{detail?.responsibilities[0]}.</p>
 
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F1EFE8]">
                   <span className="text-[13px] text-[#1A1A18] tabular">
@@ -271,6 +296,7 @@ export default function JobListing({ background, onApply }: Props) {
                   <span className="text-[13px] font-medium text-[#0F6E56]">
                     {isActive ? 'Lanjutkan' : isDone ? 'Lihat' : 'Detail'}
                   </span>
+                </div>
                 </div>
               </button>
             )
@@ -298,7 +324,12 @@ export default function JobListing({ background, onApply }: Props) {
             role="dialog" aria-modal="true" aria-labelledby="job-title"
           >
             <div className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-fadeUp">
-              <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#E5E3DC] flex items-start justify-between gap-4">
+              {POSITION_PHOTO[modalJob] && (
+                <div className="relative w-full h-28 sm:h-36 flex-shrink-0 bg-[#E9E4DA]">
+                  <Image src={POSITION_PHOTO[modalJob].src} alt={POSITION_PHOTO[modalJob].alt} fill sizes="512px" className="object-cover" />
+                </div>
+              )}
+              <div className="px-5 sm:px-6 pt-4 pb-4 border-b border-[#E5E3DC] flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[13px] text-[#6B6A64]">PT Vantara Nusantara · {pos.dept}</p>
                   <h2 id="job-title" className="text-lg font-semibold text-[#1A1A18] leading-snug mt-0.5">{role}</h2>
