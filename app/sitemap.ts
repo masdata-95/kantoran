@@ -3,7 +3,8 @@ import type { MetadataRoute } from 'next'
 const BASE = 'https://kantoran.id'
 
 // Perbarui LAST_UPDATED saat isi landing berubah berarti
-const LAST_UPDATED = new Date('2026-10-13')
+// Tanggal UTC yang sudah lewat: lastmod di masa depan bisa ditandai invalid oleh Search Console
+const LAST_UPDATED = new Date('2026-10-12')
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
