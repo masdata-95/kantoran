@@ -34,7 +34,7 @@ const sumVals = (o: Record<string, number>) => Object.values(o).reduce((a, b) =>
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white border border-[#E5E3DC] rounded-2xl p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-3">{title}</p>
+      <p className="text-[11px] font-bold text-[#6B6A64] mb-3">{title}</p>
       {children}
     </div>
   )
@@ -45,7 +45,7 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
     <div>
       <p className="font-serif text-2xl font-bold text-[#0F6E56] leading-tight">{value}</p>
       <p className="text-xs text-[#444441]">{label}</p>
-      {sub && <p className="text-[10px] text-[#888780]">{sub}</p>}
+      {sub && <p className="text-[11px] text-[#6B6A64]">{sub}</p>}
     </div>
   )
 }
@@ -101,9 +101,9 @@ export default function AdminPage() {
           <div className="w-2 h-2 rounded-full bg-[#0F6E56]" />
           <span className="font-serif font-bold text-[#0F6E56]">Kantoran</span>
           <span className="text-[#E5E3DC]">·</span>
-          <span className="text-xs text-[#888780]">Dashboard Founder</span>
+          <span className="text-xs text-[#6B6A64]">Dashboard Founder</span>
         </div>
-        <p className="text-[10px] text-[#888780] mb-5">Diperbarui {new Date(stats.generatedAt).toLocaleString('id-ID')} · refresh halaman untuk data terbaru</p>
+        <p className="text-[11px] text-[#6B6A64] mb-5">Diperbarui {new Date(stats.generatedAt).toLocaleString('id-ID')} · refresh halaman untuk data terbaru</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Users */}
@@ -123,7 +123,7 @@ export default function AdminPage() {
               <Stat label="Revenue" value={stats.revenue.connected ? idr(stats.revenue.totalIdr) : 'Rp 0'} />
             </div>
             {!stats.revenue.connected && (
-              <p className="text-[10px] text-[#888780] bg-[#F1EFE8] rounded-lg px-2.5 py-1.5">{stats.revenue.note}</p>
+              <p className="text-[11px] text-[#6B6A64] bg-[#F1EFE8] rounded-lg px-2.5 py-1.5">{stats.revenue.note}</p>
             )}
           </Card>
 
@@ -153,7 +153,7 @@ export default function AdminPage() {
                   <span className="font-semibold text-[#111111]">{v.runs} <span className="text-[#0F6E56]">/ {v.done}</span></span>
                 </div>
               ))}
-              {Object.keys(stats.byPosition).length === 0 && <p className="text-xs text-[#888780]">Belum ada run.</p>}
+              {Object.keys(stats.byPosition).length === 0 && <p className="text-xs text-[#6B6A64]">Belum ada run.</p>}
             </div>
           </Card>
 
@@ -166,10 +166,10 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {Object.entries(stats.ai.calls7d).map(([bucket, n]) => (
-                <span key={bucket} className="text-[10px] bg-[#F1EFE8] text-[#444441] px-2 py-0.5 rounded-full">{bucket}: {n} (7h)</span>
+                <span key={bucket} className="text-[11px] bg-[#F1EFE8] text-[#444441] px-2 py-0.5 rounded-full">{bucket}: {n} (7h)</span>
               ))}
             </div>
-            <p className="text-[10px] text-[#888780]">{stats.ai.note}</p>
+            <p className="text-[11px] text-[#6B6A64]">{stats.ai.note}</p>
           </Card>
 
           {/* Event funnel granular (tabel events) */}
@@ -191,7 +191,7 @@ export default function AdminPage() {
           {/* Kalibrasi review task — apakah ambang lulus (default 70) sudah pas */}
           <Card title={`Review Task (7 hari) · lulus ≥ ${stats.review.passScore}`}>
             {stats.review.submissions7d === 0 ? (
-              <p className="text-xs text-[#888780]">Belum ada submission task 7 hari terakhir.</p>
+              <p className="text-xs text-[#6B6A64]">Belum ada submission task 7 hari terakhir.</p>
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 <Stat label="Submission" value={stats.review.submissions7d} />
@@ -199,7 +199,7 @@ export default function AdminPage() {
                 <Stat label="Lolos" value={stats.review.passRatePct !== null ? `${stats.review.passRatePct}%` : '-'} />
               </div>
             )}
-            <p className="text-[10px] text-[#888780] mt-2">
+            <p className="text-[11px] text-[#6B6A64] mt-2">
               Kalau pass rate terlalu rendah (banyak yang frustrasi), turunkan ambang lewat env
               KANTORAN_PASS_SCORE lalu redeploy. Tanpa deploy kode.
             </p>
@@ -208,7 +208,7 @@ export default function AdminPage() {
           {/* Error client terbaru (Sentry-lite) */}
           <Card title="Error Client Terbaru">
             {!stats.events.available ? (
-              <p className="text-xs text-[#888780]">Butuh migration 005.</p>
+              <p className="text-xs text-[#6B6A64]">Butuh migration 005.</p>
             ) : (stats.events.clientErrors || []).length === 0 ? (
               <p className="text-xs text-[#0F6E56] font-medium">Tidak ada error client 7 hari terakhir.</p>
             ) : (
@@ -216,7 +216,7 @@ export default function AdminPage() {
                 {(stats.events.clientErrors || []).map((e, i) => (
                   <div key={i} className="text-[11px] border-b border-[#F1EFE8] last:border-0 pb-1.5">
                     <p className="text-[#9A3412] font-mono leading-snug">{e.message || '(tanpa pesan)'}</p>
-                    <p className="text-[#888780]">{e.path || ''} · {new Date(e.at).toLocaleString('id-ID')}</p>
+                    <p className="text-[#6B6A64]">{e.path || ''} · {new Date(e.at).toLocaleString('id-ID')}</p>
                   </div>
                 ))}
               </div>

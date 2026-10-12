@@ -17,16 +17,20 @@ import GuidedTour, { type TourStep } from '@/components/GuidedTour'
 import ReferenceLetter from '@/components/ReferenceLetter'
 import { countRevisions, computeGrade, GRADE_LABEL, GRADE_REVIEW, getWorkStyle, isConditionalOffer } from '@/lib/performance'
 import { track } from '@/lib/track'
+import {
+  Mail, Handshake, MessagesSquare, Monitor, GraduationCap, Folder, Database, ScrollText,
+  Coffee, LogOut, RotateCcw, Briefcase, Menu, X, Coins, SendHorizontal, Lock, FileSpreadsheet, Download,
+} from 'lucide-react'
 
 // Tur pengenalan UI untuk user yang baru pertama kali masuk simulasi.
 // Selector menunjuk atribut data-tour di elemen bersangkutan.
 const TOUR_STEPS: TourStep[] = [
-  { title: 'Selamat datang di kantor barumu', body: 'Semua yang terjadi di sini berjalan seperti kantor sungguhan: ada email, chat tim, interview, sampai nego gaji. Sebelum mulai, kenalan dulu sama ruangannya sebentar.' },
-  { title: 'Inbox', body: 'Dokumen penting seperti undangan interview dan offering letter masuk ke menu Inbox di daftar ruangan. Sekarang kamu langsung di HR Office, tempat interview berlangsung.' },
-  { target: '[data-tour="team"]', title: 'Tim kamu', body: 'Orang-orang yang bisa kamu ajak bicara. Klik nama untuk buka chat. Untuk sekarang baru Sinta dari HR yang aktif, sisanya terbuka setelah kamu diterima kerja.', needsSidebar: true },
-  { target: '[data-tour="rooms"]', title: 'Ruangan kantor', body: 'Pindah ruangan lewat menu ini. Ruangan yang terkunci akan terbuka seiring perjalananmu. Langkah pertamamu nanti: HR Office untuk interview.', needsSidebar: true },
-  { target: '[data-tour="coins"]', title: 'Kantor Coin', body: 'Poin yang kamu kumpulkan dari setiap aktivitas dan task yang selesai.' },
-  { title: 'Sinta sudah menunggu', body: 'Sinta, HR kami, sudah menyapamu di layar ini. Balas saja pesannya untuk mulai interview, ketik seperti kamu ngobrol beneran. Sisanya akan mengalir seperti hari pertama kerja. Semoga lancar!' },
+  { title: 'Ini kantor barumu', body: 'Semuanya terjadi lewat chat dan email, persis kerja kantoran. Tur ini cuma enam langkah singkat.' },
+  { title: 'Undangan sudah di Inbox', body: 'Email undangan interview masuk ke Inbox. Tidak perlu dibuka dulu, interview-nya langsung di layar ini (HR Office).' },
+  { target: '[data-tour="team"]', title: 'Orang-orang di kantor', body: 'Sekarang baru Sinta dari HR yang bisa diajak bicara. Supervisor dan rekan tim muncul setelah kamu tanda tangan kontrak.', needsSidebar: true },
+  { target: '[data-tour="rooms"]', title: 'Ruangan', body: 'Yang bergembok terbuka satu per satu sesuai perjalananmu. Kalau ada pesan baru, notifikasinya muncul di atas layar.', needsSidebar: true },
+  { target: '[data-tour="coins"]', title: 'Coin', body: 'Bertambah tiap kamu membalas chat, menyelesaikan latihan, atau task disetujui. Anggap saja skor.' },
+  { title: 'Sinta sudah menyapamu', body: 'Balas seperti chat dengan HR sungguhan: jujur, jelas, tidak perlu terlalu formal. Interviewnya sekitar 15 menit, di akhir ada nego gaji.' },
 ]
 
 // ── TYPES ─────────────────────────────────────────
@@ -130,6 +134,52 @@ const isRoomAvailable = (room: string, step: number): boolean => {
   return room in locked && !locked[room]
 }
 
+// Ringkasan CV dari profil untuk Sinta. Dulu profil diisi 3 menit tapi tidak pernah
+// sampai ke HR, jadi interview menanyakan ulang semuanya. Server memotong di 600 char.
+const buildCvSummary = (p?: UserProfile | null): string => {
+  if (!p) return ''
+  const edu = (p.education || [])
+    .filter(e => e.institution?.trim())
+    .map(e => `${e.major || 'jurusan tidak disebut'} di ${e.institution}${e.status === 'kuliah' ? ' (masih kuliah)' : e.year ? ` (lulus ${e.year})` : ''}`)
+    .join('; ')
+  const exp = (p.experience || [])
+    .filter(e => !e.isSimulation && (e.company?.trim() || e.position?.trim()))
+    .map(e => `${e.position || 'anggota'} di ${e.company || '-'}${e.description ? `, ${e.description.slice(0, 100)}` : ''}`)
+    .join('; ')
+  const skills = (p.skills || []).slice(0, 10).join(', ')
+  return [
+    edu && `Pendidikan: ${edu}`,
+    exp ? `Pengalaman: ${exp}` : 'Pengalaman: belum ada pengalaman kerja',
+    skills && `Skill yang dicantumkan: ${skills}`,
+    p.city && `Domisili: ${p.city}`,
+  ].filter(Boolean).join('. ')
+}
+
+// Gaji hasil nego dibaca dari offering letter di inbox — salaryOffered di state
+// hilang setelah refresh, offering letter tidak.
+const getOfferSalary = (history: Record<string, Message[]>): number => {
+  const offer = (history['inbox'] || []).find(m => m.role === 'email' && m.data?.isOffering)
+  return Number(offer?.data?.salary || 0)
+}
+
+// Interview berjalan di step 0. Run dianggap ada (layak disimpan / dipulihkan)
+// begitu user sudah membalas Sinta, bukan menunggu step > 0. Dulu refresh di
+// tengah interview 15 menit menghapus seluruh percakapan.
+const hasStartedInterview = (history: Record<string, Message[]> | undefined): boolean =>
+  (history?.['hr_office'] || []).some(m => m.role === 'user')
+
+// Nama channel Slack tim, satu sumber (dulu header & pesan sistem beda format)
+const channelOf = (pos?: { dept: string }) =>
+  pos?.dept.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'general'
+
+// Nama panggilan NPC: "Mbak Sari Wulandari" → "Mbak Sari", "Rizky Pratama" → "Rizky"
+const callName = (full?: string) => {
+  const w = (full || '').split(' ')
+  return ['Mbak', 'Pak', 'Bu', 'Kak', 'Mas'].includes(w[0]) ? w.slice(0, 2).join(' ') : w[0] || ''
+}
+
+const fmtJuta = (n: number) => (n / 1000000).toFixed(1).replace(/\.0$/, '').replace('.', ',')
+
 // ── MAIN COMPONENT ────────────────────────────────
 import ProfileTab from '@/components/ProfileTab'
 import type { UserProfile } from '@/lib/profile'
@@ -157,6 +207,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   // Daftar task pipeline (task-2 day-1, lalu day 2+). Task terkunci hanya bawa {slug,day,title,teaser}.
   const [seasonTasks, setSeasonTasks] = useState<SeasonTask[]>([])
   const [isSubmittingTask, setIsSubmittingTask] = useState(false)
+  // Pesan error di Workspace (file tak terbaca / review gagal) — pengganti alert()
+  const [workspaceError, setWorkspaceError] = useState('')
   const [profile, setProfile] = useState<UserProfile | null>(userProfile || null)
   const [showProfile, setShowProfile] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false) // drawer di mobile
@@ -274,9 +326,23 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   // memastikan user idle tidak menghasilkan write ke database sama sekali
   useEffect(() => {
     const iv = setInterval(() => {
-      if (stateRef.current.step > 0) saveProgress()
+      const s = stateRef.current
+      if (s.position && (s.step > 0 || hasStartedInterview(s.chatHistory))) saveProgress()
     }, 30000)
     return () => clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // HP: user pindah app / kunci layar di tengah interview → simpan saat itu juga,
+  // jangan menunggu siklus 30 detik berikutnya
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState !== 'hidden') return
+      const s = stateRef.current
+      if (s.position && (s.step > 0 || hasStartedInterview(s.chatHistory))) saveProgress()
+    }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -302,7 +368,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           role: 'npc', npcId: 'sup',
           text: `${state.firstName}, yuk kita standup sebentar. Ada beberapa hal yang mau aku sampaikan untuk hari pertama kamu.`
         }, true)
-        showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
+        showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Mengajakmu standup sebentar')
         setState(prev => ({
           ...prev,
           unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
@@ -328,7 +394,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         role: 'npc', npcId: 'sup',
         text: `${state.firstName}, yuk standup sebentar. Banyak yang mau aku jelasin untuk hari pertama kamu di sini.`
       }, true)
-      showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Ada DM dari supervisormu')
+      showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Mengajakmu standup sebentar')
       setState(prev => ({
         ...prev,
         unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
@@ -479,7 +545,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
       const qs = initialPosition ? `?position=${encodeURIComponent(initialPosition)}` : ''
       const res = await authFetch(`/api/progress${qs}`)
       const { progress } = await res.json()
-      if (progress && progress.step > 0) {
+      if (progress && (progress.step > 0 || hasStartedInterview(progress.chat_history as Record<string, Message[]>))) {
         const loadedHistory = (progress.chat_history as Record<string, Message[]>) || {}
         // interviewDone juga dipulihkan dari kartu "interview_done" di history —
         // refresh setelah interview selesai tapi sebelum klik offering TIDAK boleh
@@ -505,7 +571,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
           simDay: progress.sim_day || 1,
         }))
         // Refresh harus mendarat kembali di room terakhir yang dibuka, bukan reset ke slack/inbox
-        let initialView = progress.step >= 3 ? 'slack' : 'inbox'
+        let initialView = progress.step >= 3 ? 'slack' : progress.step >= 2 ? 'inbox' : 'hr_office'
         try {
           const savedView = sessionStorage.getItem(`kantoran_last_view_${user.id}_${progress.position || initialPosition || ''}`)
           if (savedView && isRoomAvailable(savedView, progress.step || 0)) initialView = savedView
@@ -586,7 +652,13 @@ PT Vantara Nusantara`
         id: sintaMsgId,
         role: 'npc' as const,
         npcId: 'sinta',
-        text: `Halo ${firstName}! Saya Sinta, HR Business Partner Vantara. Santai aja ya, ini lebih ke ngobrol dan kenalan dulu. Cerita dong, siapa kamu dan kenapa tertarik sama posisi ${pos.title} di sini?`
+        // Satu pertanyaan saja (aturan prompt Sinta) + bukti CV sudah dibaca
+        text: (() => {
+          const edu = userProfile?.education?.find(e => e.institution?.trim() && e.major?.trim())
+          return edu
+            ? `Halo ${firstName}, aku Sinta dari HR Vantara. CV kamu udah aku baca, ${edu.major} di ${edu.institution} ya. Santai aja, anggap ngobrol biasa. Gimana kabarnya hari ini?`
+            : `Halo ${firstName}, aku Sinta dari HR Vantara. Santai aja, anggap ngobrol biasa. Gimana kabarnya hari ini?`
+        })()
       }
 
       const initState: SimState = {
@@ -614,7 +686,7 @@ PT Vantara Nusantara`
       // Email undangan tetap di Inbox (badge unread) untuk imersi, tapi bukan penghalang.
       setView('hr_office')
       setTimeout(() => {
-        showNotif('hr_office', 'Sinta Maharani', 'Sinta sudah menyapamu, balas untuk mulai interview')
+        showNotif('hr_office', 'Sinta Maharani', 'Sinta sudah menyapamu. Balas untuk mulai interview.')
       }, 800)
     }
   }, [progLoading, showApp, initialPosition])
@@ -683,7 +755,7 @@ PT Vantara Nusantara`
         dept: `Dept. ${p?.dept}`, body: task.brief, ctx,
       }
     })
-    addMsg('sup_chat', { role: 'action', data: { label: 'Buka File Manager →', goTo: 'file_manager' } })
+    addMsg('sup_chat', { role: 'action', data: { label: 'Buka File Manager', goTo: 'file_manager' } })
     if (task.file_name) {
       addMsg('file_manager', {
         role: 'task',
@@ -716,8 +788,8 @@ PT Vantara Nusantara`
     const dayAction: Omit<Message, 'id'> = {
       role: 'action',
       data: canAdvance
-        ? { label: `Selesai hari ini, lanjut ke Hari ke-${next!.day}`, nextStep: 97, type: 'day_done', coins: newCoins, tasksDone: newTasksDone }
-        : { label: 'Selesai untuk hari ini, Lanjut ke Hari Kedua', nextStep: 99, type: 'day_done', coins: newCoins, tasksDone: newTasksDone },
+        ? { label: `Lanjut ke hari ke-${next!.day}`, nextStep: 97, type: 'day_done', coins: newCoins, tasksDone: newTasksDone }
+        : { label: 'Selesai untuk hari ini', nextStep: 99, type: 'day_done', coins: newCoins, tasksDone: newTasksDone },
     }
     setTimeout(() => {
       if (day === 1) {
@@ -731,11 +803,11 @@ PT Vantara Nusantara`
         addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Good work hari ini ${name}. Sudah jam 5, bisa pulang dulu.${canAdvance ? ' Besok standup jam 9, ada lanjutannya.' : ''}` })
         addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Kebiasaan tim tiap pulang: sebut satu hal yang paling kamu pelajari hari ini. Apa punyamu?` })
         addMsg('sup_chat', dayAction)
-        showNotif('sup_chat', p?.supervisor.name || 'Supervisor', 'Hari ini selesai! Ada pesan dari supervisor.')
+        showNotif('sup_chat', p?.supervisor.name || 'Supervisor', 'Hari ini selesai, ada pesan untukmu')
         if (day === 1) {
           setTimeout(() => {
             addMsg('mgr_chat', { role: 'npc', npcId: 'mgr', text: `${name}, ${p?.supervisor.name.split(' ')[0]} cerita task pertamamu langsung approved. Jarang-jarang itu terjadi di hari pertama. Besok pagi mampir ke ruanganku ya, ada hal yang mau aku diskusikan soal kamu.` })
-            showNotif('mgr_chat', p?.manager.name || 'Manager', 'Manager mengirim DM untukmu')
+            showNotif('mgr_chat', p?.manager.name || 'Manager', 'Mengirim pesan untukmu')
           }, 3500)
         }
       }, 2000)
@@ -776,7 +848,7 @@ PT Vantara Nusantara`
             bgRole: state.bgRole,
             level: state.level,
             position: state.position,
-            experience: state.experience,
+            experience: state.experience || buildCvSummary(profile),
             motivation: state.motivation,
             step: state.step,
           },
@@ -824,7 +896,7 @@ PT Vantara Nusantara`
         slack: 'Slack',
         jnr: pos?.junior.name || 'Kolega',
       }
-      showNotif(room, roomLabels[room] || room, 'Ada balasan baru, klik untuk buka')
+      showNotif(room, roomLabels[room] || room, 'Membalas pesanmu')
       setState(prev => ({
         ...prev,
         unreadCounts: { ...prev.unreadCounts, [room]: (prev.unreadCounts[room] || 0) + 1 }
@@ -838,11 +910,11 @@ PT Vantara Nusantara`
       setTimeout(() => {
         addMsg('hr_office', {
           role: 'action',
-          data: { label: 'Pelajari: Cara Menjawab Interview', goTo: 'academy', type: 'interview_rejected' }
+          data: { label: 'Pelajari cara menjawab interview', goTo: 'academy', type: 'interview_rejected' }
         }, true)
         addMsg('hr_office', {
           role: 'action',
-          data: { label: 'Aku siap, Ulangi Interview', nextStep: 98 }
+          data: { label: 'Ulangi interview', nextStep: 98 }
         }, true)
       }, 1500)
       return
@@ -882,9 +954,9 @@ PT Vantara Nusantara`
                 role: 'action',
                 data: {
                   label: conditional
-                    ? 'Interview selesai. Kamu diterima, dengan catatan evaluasi dari HR.'
-                    : 'Interview selesai! Kamu diterima di PT Vantara Nusantara.',
-                  subLabel: 'Lanjut ke Offering Letter',
+                    ? 'Interview selesai. Sinta menerimamu dengan catatan evaluasi, offering letter dikirim ke Inbox.'
+                    : 'Interview selesai. Sinta mengirim offering letter ke Inbox.',
+                  subLabel: 'Buka offering letter',
                   nextStep: 2,
                   type: 'interview_done',
                   // Diterima bersyarat: offer konservatif + supervisor lebih dingin +
@@ -954,7 +1026,7 @@ PT Vantara Nusantara`
   }
 
   const handleRestart = async () => {
-    if (!confirm('Yakin mau mengulang posisi ini dari awal?\n\nProgress dan chat di posisi INI akan hilang. Progress posisi lain tetap tersimpan.')) return
+    if (!confirm('Ulangi posisi ini dari awal?\n\nChat, gaji hasil nego, dan surat referensi di posisi ini akan dihapus. Posisi lain tidak terpengaruh.')) return
     try {
       // Multi-role: reset hanya run posisi yang sedang dibuka
       await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({ position: state.position }) })
@@ -968,16 +1040,15 @@ PT Vantara Nusantara`
       setReviewResult(null)
       setUploadedFile(null)
       setExtractedData('')
-    } catch { alert('Gagal reset, coba lagi.') }
+    } catch { showNotif(view, 'Gagal', 'Belum bisa mengulang. Periksa koneksi lalu coba lagi.') }
   }
 
   // Rekap personal untuk dibagikan — dibangun dari data run (bukan template generik)
   const buildRecap = () => {
     const grade = GRADE_LABEL[computeGrade(countRevisions(state.chatHistory))]
     const ws = getWorkStyle(state.chatHistory)
-    const salary = state.salaryOffered > 0
-      ? `nego gaji sampai Rp ${(state.salaryOffered / 1000000).toFixed(1).replace(/\.0$/, '')} juta`
-      : 'nego gaji sendiri'
+    const offered = state.salaryOffered || getOfferSalary(state.chatHistory)
+    const salary = offered > 0 ? `nego gaji sampai Rp ${fmtJuta(offered)} juta` : 'nego gaji sendiri'
     return `Hari pertamaku sebagai ${state.bgRole} di simulasi Kantoran: lulus interview HR, ${salary}, task pertama APPROVED dengan penilaian "${grade}"${ws ? ` dan gaya kerja "${ws.label}"` : ''}. ${state.coins} Kantor Coin terkumpul. Rasain juga jadi anak kantoran: kantoran.id`
   }
 
@@ -1019,13 +1090,18 @@ PT Vantara Nusantara`
             id: `sinta-retry-${Date.now()}`,
             role: 'npc' as const,
             npcId: 'sinta',
-            text: `Hai lagi. Aku menghargai kamu mau balik dan coba lagi, itu poin plus buatku. Kita mulai dari awal ya, santai aja. Cerita dong, siapa kamu dan kenapa tertarik sama posisi ini?`
+            text: `Hai lagi. Makasih udah mau balik dan coba lagi, itu poin plus buatku. Kita mulai dari awal ya. Coba ceritain singkat tentang dirimu.`
           }]
         }
       }))
       setView('hr_office')
       return
     }
+
+    // Tombol aksi lama di riwayat chat (kartu "Buka offering letter", tombol tanda
+    // tangan di email) masih bisa diklik setelah langkahnya lewat. Tanpa guard ini
+    // klik ulang memundurkan step dan memutar ulang adegan: offer baru, Slack dobel.
+    if (step <= stateRef.current.step) return
 
     setState(prev => ({ ...prev, step }))
 
@@ -1039,13 +1115,19 @@ PT Vantara Nusantara`
       const hrMessages = state.chatHistory['hr_office'] || []
       let agreedSalary = conditional ? salRange.min : salRange.offer
 
+      // Ambil angka gaji TERAKHIR di pesan: "range kami 4 sampai 6 juta, kita sepakat
+      // 5,5 juta" harus menghasilkan 5,5 (dulu 6). Mendukung "5,5 juta", "5.5 jt",
+      // "Rp 5.500.000" (dulu format rupiah penuh tidak terbaca → angka default).
       const extractJuta = (text: string): number | null => {
-        const m = text.match(/(\d+[.,]?\d*)\s*juta/)
-        if (m) {
-          const val = parseFloat(m[1].replace(',', '.')) * 1000000
-          if (val >= 1000000 && val <= 15000000) return Math.round(val)
+        const found: { at: number; val: number }[] = []
+        for (const m of text.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:juta|jt)\b/g)) {
+          found.push({ at: m.index ?? 0, val: parseFloat(m[1].replace(',', '.')) * 1000000 })
         }
-        return null
+        for (const m of text.matchAll(/rp\s?(\d{1,3}(?:\.\d{3}){2,})/g)) {
+          found.push({ at: m.index ?? 0, val: parseInt(m[1].replace(/\./g, ''), 10) })
+        }
+        const valid = found.filter(f => f.val >= 1000000 && f.val <= 15000000).sort((x, y) => x.at - y.at)
+        return valid.length ? Math.round(valid[valid.length - 1].val) : null
       }
 
       let agreedFound = false
@@ -1103,8 +1185,10 @@ PT Vantara Nusantara`
         data: {
           from: 'sinta@vantara.co.id',
           subject: `Offering Letter, ${state.bgRole}`,
-          preview: 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.',
+          preview: 'Penawaran kerja untuk posisi yang kamu lamar.',
           isOffering: true,
+          issuedAt: Date.now(),
+          conditional,
           salary: finalSalary,
           position: state.bgRole,
           dept: pos?.dept,
@@ -1131,20 +1215,20 @@ PT Vantara Nusantara`
       }))
 
       setView('inbox')
-      setTimeout(() => showNotif('inbox', 'Inbox', 'Offering Letter dari Sinta Maharani masuk!'), 300)
+      setTimeout(() => showNotif('inbox', 'Inbox', 'Offering letter dari Sinta sudah masuk'), 300)
     }
 
     if (step === 3) {
       setState(prev => ({ ...prev, step: 3, phaseUnlocked: 1 }))
       track('offer_signed', { position: state.position, level: state.level, salary: state.salaryOffered })
       const pos = POSITIONS[state.position]
-      const channelName = pos?.dept.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/-$/g, '') || 'general'
+      const channelName = channelOf(pos)
 
       setTimeout(() => {
         addMsg('slack', { role: 'system', text: `Kamu ditambahkan ke #${channelName}` }, true)
         setTimeout(() => {
           addMsg('slack', { role: 'npc', npcId: 'sinta', text: `Hai tim! Perkenalkan ${state.firstName}, ${state.bgRole} yang mulai hari ini. Disambut ya!` })
-          showNotif('slack', 'Slack', `Sinta Maharani menyebut nama kamu di #${channelName}`)
+          showNotif('slack', 'Slack', `Sinta memperkenalkanmu ke tim di #${channelName}`)
           setTimeout(() => {
             // Diterima bersyarat → supervisor menyambut lebih dingin; kepercayaan harus direbut
             addMsg('slack', {
@@ -1165,7 +1249,7 @@ PT Vantara Nusantara`
 
       // Surat referensi mulai terlihat sejak diterima — aset yang dibangun, bukan janji di akhir
       setTimeout(() => {
-        showNotif('reference', 'Surat Referensi', 'HR mulai menyusun surat referensimu. Lihat di sidebar.')
+        showNotif('reference', 'Surat Referensi', 'HR mulai menyusun surat referensimu')
         setState(prev => ({
           ...prev,
           unreadCounts: { ...prev.unreadCounts, reference: (prev.unreadCounts['reference'] || 0) + 1 }
@@ -1178,15 +1262,15 @@ PT Vantara Nusantara`
       const pos = POSITIONS[state.position]
       setTimeout(() => {
         // Supervisor explains company + position + SOP
-        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oke, sebelum mulai kerja aku mau orientasi singkat dulu. PT Vantara Nusantara itu FMCG personal care, ada 3 brand: Lumière (skincare), Roots&Co (haircare), sama Vanta Glow (body care). Kita distribute ke modern trade, GT, sama e-commerce.` })
+        addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Oke, sebelum mulai kerja aku mau orientasi singkat dulu. PT Vantara Nusantara itu FMCG personal care, ada 3 brand: Lumière (skincare), Roots&Co (haircare), sama Vanta Glow (body care). Jualannya lewat tiga jalur: modern trade (minimarket, supermarket), general trade (toko kelontong, grosir), sama e-commerce.` })
         setTimeout(() => {
-          addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Posisi kamu sebagai ${state.bgRole} di tim ${pos?.dept}. Tanggung jawab utamamu adalah ${pos?.itx}. Kamu lapor langsung ke aku, dan kalau ada hal strategis baru eskalasi ke ${pos?.manager.name}.` })
+          addMsg('sup_chat', { role: 'npc', npcId: 'sup', text: `Kamu masuk sebagai ${state.bgRole} di tim ${pos?.dept}. Sehari-hari kerjaanmu banyak di ${pos?.itx}. Lapornya langsung ke aku. Kalau ada yang menyangkut keputusan besar, baru kita bawa ke ${pos?.manager.name}.` })
           setTimeout(() => {
             addMsg('sup_chat', {
               role: 'learn',
               data: {
-                icon: '📋', title: 'SOP Tim ' + pos?.dept,
-                body: 'Daily standup jam 9 pagi. Task masuk via chat supervisor. Deadline selalu dicantumkan. Submit hasil kerja di Workspace. Feedback langsung dari supervisor.',
+                title: 'Cara kerja tim ' + pos?.dept,
+                body: 'Standup tiap jam 9 pagi. Task masuk lewat chat ini dan selalu ada tenggatnya. Hasil kerja dikumpulkan di Workspace, feedback-nya dikirim balik ke chat ini.',
               }
             })
             setTimeout(() => {
@@ -1195,12 +1279,12 @@ PT Vantara Nusantara`
               addMsg('sup_chat', {
                 role: 'learn',
                 data: {
-                  icon: '📢', title: 'Format Daily Standup',
-                  body: '(1) Dikerjakan kemarin, (2) Rencana hari ini, (3) Ada hambatan? Untuk hari pertama, cukup bilang rencana hari ini saja.',
+                  title: 'Format daily standup',
+                  body: 'Biasanya tiga hal: apa yang dikerjakan kemarin, rencana hari ini, dan ada hambatan atau tidak. Karena ini hari pertama, cukup ceritakan rencanamu hari ini.',
                 }
               })
-              addMsg('sup_chat', { role: 'action', data: { label: 'Buka Academy, Mulai Training →', goTo: 'academy' } })
-              showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Orientasi hari pertama dari supervisor')
+              addMsg('sup_chat', { role: 'action', data: { label: 'Lihat training (opsional)', goTo: 'academy' } })
+              showNotif('sup_chat', pos?.supervisor.name || 'Supervisor', 'Orientasi hari pertama')
             }, 1500)
           }, 1200)
         }, 1200)
@@ -1223,7 +1307,7 @@ PT Vantara Nusantara`
             ctx: pos?.taskContext,
           }
         })
-        addMsg('sup_chat', { role: 'action', data: { label: 'Buka File Manager →', nextStep: 6, goTo: 'file_manager' } })
+        addMsg('sup_chat', { role: 'action', data: { label: 'Buka File Manager', nextStep: 6, goTo: 'file_manager' } })
 
         // Add file to file manager
         addMsg('file_manager', {
@@ -1249,7 +1333,7 @@ PT Vantara Nusantara`
               role: 'npc', npcId: 'sup',
               text: `Satu lagi. Kamu udah aku kasih akses read-only ke database penjualan internal, ada di sidebar namanya Database. Aku taruh beberapa latihan SQL kecil di situ, kerjain kalau sempat, kepake banget buat investigasi data.`
             })
-            addMsg('sup_chat', { role: 'action', data: { label: 'Buka Database Vantara →', goTo: 'database' } }, true)
+            addMsg('sup_chat', { role: 'action', data: { label: 'Buka Database', goTo: 'database' } }, true)
           }, 5000)
         }
       }, 800)
@@ -1262,7 +1346,7 @@ PT Vantara Nusantara`
       const pos = POSITIONS[state.position]
       setTimeout(() => {
         addMsg('jnr', { role: 'npc', npcId: 'jnr', text: `Psst ${state.firstName}, dari pengalaman aku, baca dulu semua data sebelum mulai. Kak ${pos?.supervisor.name.split(' ')[0]} lumayan strict soal detail hehe` })
-        showNotif('jnr', POSITIONS[state.position]?.junior.name || 'Junior', 'Ada pesan dari rekan tim')
+        showNotif('jnr', POSITIONS[state.position]?.junior.name || 'Junior', 'Kirim pesan untukmu')
       }, 3000)
 
       // Dilema gaya kerja: pilihan user tercatat (chosenTrait) dan dibacakan di
@@ -1309,8 +1393,15 @@ PT Vantara Nusantara`
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file)
+    setWorkspaceError('')
     // File baru = review lama tidak berlaku lagi — tanpa ini tombol submit tertahan
     setReviewResult(null)
+    if (!/\.xlsx$/i.test(file.name)) {
+      setUploadedFile(null)
+      setExtractedData('')
+      setWorkspaceError('Format file harus .xlsx. Di Excel: File, Save As, pilih Excel Workbook (.xlsx).')
+      return
+    }
     try {
       // exceljs menggantikan xlsx (CVE tanpa patch di npm); parsing tetap di browser,
       // terhadap file milik user sendiri. Konsekuensi: hanya .xlsx (bukan .xls lama).
@@ -1338,15 +1429,19 @@ PT Vantara Nusantara`
       setExtractedData(extracted)
     } catch (e) {
       console.error('Excel read error:', e)
-      setExtractedData(`File: ${file.name}\n[Tidak bisa membaca file, pastikan format .xlsx]`)
+      // Dulu teks error ini ikut dikirim ke supervisor AI dan dihitung revisi
+      setUploadedFile(null)
+      setExtractedData('')
+      setWorkspaceError('File ini tidak bisa dibaca. Coba buka di Excel lalu simpan ulang sebagai .xlsx.')
     }
   }
 
   const handleSubmitTask = async () => {
     if (!extractedData) {
-      alert('Upload file Excel hasil kerjamu dulu ya.')
+      setWorkspaceError('Upload file Excel hasil kerjamu dulu.')
       return
     }
+    setWorkspaceError('')
     // Task yang sudah APPROVED tidak bisa disubmit ulang (dobel coin/tasksDone) sampai
     // pindah ke task berikutnya — reviewResult di-reset saat handoff/advance hari.
     if (reviewResult?.isApproved) return
@@ -1387,13 +1482,13 @@ PT Vantara Nusantara`
           type: data.isApproved ? 'good' : 'neutral',
           label: data.isApproved ? 'TASK APPROVED' : 'REVISION NEEDED',
           text: data.isApproved
-            ? 'Hasil kerja kamu sudah memenuhi standar. Task ini selesai!'
-            : 'Ada hal yang perlu diperbaiki. Upload ulang file yang sudah direvisi.'
+            ? 'Sudah memenuhi standar tim. Task ini selesai.'
+            : 'Perbaiki poin dari supervisor, lalu upload ulang file revisinya di Workspace.'
         }
       })
 
       showNotif('sup_chat', pos?.supervisor.name || 'Supervisor',
-        data.isApproved ? 'Task kamu APPROVED!' : 'Task perlu direvisi')
+        data.isApproved ? 'Task kamu disetujui' : 'Task-mu perlu direvisi')
 
       // Stakes: supervisor makin dingin tiap revisi. Kegagalan tidak menghentikan
       // progress, tapi mengubah cerita — dan tercatat di penilaian + surat referensi.
@@ -1407,7 +1502,7 @@ PT Vantara Nusantara`
               role: 'npc', npcId: 'sup',
               text: `Saranku: buka training module di Academy dulu, 10-15 menit aja. Materinya persis soal bagian yang tadi bolong. Abis itu baru revisi.`
             }, viewRef.current === 'sup_chat')
-            addMsg('sup_chat', { role: 'action', data: { label: 'Buka Academy →', goTo: 'academy' } }, true)
+            addMsg('sup_chat', { role: 'action', data: { label: 'Buka Academy', goTo: 'academy' } }, true)
           }, 3000)
         }
         if (revCount >= 2) {
@@ -1468,7 +1563,7 @@ PT Vantara Nusantara`
       }
     } catch (e) {
       console.error('Review error:', e)
-      alert('Gagal submit, coba lagi ya.')
+      setWorkspaceError('Supervisor belum menerima filemu karena koneksi terputus. File masih ada, tekan kirim sekali lagi.')
     } finally {
       setIsSubmittingTask(false)
     }
@@ -1485,7 +1580,7 @@ PT Vantara Nusantara`
           <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce"></div>
           <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce"></div>
         </div>
-        <p style={{ color:'#888780', fontSize:13 }}>Memuat progress kamu...</p>
+        <p style={{ color:'#6B6A64', fontSize:13 }}>Memuat progress kamu...</p>
       </div>
     </div>
   )
@@ -1506,26 +1601,46 @@ PT Vantara Nusantara`
     )
   }
 
-  const rooms = [
-    { id: 'inbox',        icon: '📧', label: 'Inbox',        locked: false },
-    { id: 'hr_office',   icon: '🤝', label: 'HR Office',    locked: false },
-    { id: 'slack',       icon: '💬', label: 'Slack',        locked: state.phaseUnlocked < 1 },
-    { id: 'meeting',     icon: '🪑', label: 'Meeting',      locked: state.phaseUnlocked < 1 },
-    { id: 'sup_chat',    icon: '👤', label: 'Supervisor',   locked: state.phaseUnlocked < 1 },
-    { id: 'workspace',   icon: '🖥️', label: 'Workspace',   locked: state.phaseUnlocked < 1 },
-    // Academy juga terbuka saat interview DITOLAK (belum step 4) — modul "Cara
-    // Menjawab Interview" adalah jalan kembalinya
-    { id: 'academy',     icon: '🎓', label: 'Academy',      locked: state.step < 4 && !(state.chatHistory['hr_office'] || []).some(m => m.role === 'action' && m.data?.type === 'interview_rejected') },
-    { id: 'file_manager',icon: '📁', label: 'File Manager', locked: state.step < 5 },
+  const channelName = channelOf(pos)
+  const interviewRejected = (state.chatHistory['hr_office'] || []).some(m => m.role === 'action' && m.data?.type === 'interview_rejected')
+  // Supervisor, manager, dan rekan sudah ada di daftar Tim, jadi tidak diulang di sini.
+  // Ruang "Meeting" dihapus: tidak pernah berisi apa pun (temuan QA Okt 2026).
+  const rooms: { id: string; Icon: typeof Mail; label: string; locked: boolean }[] = [
+    { id: 'inbox', Icon: Mail, label: 'Inbox', locked: false },
+    { id: 'hr_office', Icon: Handshake, label: 'HR Office', locked: false },
+    { id: 'slack', Icon: MessagesSquare, label: `#${channelName}`, locked: state.phaseUnlocked < 1 },
+    { id: 'file_manager', Icon: Folder, label: 'File Manager', locked: state.step < 5 },
+    { id: 'workspace', Icon: Monitor, label: 'Workspace', locked: state.phaseUnlocked < 1 },
     // Database Vantara: SQL editor in-story, khusus Data Analyst
     ...(state.position === 'data_analyst'
-      ? [{ id: 'database', icon: '🗄️', label: 'Database', locked: state.step < 5 }]
+      ? [{ id: 'database', Icon: Database, label: 'Database', locked: state.step < 5 }]
       : []),
-    { id: 'reference',   icon: '📜', label: 'Surat Referensi', locked: state.phaseUnlocked < 1 },
-    { id: 'pantry',      icon: '☕', label: 'Pantry',       locked: state.phaseUnlocked < 1 },
+    // Academy juga terbuka saat interview DITOLAK — modul "Cara Menjawab Interview" jalan kembalinya
+    { id: 'academy', Icon: GraduationCap, label: 'Academy', locked: state.step < 4 && !interviewRejected },
+    { id: 'reference', Icon: ScrollText, label: 'Surat Referensi', locked: state.phaseUnlocked < 1 },
+    { id: 'pantry', Icon: Coffee, label: 'Pantry', locked: state.phaseUnlocked < 1 },
   ]
 
   const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack', 'jnr'].includes(view)
+  const offerSalary = getOfferSalary(state.chatHistory)
+
+  // Task yang sedang terbuka. Task-1 hari-1 dari POSITIONS; sesudahnya dari pipeline
+  // seasonTasks (cursor = tasksDone). Dulu Workspace menutup upload di step 10, padahal
+  // task ke-2 hari yang sama baru diantar di step 10 → tidak bisa dikumpulkan.
+  const activeSeasonTask = state.step >= 10 && state.tasksDone >= 1 ? seasonTasks[state.tasksDone - 1] : null
+  const taskOpen = state.step >= 5 && (
+    state.step < 10 || (!!activeSeasonTask && !activeSeasonTask.locked && activeSeasonTask.day <= state.simDay)
+  )
+  const activeTaskTitle = state.step >= 10 && activeSeasonTask && !activeSeasonTask.locked
+    ? activeSeasonTask.title : (pos?.taskTitle || '')
+
+  const inputPlaceholder =
+    view === 'hr_office' ? 'Balas Sinta' :
+    view === 'slack' ? 'Sapa tim, misalnya perkenalkan diri singkat' :
+    view === 'sup_chat' ? `Tulis ke ${callName(pos?.supervisor.name)}` :
+    view === 'mgr_chat' ? `Tulis ke ${callName(pos?.manager.name)}` :
+    view === 'jnr' ? `Tulis ke ${callName(pos?.junior.name)}` :
+    view === 'pantry' ? 'Ngobrol santai' : 'Tulis pesan'
 
   return (
     <div
@@ -1533,64 +1648,64 @@ PT Vantara Nusantara`
       style={viewportH ? { height: `${viewportH}px` } : undefined}
     >
 
-      {/* Notification Banner */}
+      {/* Notifikasi: klik = pindah ke ruangan asal pesan */}
       {notification && (
-        <div
-          className="bg-[#0F6E56] text-white text-sm px-4 py-2.5 flex items-center justify-between animate-fadeUp"
+        <button
+          type="button"
+          className="w-full bg-[#0F6E56] text-white text-sm px-4 py-2.5 flex items-center justify-between gap-3 animate-fadeUp text-left"
           style={{ cursor: 'pointer' }}
           onClick={() => { setView(notification.room); setNotification(null) }}
         >
-          <span>{notification.text}</span>
-          <span className="text-white/70 text-xs ml-4">Klik untuk buka →</span>
-        </div>
+          <span className="min-w-0 truncate">
+            <span className="font-medium">{notification.roomLabel}</span>
+            <span className="text-white/85"> · {notification.text}</span>
+          </span>
+          <span className="text-white/85 text-[13px] flex-shrink-0 underline underline-offset-2">Buka</span>
+        </button>
       )}
 
       {/* Topbar */}
-      <div className="flex items-center justify-between px-3 sm:px-4 h-[52px] border-b border-[#E5E3DC] bg-white flex-shrink-0 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {/* Hamburger, mobile only */}
+      <div className="flex items-center justify-between px-2 sm:px-4 h-[52px] border-b border-[#E5E3DC] bg-white flex-shrink-0 gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
           <button
             onClick={() => setSidebarOpen(o => !o)}
-            aria-label="Menu"
+            aria-label="Buka menu"
             style={{ cursor: 'pointer' }}
-            className="md:hidden flex flex-col justify-center gap-[3px] w-7 h-7 flex-shrink-0"
+            className="md:hidden w-9 h-9 flex items-center justify-center rounded-md text-[#1A1A18] hover:bg-[#F1EFE8] flex-shrink-0"
           >
-            <span className="block h-[2px] w-5 bg-[#0F6E56] rounded" />
-            <span className="block h-[2px] w-5 bg-[#0F6E56] rounded" />
-            <span className="block h-[2px] w-5 bg-[#0F6E56] rounded" />
+            <Menu size={20} aria-hidden />
           </button>
-          <div className="w-2 h-2 rounded-full bg-[#0F6E56] flex-shrink-0"></div>
-          <span className="font-serif font-bold text-[#0F6E56] truncate">Kantoran</span>
+          <span className="text-[15px] font-semibold text-[#0F6E56] flex-shrink-0">Kantoran</span>
+          <span className="hidden sm:inline text-[13px] text-[#6B6A64] truncate">
+            · {state.bgRole}{state.step >= 3 ? `, hari ke-${state.simDay}` : ''}
+          </span>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-full px-3 py-1 text-xs font-medium text-[#0F6E56]">
-          <span>📍</span>
-          <span>{rooms.find(r => r.id === view)?.label || 'Kantoran'}</span>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <div data-tour="coins" className="flex items-center gap-1.5 bg-[#FAEEDA] border border-[#854F0B]/15 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#854F0B]">
-            🪙 {state.coins}
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+          <div data-tour="coins" title="Coin" className="flex items-center gap-1.5 text-[13px] font-medium text-[#854F0B] bg-[#FAEEDA]/70 px-2 py-1 rounded-md mr-1 tabular">
+            <Coins size={14} aria-hidden />{state.coins}<span className="sr-only"> coin</span>
           </div>
           {onExit && (
-            <button onClick={handleExit} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Kembali ke daftar lowongan, progress tersimpan">
-              🏢<span className="hidden sm:inline"> Lowongan</span>
+            <button onClick={handleExit} style={{ cursor: 'pointer' }} title="Kembali ke daftar lowongan. Progress tersimpan." aria-label="Lowongan"
+              className="flex items-center gap-1.5 text-[13px] text-[#4A4A45] hover:text-[#1A1A18] hover:bg-[#F1EFE8] px-2 py-1.5 rounded-md">
+              <Briefcase size={15} aria-hidden /><span className="hidden lg:inline">Lowongan</span>
             </button>
           )}
-          <button onClick={handleRestart} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" title="Ulangi posisi ini dari awal">
-            🔄<span className="hidden sm:inline"> Restart</span>
+          <button onClick={handleRestart} style={{ cursor: 'pointer' }} title="Ulangi posisi ini dari awal" aria-label="Ulangi posisi ini"
+            className="flex items-center gap-1.5 text-[13px] text-[#4A4A45] hover:text-[#1A1A18] hover:bg-[#F1EFE8] px-2 py-1.5 rounded-md">
+            <RotateCcw size={15} aria-hidden /><span className="hidden lg:inline">Ulangi</span>
           </button>
-          <button onClick={handleLogout} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111] transition-colors">
-            Keluar
+          <button onClick={handleLogout} style={{ cursor: 'pointer' }} title="Keluar akun" aria-label="Keluar akun"
+            className="flex items-center gap-1.5 text-[13px] text-[#4A4A45] hover:text-[#1A1A18] hover:bg-[#F1EFE8] px-2 py-1.5 rounded-md">
+            <LogOut size={15} aria-hidden /><span className="hidden lg:inline">Keluar</span>
           </button>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="flex gap-0.5 h-1 bg-[#E5E3DC] flex-shrink-0">
-        {Array.from({ length: 12 }, (_, i) => (
-          <div key={i} className={`flex-1 transition-all duration-300 ${i < state.step ? 'bg-[#1D9E75]' : i === state.step ? 'bg-[#0F6E56]' : 'bg-[#E5E3DC]'}`} />
-        ))}
+      {/* Progres hari pertama */}
+      <div className="h-[3px] bg-[#EEECE6] flex-shrink-0" role="progressbar" aria-label="Progres hari pertama"
+        aria-valuemin={0} aria-valuemax={10} aria-valuenow={Math.min(state.step, 10)}>
+        <div className="h-full bg-[#0F6E56] transition-all duration-500" style={{ width: `${Math.max(3, Math.min(state.step, 10) * 10)}%` }} />
       </div>
 
       <div className="flex flex-1 overflow-hidden min-h-0 relative">
@@ -1611,8 +1726,8 @@ PT Vantara Nusantara`
           ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
           <div data-tour="team" className="p-3 pb-2 border-b border-[#E5E3DC] flex-shrink-0">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780]">Tim Kamu</p>
-              <button onClick={() => setSidebarOpen(false)} className="md:hidden text-[#888780] text-sm" aria-label="Tutup menu" style={{ cursor: 'pointer' }}>✕</button>
+              <p className="text-[12px] font-medium text-[#6B6A64] px-2">Tim</p>
+              <button onClick={() => setSidebarOpen(false)} className="md:hidden w-8 h-8 -mr-1 flex items-center justify-center rounded-md text-[#6B6A64] hover:bg-[#F1EFE8]" aria-label="Tutup menu" style={{ cursor: 'pointer' }}><X size={16} aria-hidden /></button>
             </div>
 
             {/* Sinta */}
@@ -1665,67 +1780,66 @@ PT Vantara Nusantara`
 
           {/* Rooms */}
           <div className="flex-1 overflow-y-auto p-3 pt-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2">Ruangan</p>
-            <div data-tour="rooms" className="flex flex-col gap-0.5">
-              {rooms.map(room => (
-                <button
-                  key={room.id}
-                  onClick={() => !room.locked && setView(room.id)}
-                  style={{ cursor: room.locked ? 'not-allowed' : 'pointer' }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-all ${
-                    room.locked ? 'opacity-40 text-[#888780]' :
-                    view === room.id ? 'bg-[#E1F5EE] text-[#0F6E56] font-medium' :
-                    'text-[#888780] hover:bg-[#FAFAF7] hover:text-[#111111]'
-                  }`}
-                >
-                  <span className="text-sm">{room.icon}</span>
-                  <span className="flex-1 truncate">{room.label}</span>
-                  {room.locked && <span className="text-[10px]">🔒</span>}
-                  {!room.locked && (state.unreadCounts[room.id] || 0) > 0 && (
-                    <span className="bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                      {state.unreadCounts[room.id]}
-                    </span>
-                  )}
-                </button>
-              ))}
+            <p className="text-[12px] font-medium text-[#6B6A64] mb-1.5 px-2">Ruangan</p>
+            <div data-tour="rooms" className="flex flex-col gap-px">
+              {rooms.map(({ id, Icon, label, locked }) => {
+                const unread = state.unreadCounts[id] || 0
+                const active = view === id
+                return (
+                  <button
+                    key={id}
+                    onClick={() => !locked && setView(id)}
+                    aria-disabled={locked}
+                    aria-current={active ? 'page' : undefined}
+                    title={locked ? 'Belum terbuka' : undefined}
+                    style={{ cursor: locked ? 'not-allowed' : 'pointer' }}
+                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-left text-[13px] transition-colors ${
+                      locked ? 'text-[#A3A19A]' : active ? 'bg-[#E1F5EE] text-[#0F6E56] font-medium' : 'text-[#3A3A36] hover:bg-[#F4F3EF]'
+                    }`}
+                  >
+                    <Icon size={15} aria-hidden className="flex-shrink-0" />
+                    <span className="flex-1 truncate">{label}</span>
+                    {locked && <Lock size={12} aria-hidden className="flex-shrink-0" />}
+                    {!locked && unread > 0 && (
+                      <span className="bg-[#C2410C] text-white text-[11px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-medium tabular">
+                        {unread}<span className="sr-only"> pesan belum dibaca</span>
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
 
-            {/* Stats */}
-            {/* Profile tab button */}
             <div className="mt-3 pt-3 border-t border-[#E5E3DC]">
               <button
                 onClick={() => setShowProfile(p => !p)}
                 style={{ cursor: 'pointer' }}
-                className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all text-left mb-2 ${
-                  showProfile ? 'bg-[#E1F5EE] border border-[#0F6E56]/20' : 'hover:bg-[#FAFAF7]'
-                }`}
+                className={`w-full flex items-center gap-2.5 p-2 rounded-md transition-colors text-left ${showProfile ? 'bg-[#E1F5EE]' : 'hover:bg-[#F4F3EF]'}`}
               >
-                <div className="w-8 h-8 rounded-full av-teal flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+                <div className="w-8 h-8 rounded-full av-teal flex items-center justify-center text-[12px] font-semibold flex-shrink-0">
                   {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-[#111111] truncate">{profile?.full_name || 'Profil saya'}</p>
-                  <p className="text-[10px] text-[#888780]">Lihat CV saya</p>
+                  <p className="text-[13px] font-medium text-[#1A1A18] truncate">{profile?.full_name || 'Profil saya'}</p>
+                  <p className="text-[12px] text-[#6B6A64]">Profil dan CV</p>
                 </div>
               </button>
             </div>
 
-            <div className="border-t border-[#E5E3DC]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2 mt-3">Statistik</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { n: state.tasksDone, l: 'Task done' },
-                  { n: state.step >= 4 ? state.step - 3 : '-', l: 'Hari kerja' },
-                  { n: state.bgRole || '-', l: 'Posisi', small: true },
-                  { n: state.coins, l: 'Coin' },
-                ].map((s, i) => (
-                  <div key={i} className="bg-[#FAFAF7] rounded-lg p-2 text-center">
-                    <div className={`font-serif font-bold text-[#0F6E56] ${s.small ? 'text-xs' : 'text-lg'} leading-tight`}>{s.n}</div>
-                    <div className="text-[9px] text-[#888780] mt-0.5">{s.l}</div>
-                  </div>
-                ))}
+            <dl className="mt-3 pt-3 border-t border-[#E5E3DC] px-2 grid grid-cols-2 gap-x-3 gap-y-2.5 text-[13px]">
+              <div>
+                <dt className="text-[12px] text-[#6B6A64]">Hari ke</dt>
+                <dd className="font-medium text-[#1A1A18] tabular">{state.step >= 3 ? state.simDay : '-'}</dd>
               </div>
-            </div>
+              <div>
+                <dt className="text-[12px] text-[#6B6A64]">Task selesai</dt>
+                <dd className="font-medium text-[#1A1A18] tabular">{state.tasksDone}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-[12px] text-[#6B6A64]">Gaji hasil nego</dt>
+                <dd className="font-medium text-[#1A1A18] tabular">{offerSalary ? `Rp ${offerSalary.toLocaleString('id-ID')}` : 'Belum ada'}</dd>
+              </div>
+            </dl>
           </div>
         </div>
 
@@ -1737,7 +1851,7 @@ PT Vantara Nusantara`
               fixed md:static inset-0 md:inset-auto z-50 md:z-auto w-full md:w-[280px] flex-shrink-0">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
               <p className="text-sm font-semibold text-[#111111]">Profil Saya</p>
-              <button onClick={() => setShowProfile(false)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111]">✕ Tutup</button>
+              <button onClick={() => setShowProfile(false)} style={{ cursor: 'pointer' }} className="text-[13px] text-[#4A4A45] hover:text-[#1A1A18]">Tutup</button>
             </div>
             <div className="flex-1 overflow-hidden">
               <ProfileTab
@@ -1851,10 +1965,13 @@ PT Vantara Nusantara`
                 <WorkspaceView
                   state={state}
                   pos={pos}
+                  taskOpen={taskOpen}
+                  taskTitle={activeTaskTitle}
                   uploadedFile={uploadedFile}
                   extractedData={extractedData}
                   reviewResult={reviewResult}
                   isSubmitting={isSubmittingTask}
+                  error={workspaceError}
                   onFileUpload={handleFileUpload}
                   onSubmit={handleSubmitTask}
                   onClearUpload={() => {
@@ -1864,6 +1981,7 @@ PT Vantara Nusantara`
                     setUploadedFile(null)
                     setExtractedData('')
                     setReviewResult(null)
+                    setWorkspaceError('')
                   }}
                 />
               )}
@@ -1884,16 +2002,16 @@ PT Vantara Nusantara`
               ))}
 
               {/* File Manager: file task mendatang, terlihat tapi terkunci */}
-              {view === 'file_manager' && state.step >= 5 && (pos?.upcomingTasks.length || 0) > 0 && (
-                <div className="bg-white border border-[#E5E3DC] rounded-xl p-3 opacity-60 select-none" style={{ cursor: 'not-allowed' }}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Masuk minggu ini</p>
+              {view === 'file_manager' && state.step >= 5 && state.simDay === 1 && (pos?.upcomingTasks.length || 0) > 0 && (
+                <div className="max-w-[560px] border border-dashed border-[#D8D6CE] rounded-lg p-3.5 select-none">
+                  <p className="text-[13px] font-medium text-[#4A4A45] mb-1.5">Masuk minggu ini</p>
                   {pos!.upcomingTasks.map(t => (
-                    <div key={t.day} className="flex items-center gap-2 py-1.5 border-b border-[#F1EFE8] last:border-0">
-                      <span className="text-sm">🔒</span>
-                      <p className="text-xs font-medium text-[#444441] truncate">task_hari{t.day}.xlsx, {t.title}</p>
+                    <div key={t.day} className="flex items-center gap-2 py-1.5 text-[#6B6A64]">
+                      <Lock size={13} aria-hidden className="flex-shrink-0" />
+                      <p className="text-[13px] truncate"><span className="font-mono text-[12px]">task_hari{t.day}.xlsx</span> · {t.title}</p>
                     </div>
                   ))}
-                  <p className="text-[10px] text-[#888780] mt-2">File terkunci, terbuka di Kantoran versi penuh.</p>
+                  <p className="text-[12px] text-[#6B6A64] mt-1.5">Terbuka setelah hari kedua dirilis.</p>
                 </div>
               )}
 
@@ -1905,7 +2023,7 @@ PT Vantara Nusantara`
               {/* Typing indicator */}
               {loading && canChat && (
                 <div className="flex gap-2 animate-messageIn">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${view === 'hr_office' ? 'av-teal' : view === 'sup_chat' ? 'av-blue' : view === 'mgr_chat' ? 'av-purple' : 'av-amber'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${view === 'hr_office' ? 'av-teal' : view === 'sup_chat' ? 'av-blue' : view === 'mgr_chat' ? 'av-purple' : 'av-amber'}`}>
                     {view === 'hr_office' ? 'SM' : NPC_INITIALS[state.position]?.[view === 'sup_chat' ? 'sup' : view === 'mgr_chat' ? 'mgr' : 'jnr'] || '?'}
                   </div>
                   <div className="bg-white border border-[#E5E3DC] rounded-[0_8px_8px_8px] px-3 py-2.5 flex gap-1 items-center">
@@ -1920,7 +2038,7 @@ PT Vantara Nusantara`
 
           {/* Input */}
           {canChat && (
-            <div className="border-t border-[#E5E3DC] bg-white p-3 flex-shrink-0">
+            <div className="border-t border-[#E5E3DC] bg-white px-3 pt-3 pb-3 flex-shrink-0">
               <div className="flex gap-2 items-end">
                 <textarea
                   ref={inputRef}
@@ -1928,28 +2046,30 @@ PT Vantara Nusantara`
                   onChange={e => {
                     setInput(e.target.value)
                     e.target.style.height = 'auto'
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                    e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'
                   }}
                   onKeyDown={handleKeyDown}
                   disabled={loading}
-                  placeholder="Ketik pesan..."
+                  placeholder={inputPlaceholder}
+                  aria-label={inputPlaceholder}
                   rows={1}
                   style={{ cursor: 'text' }}
                   autoComplete="off"
                   autoFocus
-                  className="flex-1 resize-none px-3 py-2.5 border border-[#E5E3DC] rounded-lg text-sm text-[#111111] bg-[#FAFAF7] outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10 disabled:opacity-40 transition-all min-h-[42px] max-h-[120px]"
+                  className="flex-1 resize-none px-3 py-2.5 border border-[#D8D6CE] rounded-lg text-sm text-[#1A1A18] bg-white outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10 disabled:bg-[#F7F6F2] transition-colors min-h-[42px] max-h-[140px]"
                 />
                 <button
                   onClick={() => { handleSend(); focusInput() }}
                   disabled={loading || !input.trim()}
+                  aria-label="Kirim"
                   style={{ cursor: loading || !input.trim() ? 'not-allowed' : 'pointer' }}
-                  className="w-10 h-10 rounded-lg bg-[#0F6E56] text-white flex items-center justify-center hover:bg-[#085041] disabled:opacity-40 transition-all flex-shrink-0"
+                  className="w-[42px] h-[42px] rounded-lg bg-[#0F6E56] text-white flex items-center justify-center hover:bg-[#085041] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
-                  ➤
+                  <SendHorizontal size={18} aria-hidden />
                 </button>
               </div>
-              <p className="text-xs text-[#888780] mt-1.5 ml-1">
-                {view === 'pantry' ? 'Pantry, tempat gosip dan ngobrol santai' : 'Ketik bebas, rekan kerjamu akan merespons'}
+              <p className="hidden md:block text-[12px] text-[#6B6A64] mt-1.5 ml-1">
+                {loading ? 'Sedang mengetik balasan...' : 'Enter untuk kirim, Shift + Enter untuk baris baru'}
               </p>
             </div>
           )}
@@ -1974,25 +2094,27 @@ function SidebarNPC({ initials, avClass, name, role, statusDot, active, locked, 
   return (
     <button
       onClick={onClick}
+      aria-disabled={locked}
+      title={locked ? 'Terbuka setelah kamu tanda tangan kontrak' : undefined}
       style={{ cursor: locked ? 'not-allowed' : 'pointer' }}
-      className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all text-left mb-1 ${
-        locked ? 'opacity-40' : active ? 'bg-[#E1F5EE] border border-[#0F6E56]/20' : 'hover:bg-[#FAFAF7]'
+      className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors text-left ${
+        locked ? 'opacity-50' : active ? 'bg-[#E1F5EE]' : 'hover:bg-[#F4F3EF]'
       }`}
     >
       <div className="relative flex-shrink-0">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold ${avClass}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold ${avClass}`}>
           {initials}
         </div>
-        {!locked && <div className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${statusDot} border-2 border-white`}></div>}
+        {!locked && <div className={`absolute -bottom-px -right-px w-2.5 h-2.5 rounded-full ${statusDot} border-2 border-white`} />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-[#111111] truncate">{name}</p>
-        <p className="text-[10px] text-[#888780] truncate">{role}</p>
+        <p className="text-[13px] font-medium text-[#1A1A18] truncate">{name}</p>
+        <p className="text-[12px] text-[#6B6A64] truncate">{role}</p>
       </div>
-      {locked && <span className="text-[10px] text-[#888780]">🔒</span>}
+      {locked && <Lock size={12} aria-hidden className="text-[#A3A19A] flex-shrink-0" />}
       {!locked && unread > 0 && (
-        <span className="bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold flex-shrink-0">
-          {unread}
+        <span className="bg-[#C2410C] text-white text-[11px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-medium flex-shrink-0 tabular">
+          {unread}<span className="sr-only"> pesan belum dibaca</span>
         </span>
       )}
     </button>
@@ -2000,67 +2122,75 @@ function SidebarNPC({ initials, avClass, name, role, statusDot, active, locked, 
 }
 
 function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state: SimState; pos?: typeof POSITIONS[string]; onOfferingClick?: () => void }) {
-  const headers: Record<string, { initials: string; avClass: string; name: string; status: string; tag: string; tagBg: string }> = {
-    inbox:       { initials: '📧', avClass: 'av-teal', name: 'Inbox', status: 'Email masuk', tag: '', tagBg: '' },
-    hr_office:   { initials: 'SM', avClass: 'av-teal', name: 'Sinta Maharani', status: '🟢 Online · HR Business Partner', tag: 'HR', tagBg: 'bg-[#E1F5EE] text-[#0F6E56]' },
-    slack:       { initials: '💬', avClass: 'av-teal', name: `#${pos?.dept.toLowerCase().replace(/[^a-z]/g, '-') || 'general'}`, status: 'Group channel tim', tag: 'Slack', tagBg: 'bg-[#E1F5EE] text-[#0F6E56]' },
-    meeting:     { initials: '🪑', avClass: 'av-teal', name: 'Meeting Room', status: 'Daily standup & rapat tim', tag: '', tagBg: '' },
-    workspace:   { initials: '🖥️', avClass: 'av-teal', name: 'Workspace', status: 'Task & submit hasil kerja', tag: '', tagBg: '' },
-    academy:     { initials: '🎓', avClass: 'av-teal', name: 'Vantara Academy', status: 'Training module dari supervisormu', tag: '', tagBg: '' },
-    file_manager:{ initials: '📁', avClass: 'av-amber', name: 'File Manager', status: 'File task & dokumen kerja', tag: '', tagBg: '' },
-    reference:   { initials: '📜', avClass: 'av-teal', name: 'Surat Referensi Kerja', status: 'Aset yang sedang kamu bangun di Vantara', tag: '', tagBg: '' },
-    database:    { initials: '🗄️', avClass: 'av-blue', name: 'Database Vantara', status: 'Akses read-only · SQL editor', tag: '', tagBg: '' },
-    pantry:      { initials: '☕', avClass: 'av-amber', name: 'Pantry', status: 'Tempat gosip & ngobrol santai', tag: 'Pantry', tagBg: 'bg-[#FAEEDA] text-[#854F0B]' },
-    sup_chat:    { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu`, tag: 'Supervisor', tagBg: 'bg-[#E8F0FC] text-[#1A4A8A]' },
-    mgr_chat:    { initials: NPC_INITIALS[state.position]?.mgr || '??', avClass: pos?.manager.avClass || 'av-purple', name: pos?.manager.name || 'Manager', status: pos?.manager.status || '', tag: 'Manager', tagBg: 'bg-[#F0EAF9] text-[#5B2D8E]' },
-    jnr:         { initials: NPC_INITIALS[state.position]?.jnr || '??', avClass: pos?.junior.avClass || 'av-amber', name: pos?.junior.name || 'Junior', status: `${pos?.junior.status || ''} · Teman tim`, tag: 'Junior', tagBg: 'bg-[#FAEEDA] text-[#854F0B]' },
+  const npc: Record<string, { initials: string; avClass: string; name: string; status: string }> = {
+    hr_office: {
+      initials: 'SM', avClass: 'av-teal', name: 'Sinta Maharani',
+      status: state.step < 2 && !state.interviewDone ? `Interview ${pos?.title || ''} · sekitar 15 menit` : 'HR Business Partner',
+    },
+    sup_chat: { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu` },
+    mgr_chat: { initials: NPC_INITIALS[state.position]?.mgr || '??', avClass: pos?.manager.avClass || 'av-purple', name: pos?.manager.name || 'Manager', status: `${pos?.manager.status || ''} · ${pos?.manager.role || ''}` },
+    jnr: { initials: NPC_INITIALS[state.position]?.jnr || '??', avClass: pos?.junior.avClass || 'av-amber', name: pos?.junior.name || 'Junior', status: `${pos?.junior.status || ''} · Rekan satu tim` },
   }
-  const h = headers[view] || headers['inbox']
+  const rooms: Record<string, { Icon: typeof Mail; name: string; status: string }> = {
+    inbox: { Icon: Mail, name: 'Inbox', status: 'Email dari HR dan kantor' },
+    slack: { Icon: MessagesSquare, name: `#${channelOf(pos)}`, status: 'Channel tim' },
+    workspace: { Icon: Monitor, name: 'Workspace', status: 'Kumpulkan hasil kerja untuk direview supervisor' },
+    academy: { Icon: GraduationCap, name: 'Vantara Academy', status: 'Training dari supervisormu, tidak wajib' },
+    file_manager: { Icon: Folder, name: 'File Manager', status: 'File task dan dokumen kerja' },
+    reference: { Icon: ScrollText, name: 'Surat Referensi', status: 'Terisi seiring kerjamu di Vantara' },
+    database: { Icon: Database, name: 'Database Vantara', status: 'Akses baca saja · SQL editor' },
+    pantry: { Icon: Coffee, name: 'Pantry', status: `Ngobrol santai dengan ${callName(pos?.junior.name)}` },
+  }
+
+  // Jalan pintas ke offering HANYA kalau interview sudah panjang tapi Sinta belum
+  // menutup (model kadang lupa token). Dulu tombol ini tampil sejak pesan pertama dan
+  // bisa dipakai melompati interview cukup dengan menyebut kata "gaji".
+  const hrMsgs = state.chatHistory['hr_office'] || []
+  const answered = hrMsgs.filter(m => m.role === 'user').length
+  const rejected = hrMsgs.some(m => m.role === 'action' && m.data?.type === 'interview_rejected')
+  const showSkip = view === 'hr_office' && !state.interviewDone && state.step < 2 && !rejected && answered >= 10 && !!onOfferingClick
+
+  const h = npc[view]
+  const r = rooms[view] || rooms.inbox
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#E5E3DC] bg-white flex-shrink-0">
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${h.avClass}`}>
-        {h.initials}
-      </div>
+    <div className="flex items-center gap-3 px-4 h-[56px] border-b border-[#E5E3DC] bg-white flex-shrink-0">
+      {h ? (
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0 ${h.avClass}`}>{h.initials}</div>
+      ) : (
+        <div className="w-9 h-9 rounded-lg bg-[#F1EFE8] text-[#4A4A45] flex items-center justify-center flex-shrink-0"><r.Icon size={17} aria-hidden /></div>
+      )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#111111] truncate">{h.name}</p>
-        {h.status && <p className="text-xs text-[#888780] truncate">{h.status}</p>}
+        <p className="text-sm font-semibold text-[#1A1A18] truncate">{h ? h.name : r.name}</p>
+        <p className="text-[12px] text-[#6B6A64] truncate">{h ? h.status : r.status}</p>
       </div>
-      {view === 'hr_office' && !state.interviewDone && onOfferingClick && (
+      {showSkip && (
         <button
           onClick={onOfferingClick}
           style={{ cursor: 'pointer' }}
-          className="text-xs font-medium text-[#0F6E56] border border-[#0F6E56]/30 bg-[#E1F5EE] hover:bg-[#0F6E56] hover:text-white px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
+          title="Pakai kalau gaji sudah dibahas tapi Sinta belum menutup interview"
+          className="text-[13px] font-medium text-[#0F6E56] border border-[#0F6E56]/40 hover:bg-[#E1F5EE] px-3 py-1.5 rounded-md transition-colors flex-shrink-0"
         >
-          Interview selesai
+          Lanjut ke offering
         </button>
       )}
-      {h.tag && view !== 'hr_office' && <span className={`text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0 ${h.tagBg}`}>{h.tag}</span>}
     </div>
   )
 }
 
 function EmptyRoom({ view, state }: { view: string; state: SimState }) {
   const hints: Record<string, string> = {
-    inbox: 'Email dari Sinta akan masuk di sini setelah kamu mendaftar.',
-    hr_office: 'Mulai percakapan dengan Sinta untuk sesi interview.',
-    pantry: 'Datang ke pantry dan mulai ngobrol, bisa gosip soal kantor juga!',
-    slack: 'Group channel tim akan aktif setelah kamu diterima.',
-    meeting: 'Meeting room akan digunakan untuk standup harian.',
-    sup_chat: 'Chat dengan supervisormu akan dimulai setelah onboarding.',
-    file_manager: 'File task Excel akan tersedia di sini setelah dapat task.',
-    workspace: 'Upload hasil kerja Excel kamu di sini.',
+    inbox: 'Belum ada email.',
+    hr_office: 'Sinta akan menyapamu di sini.',
+    pantry: 'Belum ada obrolan. Mampir dan sapa rekan timmu.',
+    slack: 'Channel tim aktif setelah kamu tanda tangan kontrak.',
+    sup_chat: state.step >= 3 ? 'Supervisormu akan mengirim pesan sebentar lagi.' : 'Terbuka setelah kamu tanda tangan kontrak.',
+    mgr_chat: 'Manager jarang chat duluan. Tidak apa-apa, itu normal.',
+    jnr: 'Belum ada obrolan.',
+    file_manager: 'File task muncul di sini setelah supervisor memberi task.',
   }
   return (
     <div className="flex-1 flex items-center justify-center py-16">
-      <div className="text-center">
-        <div className="text-3xl mb-3">
-          {view === 'inbox' ? '📧' : view === 'pantry' ? '☕' : view === 'file_manager' ? '📁' : '💬'}
-        </div>
-        <p className="text-sm text-[#888780] max-w-xs">{hints[view] || 'Belum ada percakapan.'}</p>
-        {view === 'hr_office' && state.chatHistory['hr_office']?.length === 0 && (
-          <p className="text-xs text-[#0F6E56] mt-2 font-medium">Ketik pesan untuk memulai interview →</p>
-        )}
-      </div>
+      <p className="text-sm text-[#6B6A64] max-w-xs text-center">{hints[view] || 'Belum ada percakapan.'}</p>
     </div>
   )
 }
@@ -2106,7 +2236,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
           style={{ cursor: retryDisabled ? 'default' : 'pointer' }}
           className="text-xs font-semibold text-[#0F6E56] border border-[#0F6E56]/30 rounded-full px-3 py-1 hover:bg-[#E1F5EE] disabled:opacity-50"
         >
-          ↻ Kirim ulang
+          Kirim ulang
         </button>
       </div>
     </div>
@@ -2122,11 +2252,11 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
 
   if (msg.role === 'npc') return (
     <div className="flex gap-2 animate-messageIn">
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 mt-0.5 ${getNPCAvClass(msg.npcId)}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 mt-0.5 ${getNPCAvClass(msg.npcId)}`}>
         {getNPCInitials(msg.npcId)}
       </div>
       <div className="max-w-[80%]">
-        <p className="text-[10px] font-semibold text-[#888780] mb-1">{getNPCName(msg.npcId)}</p>
+        <p className="text-[11px] font-semibold text-[#6B6A64] mb-1">{getNPCName(msg.npcId)}</p>
         <div className="bg-white border border-[#E5E3DC] rounded-[0_8px_8px_8px] px-3 py-2.5 text-sm leading-relaxed text-[#111111]">
           {msg.text}
         </div>
@@ -2136,7 +2266,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
 
   if (msg.role === 'system') return (
     <div className="flex justify-center animate-messageIn">
-      <span className="bg-[#F1EFE8] rounded-full px-3 py-1 text-xs text-[#888780]">{msg.text}</span>
+      <span className="bg-[#F1EFE8] rounded-full px-3 py-1 text-xs text-[#6B6A64]">{msg.text}</span>
     </div>
   )
 
@@ -2157,7 +2287,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
               chosen === i
                 ? 'border-[#0F6E56] bg-[#E1F5EE] text-[#0F6E56] font-medium'
                 : chosen !== undefined
-                  ? 'border-[#E5E3DC] text-[#888780] opacity-50'
+                  ? 'border-[#E5E3DC] text-[#6B6A64] opacity-50'
                   : 'border-[#0F6E56]/30 bg-white text-[#111111] hover:bg-[#E1F5EE]'
             }`}
           >
@@ -2165,7 +2295,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
           </button>
         ))}
         {chosen === undefined && (
-          <p className="text-[10px] text-[#888780]">Pilihanmu ikut membentuk penilaian gaya kerjamu.</p>
+          <p className="text-[11px] text-[#6B6A64]">Pilihanmu ikut membentuk penilaian gaya kerjamu.</p>
         )}
       </div>
     )
@@ -2174,26 +2304,21 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
   if (msg.role === 'learn') {
     const d = msg.data || {}
     return (
-      <div className="bg-gradient-to-br from-[#E1F5EE] to-[#d4f5e9] border border-[#0F6E56]/20 rounded-xl p-3 animate-messageIn">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-base">{String(d.icon ?? '')}</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F6E56]">{String(d.title ?? '')}</span>
-        </div>
-        <p className="text-xs leading-relaxed text-[#085041]">{String(d.body ?? '')}</p>
+      <div className="max-w-[560px] border-l-2 border-[#0F6E56] bg-[#F4F8F6] rounded-r-lg px-3.5 py-2.5 animate-messageIn">
+        <p className="text-[13px] font-semibold text-[#0F6E56] mb-0.5">{String(d.title ?? '')}</p>
+        <p className="text-[13px] leading-relaxed text-[#2E3B36]">{String(d.body ?? '')}</p>
       </div>
     )
   }
 
   if (msg.role === 'feedback') {
     const d = msg.data || {}
-    const colors: Record<string, string> = {
-      good: 'bg-[#DCFCE7] border-[#166534]/20 text-[#166534]',
-      neutral: 'bg-[#FAEEDA] border-[#854F0B]/20 text-[#854F0B]',
-    }
+    const good = d.type === 'good'
     return (
-      <div className={`border rounded-xl p-3 animate-messageIn ${colors[String(d.type)] || colors.neutral}`}>
-        <p className="text-[10px] font-bold uppercase tracking-wider mb-1">{String(d.label ?? '')}</p>
-        <p className="text-xs leading-relaxed">{String(d.text ?? '')}</p>
+      <div className={`max-w-[560px] rounded-lg px-3.5 py-2.5 border animate-messageIn ${good ? 'bg-[#EEF8F1] border-[#166534]/20 text-[#166534]' : 'bg-[#FDF6EA] border-[#854F0B]/20 text-[#7A4708]'}`}>
+        {/* data.label tetap "TASK APPROVED"/"REVISION NEEDED" — dibaca countRevisions() */}
+        <p className="text-[13px] font-semibold">{good ? 'Task disetujui' : 'Perlu revisi'}</p>
+        <p className="text-[13px] leading-relaxed mt-0.5">{String(d.text ?? '')}</p>
       </div>
     )
   }
@@ -2202,191 +2327,133 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
     const d = msg.data || {}
     const isInterviewDone = d.type === 'interview_done'
     const isDayDone = d.type === 'day_done'
+    const ns = d.nextStep !== undefined ? Number(d.nextStep) : undefined
+    // Langkah yang sudah lewat: tombol tetap ada untuk navigasi, tapi tidak memicu
+    // adegan ulang (guard juga ada di handleNextStep)
+    const stale = ns !== undefined && ns < 90 && ns <= state.step
 
     if (isDayDone) {
-      // Penilaian hari pertama: grade dari jumlah revisi + gaya kerja dari pilihan dilema
-      const revs = countRevisions(state.chatHistory)
-      const grade = computeGrade(revs)
+      // Penilaian hari ini: grade dari jumlah revisi + gaya kerja dari pilihan dilema
+      const grade = computeGrade(countRevisions(state.chatHistory))
       const workStyle = getWorkStyle(state.chatHistory)
+      const canAdvance = ns === 97
+      const upcoming = canAdvance ? [] : (pos?.upcomingTasks || [])
       return (
-        <div className="animate-messageIn bg-gradient-to-br from-[#E1F5EE] to-[#d4f5e9] border border-[#0F6E56]/20 rounded-xl p-4">
-          <p className="text-sm font-bold text-[#0F6E56] mb-1">Hari pertamamu selesai, dan kamu membuktikan kamu bisa.</p>
-          <p className="text-xs text-[#444441] mb-3 leading-relaxed">
-            Interview dilalui. Gaji dinegosiasikan. Task pertama: APPROVED.
-            Banyak orang menunggu berbulan-bulan untuk merasakan semua ini, kamu menjalaninya dalam satu hari.
-            Tapi ceritamu di Vantara baru saja dimulai.
+        <div className="max-w-[560px] animate-messageIn border border-[#E5E3DC] bg-white rounded-xl p-4 sm:p-5">
+          <p className="text-[15px] font-semibold text-[#1A1A18]">Hari ke-{state.simDay} selesai</p>
+          <p className="text-[13px] text-[#4A4A45] mt-1 leading-relaxed">
+            {state.simDay === 1
+              ? 'Interview, nego gaji, kontrak, sampai task pertama disetujui. Semuanya tercatat di surat referensimu.'
+              : 'Task hari ini disetujui dan tercatat di surat referensimu.'}
           </p>
-          <div className="bg-white/70 rounded-lg p-3 mb-3">
-            <p className="text-xs font-semibold text-[#0F6E56] mb-1">Penilaian hari pertama: {GRADE_LABEL[grade]}</p>
-            <p className="text-[10px] text-[#444441] leading-relaxed">
+          <div className="mt-4 rounded-lg bg-[#F7F6F2] px-3.5 py-3">
+            <p className="text-[13px] font-semibold text-[#1A1A18]">Penilaian supervisor: {GRADE_LABEL[grade]}</p>
+            <p className="text-[13px] text-[#4A4A45] leading-relaxed mt-1">
               {GRADE_REVIEW[grade]}
               {workStyle ? ` Gaya kerjamu: ${workStyle.label.toLowerCase()}. ${workStyle.review}` : ''}
             </p>
-            <p className="text-[10px] text-[#888780] mt-1.5">Semua ini sudah tercatat di surat referensimu (lihat sidebar).</p>
           </div>
-          <div className="bg-white/70 rounded-lg p-3 mb-3">
-            <p className="text-xs font-semibold text-[#0F6E56] mb-2">Yang sudah menunggumu minggu ini:</p>
-            <div className="flex flex-col">
-              {(pos?.upcomingTasks || []).map(t => (
-                <div
-                  key={t.day}
-                  className="flex items-start gap-2 py-1.5 border-b border-[#E5E3DC]/60 last:border-0 opacity-55 select-none"
-                  style={{ cursor: 'not-allowed' }}
-                  title="Terbuka di Kantoran versi penuh"
-                >
-                  <span className="text-xs mt-0.5">🔒</span>
-                  <div>
-                    <p className="text-xs font-semibold text-[#444441]">Hari {t.day}, {t.title}</p>
-                    <p className="text-[10px] text-[#888780] leading-relaxed">{t.teaser}</p>
-                  </div>
-                </div>
-              ))}
+          {upcoming.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[13px] font-semibold text-[#1A1A18] mb-1">Berikutnya di minggu ini</p>
+              <ul>
+                {upcoming.map(t => (
+                  <li key={t.day} className="flex gap-2.5 py-2 border-b border-[#F1EFE8] last:border-0">
+                    <Lock size={13} aria-hidden className="mt-1 text-[#A3A19A] flex-shrink-0" />
+                    <div>
+                      <p className="text-[13px] font-medium text-[#4A4A45]">Hari {t.day}: {t.title}</p>
+                      <p className="text-[12px] text-[#6B6A64] leading-relaxed">{t.teaser}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
           <button
-            onClick={() => {
-              if (d.nextStep !== undefined) onNextStep(Number(d.nextStep), d)
-            }}
+            onClick={() => { if (ns !== undefined) onNextStep(ns, d) }}
             style={{ cursor: 'pointer' }}
-            className="btn-teal text-sm w-full py-2.5"
+            className="btn-teal text-sm w-full py-2.5 mt-4"
           >
-            Daftar Waitlist, Lanjutkan ke Hari Kedua →
+            {String(d.label || 'Lanjut')}
           </button>
-          <p className="text-center text-[10px] text-[#888780] mt-2">
-            Gratis. Kamu jadi yang pertama tahu saat hari kedua dibuka, beserta harga early-bird.
-          </p>
+          {!canAdvance && (
+            <p className="text-center text-[12px] text-[#6B6A64] mt-2 leading-relaxed">
+              Hari kedua sedang disiapkan. Setelah ini ada dua pertanyaan singkat, lalu kamu bisa mencoba posisi lain.
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    if (isInterviewDone) {
+      return (
+        <div className="max-w-[560px] animate-messageIn border border-[#0F6E56]/25 bg-[#F4F8F6] rounded-xl p-4">
+          <p className="text-sm text-[#1A1A18] leading-relaxed">{String(d.label ?? '')}</p>
+          <button
+            onClick={() => { if (stale) onViewChange('inbox'); else if (ns !== undefined) onNextStep(ns, d) }}
+            style={{ cursor: 'pointer' }}
+            className="btn-teal text-sm mt-3"
+          >
+            {stale ? 'Lihat di Inbox' : String(d.subLabel ?? 'Buka offering letter')}
+          </button>
         </div>
       )
     }
 
     return (
-      <div className={`animate-messageIn rounded-xl p-3 ${isInterviewDone ? 'bg-[#E1F5EE] border border-[#0F6E56]/20' : 'ml-10'}`}>
-        {isInterviewDone && (
-          <p className="text-sm font-semibold text-[#0F6E56] mb-2">{String(d.label ?? '')}</p>
-        )}
+      <div className="ml-10 animate-messageIn">
         <button
           onClick={() => {
             if (d.goTo) onViewChange(String(d.goTo))
-            if (d.nextStep !== undefined) onNextStep(Number(d.nextStep), d)
+            if (ns !== undefined && !stale) onNextStep(ns, d)
           }}
           style={{ cursor: 'pointer' }}
-          className="btn-teal text-sm inline-flex items-center gap-2"
+          className="text-[13px] font-medium text-[#0F6E56] border border-[#0F6E56]/40 hover:bg-[#E1F5EE] px-3 py-2 rounded-md transition-colors"
         >
-          {String(isInterviewDone ? d.subLabel : d.label) ?? 'Lanjut'} →
+          {String(d.label ?? 'Lanjut')}
         </button>
       </div>
     )
   }
 
   if (msg.role === 'email') {
+    // Email selalu dibaca di Inbox (offering letter + tanda tangan hanya di sana)
     const d = msg.data || {}
-    if (d.isOffering) {
-      return (
-        <div className="bg-white border border-[#E5E3DC] rounded-xl overflow-hidden animate-messageIn" style={{ maxWidth: '100%' }}>
-          <div className="bg-gradient-to-r from-[#0F6E56] to-[#1D9E75] px-4 py-3">
-            <p className="text-white font-semibold text-sm">PT Vantara Nusantara</p>
-            <p className="text-white/80 text-xs">FMCG Personal Care · Jakarta Selatan</p>
-          </div>
-          <div className="px-4 pt-3 pb-2">
-            <p className="font-semibold text-xs uppercase tracking-wider text-[#888780] mb-2">Surat Penawaran Kerja</p>
-            <div className="flex flex-col">
-              {([
-                ['Posisi', String(d.position ?? '')],
-                ['Departemen', String(d.dept ?? '')],
-                ['Supervisor', String(d.supervisor ?? '')],
-                ['Gaji Pokok', `Rp ${Number(d.salary || 0).toLocaleString('id-ID')} / bln`],
-                ['Tunjangan', 'Makan Rp 600rb + Transport Rp 400rb'],
-                ['Probasi', String(d.probation ?? '')],
-                ['Sistem Kerja', String(d.workSystem ?? '')],
-              ] as [string, string][]).map(([k, v]) => (
-                <div key={k} className="flex justify-between py-1.5 border-b border-[#F1EFE8] last:border-0 text-xs gap-2">
-                  <span className="text-[#888780] flex-shrink-0">{k}</span>
-                  <span className={`font-medium text-right ${k === 'Gaji Pokok' ? 'text-[#0F6E56] font-bold' : 'text-[#111111]'}`}>{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="px-4 pb-4 pt-2 border-t border-[#E5E3DC] bg-[#FAFAF7]">
-            <button
-              onClick={() => onNextStep(3)}
-              style={{ cursor: 'pointer' }}
-              className="btn-teal w-full py-3 text-sm font-semibold"
-              type="button"
-            >
-              Tanda Tangan & Terima Offer →
-            </button>
-            <p className="text-center text-[10px] text-[#888780] mt-2">
-              Dengan menandatangani, kamu menyetujui semua ketentuan di atas.
-            </p>
-          </div>
-        </div>
-      )
-    }
     return (
-      <div className="bg-white border border-[#E5E3DC] rounded-xl overflow-hidden animate-messageIn">
-        <div className="bg-[#F1EFE8] px-3 py-2 border-b border-[#E5E3DC]">
-          <p className="text-xs text-[#888780]"><strong className="text-[#111111]">Dari:</strong> {String(d.from ?? '')}</p>
-          <p className="text-xs font-medium text-[#111111] mt-0.5">{String(d.subject ?? '')}</p>
-        </div>
-        <div className="px-3 py-2.5">
-          <p className="text-xs leading-relaxed text-[#111111]">{String(d.body ?? d.preview ?? '')}</p>
-          {!!d.body && (
-            <button
-              onClick={() => onViewChange('hr_office')}
-              style={{ cursor: 'pointer' }}
-              className="mt-2 text-xs text-[#0F6E56] font-medium hover:underline"
-            >
-              Buka HR Office untuk interview →
-            </button>
-          )}
-        </div>
+      <div className="max-w-[560px] bg-white border border-[#E5E3DC] rounded-lg px-3.5 py-3 animate-messageIn">
+        <p className="text-[12px] text-[#6B6A64]">Email dari {String(d.from ?? 'HR')}</p>
+        <p className="text-[13px] font-medium text-[#1A1A18] mt-0.5">{String(d.subject ?? '')}</p>
+        <button onClick={() => onViewChange('inbox')} style={{ cursor: 'pointer' }} className="mt-2 text-[13px] font-medium text-[#0F6E56] hover:underline">
+          Buka di Inbox
+        </button>
       </div>
     )
   }
 
   if (msg.role === 'task') {
     const d = msg.data || {}
+    const meta = [
+      d.num ? `Task ${String(Number(d.num)).padStart(2, '0')}` : '',
+      d.deadline ? `Tenggat ${String(d.deadline).toLowerCase()}` : '',
+      d.dept ? String(d.dept) : '',
+    ].filter(Boolean)
     return (
-      <div className="bg-white border-l-[3px] border-[#0F6E56] border border-[#E5E3DC] rounded-[0_8px_8px_0] p-3 animate-messageIn">
-        <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2 flex-wrap">
-          {!!d.num && <span>📋 Task #{String(Number(d.num)).padStart(2, '0')}</span>}
-          {!!d.deadline && <span>⏰ {String(d.deadline)}</span>}
-          {!!d.dept && <span>🔗 {String(d.dept)}</span>}
-        </div>
-        <p className="text-sm font-medium text-[#0F6E56] mb-1.5">{String(d.title ?? '')}</p>
-        <p className="text-xs leading-relaxed text-[#111111]" dangerouslySetInnerHTML={{ __html: String(d.body ?? '') }} />
-        {!!d.ctx && <p className="mt-2 text-xs text-[#888780] italic">{String(d.ctx)}</p>}
+      <div className="max-w-[560px] bg-white border border-[#E5E3DC] rounded-lg p-3.5 animate-messageIn">
+        {meta.length > 0 && <p className="text-[12px] text-[#6B6A64] mb-1.5 tabular">{meta.join(' · ')}</p>}
+        <p className="text-sm font-semibold text-[#1A1A18] mb-1">{String(d.title ?? '')}</p>
+        <p className="text-[13px] leading-relaxed text-[#2B2B28]" dangerouslySetInnerHTML={{ __html: String(d.body ?? '') }} />
+        {!!d.ctx && <p className="mt-2 text-[13px] text-[#4A4A45] border-l-2 border-[#E5E3DC] pl-2.5 leading-relaxed">{String(d.ctx)}</p>}
         {!!d.isDownload && !!d.file && (
           <a
             href={String(d.href || `/tasks/${String(d.file)}`)}
             download={String(d.file)}
             style={{ cursor: 'pointer' }}
-            className="mt-3 inline-flex items-center gap-2 btn-teal text-sm"
+            className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium text-white bg-[#0F6E56] hover:bg-[#085041] rounded-md px-3 py-2"
           >
-            Download {String(d.file)}
+            <Download size={14} aria-hidden />
+            Unduh <span className="font-mono text-[12px]">{String(d.file)}</span>
           </a>
         )}
-      </div>
-    )
-  }
-
-  if (msg.role === 'cliff') {
-    const coins = Number(msg.data?.coins || state.coins)
-    return (
-      <div className="text-center py-8 animate-messageIn">
-        <div className="text-4xl mb-3">⏸️</div>
-        <h3 className="font-serif text-xl font-bold text-[#111111] mb-2">Hari pertama selesai, {state.firstName}.</h3>
-        <p className="text-sm text-[#888780] leading-relaxed max-w-xs mx-auto mb-5">
-          Di Kantoran penuh, kamu jalani 3 bulan simulasi, task makin kompleks, situasi tak terduga, promosi, dan surat referensi kerja nyata.
-          <br /><br />Kamu sudah kumpulkan <strong>{coins} Kantor Coin</strong> hari ini 🪙
-        </p>
-        <button
-          onClick={() => window.open('/', '_blank')}
-          style={{ cursor: 'pointer' }}
-          className="btn-teal text-sm"
-        >
-          Daftar Waitlist, Lanjutkan Karir →
-        </button>
       </div>
     )
   }
@@ -2394,7 +2461,7 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
   return null
 }
 
-// ── INBOX GMAIL STYLE ────────────────────────────
+// ── INBOX ───────────────────────────────────────
 function InboxView({ messages, onNextStep, onViewChange, state }: {
   messages: Message[]
   onNextStep: (step: number, data?: Record<string, unknown>) => void
@@ -2402,181 +2469,200 @@ function InboxView({ messages, onNextStep, onViewChange, state }: {
   state: SimState
   pos?: typeof POSITIONS[string]
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [signingState, setSigningState] = useState<'none' | 'signing' | 'signed'>('none')
   const emails = messages.filter(m => m.role === 'email')
+  const offering = emails.find(e => e.data?.isOffering)
+  // Offering baru masuk (step 2) → langsung terbuka; tidak perlu mencari di daftar
+  const [selectedId, setSelectedId] = useState<string | null>(() => (state.step === 2 && offering ? offering.id : null))
+  const [readIds, setReadIds] = useState<Set<string>>(() => new Set(state.step === 2 && offering ? [offering.id] : []))
+  const [agree, setAgree] = useState(false)
+  const [signName, setSignName] = useState('')
+  const signed = state.step >= 3
   const selected = emails.find(e => e.id === selectedId)
 
-  const getTimeLabel = (idx: number) => {
-    const times = ['08.00', '09.30', '10.15', '14.00', '15.30', '16.00']
-    return times[idx] || `${8 + idx}.00`
+  const open = (id: string) => {
+    setSelectedId(id)
+    setReadIds(prev => new Set(prev).add(id))
   }
-
-  const getPreview = (d: Record<string, unknown>) => {
-    if (d.isOffering) return 'Selamat! Kami dengan senang hati menawarkan posisi ini kepada kamu.'
-    if (d.isInvite) return 'Kami mengundang kamu ke tahap seleksi awal berupa sesi interview singkat.'
-    return String(d.preview || d.body || '').slice(0, 80) + '...'
+  const isUnread = (e: Message) => {
+    if (readIds.has(e.id)) return false
+    if (e.data?.isOffering) return !signed
+    if (e.data?.isInvite) return state.step === 0 && !hasStartedInterview(state.chatHistory)
+    return false
+  }
+  const getTime = (e: Message, idx: number) => {
+    const t = Number(e.data?.issuedAt)
+    if (t) return new Date(t).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    return ['08.00', '09.30', '10.15'][idx] || '08.00'
   }
 
   if (emails.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center py-16">
-        <div className="text-center">
-          <div className="text-3xl mb-3">📭</div>
-          <p className="text-sm text-[#888780]">Inbox kosong. Email dari Sinta akan masuk setelah kamu melamar.</p>
-        </div>
+        <p className="text-sm text-[#6B6A64]">Inbox kosong.</p>
       </div>
     )
   }
 
-  // Split view: list kiri + detail kanan
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
-      {/* Email list, di mobile disembunyikan saat satu email dibuka */}
-      <div data-tour="inbox-list" className={`flex flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'hidden md:flex md:w-72' : 'flex-1'}`}>
-        <div className="px-4 py-3 border-b border-[#E5E3DC] flex-shrink-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#888780]">
-            {emails.length} pesan
-          </p>
-        </div>
-        {emails.map((email, idx) => {
+      {/* Daftar email; di mobile disembunyikan saat satu email dibuka */}
+      <div data-tour="inbox-list" className={`flex-col border-r border-[#E5E3DC] flex-shrink-0 overflow-y-auto ${selectedId ? 'hidden md:flex md:w-72' : 'flex flex-1 md:flex-none md:w-72'}`}>
+        {[...emails].reverse().map((email, ridx) => {
+          const idx = emails.length - 1 - ridx
           const d = email.data || {}
-          const isSelected = selectedId === email.id
-          const isUnread = idx === emails.length - 1 // latest always unread initially
+          const active = selectedId === email.id
+          const unread = isUnread(email)
           return (
             <button
               key={email.id}
-              onClick={() => setSelectedId(email.id)}
+              onClick={() => open(email.id)}
               style={{ cursor: 'pointer' }}
-              className={`w-full text-left px-4 py-3 border-b border-[#F1EFE8] transition-all ${
-                isSelected ? 'bg-[#E1F5EE] border-l-2 border-l-[#0F6E56]' : 'hover:bg-[#FAFAF7]'
-              }`}
+              className={`w-full text-left px-4 py-3 border-b border-[#F1EFE8] transition-colors ${active ? 'bg-[#E1F5EE]/70' : 'hover:bg-[#F7F6F2]'}`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  {isUnread && !isSelected && <div className="w-2 h-2 rounded-full bg-[#0F6E56] flex-shrink-0" />}
-                  <span className={`text-xs ${isUnread && !isSelected ? 'font-bold text-[#111111]' : 'font-medium text-[#888780]'}`}>
-                    Sinta Maharani
-                  </span>
-                </div>
-                <span className="text-[10px] text-[#888780] flex-shrink-0">
-                  Hari ini, {getTimeLabel(idx)}
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <span className={`text-[13px] truncate ${unread ? 'font-semibold text-[#1A1A18]' : 'text-[#4A4A45]'}`}>
+                  {unread && <span className="inline-block w-2 h-2 rounded-full bg-[#0F6E56] mr-2 align-middle" aria-label="Belum dibaca" />}
+                  Sinta Maharani
                 </span>
+                <span className="text-[12px] text-[#6B6A64] flex-shrink-0 tabular">{getTime(email, idx)}</span>
               </div>
-              <p className={`text-xs mb-1 truncate ${isUnread && !isSelected ? 'font-semibold text-[#111111]' : 'text-[#444441]'}`}>
-                {String(d.subject || '')}
-              </p>
-              <p className="text-[10px] text-[#888780] truncate leading-relaxed">
-                {getPreview(d)}
+              <p className={`text-[13px] truncate ${unread ? 'font-medium text-[#1A1A18]' : 'text-[#4A4A45]'}`}>{String(d.subject || '')}</p>
+              <p className="text-[12px] text-[#6B6A64] truncate">
+                {d.isOffering ? (signed ? 'Sudah ditandatangani' : 'Menunggu tanda tanganmu') : d.isInvite ? 'Undangan interview dengan HR' : String(d.preview || '')}
               </p>
             </button>
           )
         })}
       </div>
 
-      {/* Email detail */}
-      {selectedId && selected && (() => {
+      {!selected && (
+        <div className="hidden md:flex flex-1 items-center justify-center">
+          <p className="text-sm text-[#6B6A64]">Pilih email untuk dibaca.</p>
+        </div>
+      )}
+
+      {selected && (() => {
         const d = selected.data || {}
+        // Offering lama (sebelum issuedAt ada) memakai timestamp yang tertanam di id-nya
+        const issued = new Date(Number(d.issuedAt) || Number(selected.id.replace(/\D/g, '').slice(0, 13)) || 0)
+        const salary = Number(d.salary || 0)
+        const meal = Number(d.mealAllowance || 600000)
+        const transport = Number(d.transportAllowance || 400000)
+        const letterNo = `VN/HR/${issued.getFullYear()}/${selected.id.replace(/\D/g, '').slice(-4) || '0001'}`
+        const canSign = agree && signName.trim().length >= 3
         return (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Detail header */}
-            <div className="px-5 py-4 border-b border-[#E5E3DC] flex-shrink-0">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-sm text-[#111111]">{String(d.subject || '')}</p>
-                <button onClick={() => setSelectedId(null)} style={{ cursor: 'pointer' }} className="text-xs text-[#888780] hover:text-[#111111]">✕</button>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-[#888780]">
-                <div className="w-6 h-6 rounded-full av-teal flex items-center justify-center text-[9px] font-bold">SM</div>
-                <span>Sinta Maharani</span>
-                <span className="text-[#E5E3DC]">·</span>
-                <span>{String(d.from || 'sinta@vantara.co.id')}</span>
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            <div className="px-4 sm:px-5 py-3 border-b border-[#E5E3DC] flex items-start gap-3 flex-shrink-0">
+              <button onClick={() => setSelectedId(null)} style={{ cursor: 'pointer' }} aria-label="Kembali ke daftar email"
+                className="md:hidden w-8 h-8 -ml-1 flex items-center justify-center rounded-md text-[#4A4A45] hover:bg-[#F1EFE8] flex-shrink-0">
+                <X size={16} aria-hidden />
+              </button>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-[#1A1A18]">{String(d.subject || '')}</p>
+                <p className="text-[12px] text-[#6B6A64] mt-0.5 truncate">Sinta Maharani &lt;{String(d.from || 'sinta@vantara.co.id')}&gt;</p>
               </div>
             </div>
 
-            {/* Detail body */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 bg-[#FAFAF7]">
               {d.isOffering ? (
-                <div>
-                  <div className="bg-gradient-to-r from-[#0F6E56] to-[#1D9E75] rounded-xl px-4 py-3 mb-4">
-                    <p className="text-white font-semibold text-sm">PT Vantara Nusantara</p>
-                    <p className="text-white/80 text-xs">FMCG Personal Care · Jakarta Selatan</p>
-                  </div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Surat Penawaran Kerja</p>
-                  {([
-                    ['Posisi', String(d.position ?? '')],
-                    ['Departemen', String(d.dept ?? '')],
-                    ['Supervisor', String(d.supervisor ?? '')],
-                    ['Gaji Pokok', `Rp ${Number(d.salary || 0).toLocaleString('id-ID')} / bulan`],
-                    ['Tunjangan Makan', `Rp 600.000 / bulan`],
-                    ['Tunjangan Transport', `Rp 400.000 / bulan`],
-                    ['Masa Probasi', String(d.probation ?? '')],
-                    ['Sistem Kerja', String(d.workSystem ?? '')],
-                  ] as [string, string][]).map(([k, v]) => (
-                    <div key={k} className="flex justify-between py-2 border-b border-[#F1EFE8] last:border-0 text-sm">
-                      <span className="text-[#888780]">{k}</span>
-                      <span className={`font-medium ${k === 'Gaji Pokok' ? 'text-[#0F6E56] font-bold' : 'text-[#111111]'}`}>{v}</span>
-                    </div>
-                  ))}
-                </div>
+                <article className="max-w-[600px] mx-auto bg-white border border-[#E5E3DC] rounded-md px-5 sm:px-9 py-7 text-[14px] leading-relaxed text-[#2B2B28]">
+                  <header className="border-b-2 border-[#1A1A18] pb-3 mb-5">
+                    <p className="text-[15px] font-semibold tracking-[0.04em] text-[#1A1A18]">PT VANTARA NUSANTARA</p>
+                    <p className="text-[12px] text-[#6B6A64]">Personal care · Jakarta Selatan</p>
+                  </header>
+                  <p className="text-[13px] text-[#4A4A45] tabular">
+                    Jakarta, {issued.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br />
+                    Nomor: {letterNo}<br />
+                    Perihal: Penawaran kerja
+                  </p>
+                  <p className="mt-5">Yth. {state.firstName},</p>
+                  <p className="mt-2">
+                    Terima kasih sudah mengikuti proses interview dengan kami. Dengan surat ini, PT Vantara Nusantara menawarkan posisi berikut kepadamu.
+                  </p>
+                  <table className="w-full mt-4 text-[13px]">
+                    <tbody>
+                      {([
+                        ['Posisi', String(d.position ?? '')],
+                        ['Departemen', String(d.dept ?? '')],
+                        ['Atasan langsung', String(d.supervisor ?? '')],
+                        ['Gaji pokok', `Rp ${salary.toLocaleString('id-ID')} per bulan`],
+                        ['Tunjangan makan', `Rp ${meal.toLocaleString('id-ID')} per bulan`],
+                        ['Tunjangan transport', `Rp ${transport.toLocaleString('id-ID')} per bulan`],
+                        ['Masa percobaan', String(d.probation ?? '3 bulan')],
+                        ['Sistem kerja', String(d.workSystem ?? '')],
+                      ] as [string, string][]).map(([k, v]) => (
+                        <tr key={k} className="border-b border-[#F1EFE8] last:border-0 align-top">
+                          <td className="py-1.5 pr-4 text-[#6B6A64] whitespace-nowrap">{k}</td>
+                          <td className={`py-1.5 tabular ${k === 'Gaji pokok' ? 'font-semibold text-[#1A1A18]' : ''}`}>{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-3 text-[13px] text-[#4A4A45] tabular">
+                    Total diterima per bulan, sebelum pajak dan BPJS: <strong className="font-semibold text-[#1A1A18]">Rp {(salary + meal + transport).toLocaleString('id-ID')}</strong>
+                  </p>
+                  {!!d.conditional && (
+                    <p className="mt-3 text-[13px] text-[#4A4A45]">
+                      Sesuai catatan interview, evaluasi pertama dilakukan di akhir minggu pertama.
+                    </p>
+                  )}
+                  <p className="mt-4">Gaji dibayarkan setiap tanggal 25. Penawaran ini berlaku tiga hari kerja sejak tanggal surat.</p>
+                  <p className="mt-6">Salam,</p>
+                  <p className="mt-5 font-medium text-[#1A1A18]">Sinta Maharani</p>
+                  <p className="text-[13px] text-[#6B6A64]">HR Business Partner</p>
+                </article>
               ) : (
-                <p className="text-sm leading-relaxed text-[#444441] whitespace-pre-line">
-                  {String(d.body || d.preview || '')}
-                </p>
+                <div className="max-w-[600px] mx-auto bg-white border border-[#E5E3DC] rounded-md px-5 sm:px-7 py-6">
+                  <p className="text-[14px] leading-relaxed text-[#2B2B28] whitespace-pre-line">{String(d.body || d.preview || '')}</p>
+                </div>
               )}
             </div>
 
-            {/* CTA */}
-            <div className="border-t border-[#E5E3DC] px-5 py-4 bg-[#FAFAF7] flex-shrink-0">
+            <div className="border-t border-[#E5E3DC] px-4 sm:px-5 py-3.5 bg-white flex-shrink-0">
               {d.isOffering ? (
-                signingState === 'none' ? (
-                  <button
-                    onClick={() => {
-                      setSigningState('signing')
-                      setTimeout(() => setSigningState('signed'), 1800)
-                    }}
-                    style={{ cursor: 'pointer' }}
-                    className="btn-teal w-full py-3 text-sm font-semibold"
-                    type="button"
-                  >
-                    Tanda Tangan & Terima Offer →
-                  </button>
-                ) : signingState === 'signing' ? (
-                  <div className="text-center py-3">
-                    <div className="flex gap-2 justify-center mb-2">
-                      <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
-                      <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
-                      <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
-                    </div>
-                    <p className="text-xs text-[#888780]">Memproses tanda tangan digital...</p>
+                signed ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] text-[#166534]">Kontrak ini sudah kamu tanda tangani.</p>
+                    <button onClick={() => onViewChange('slack')} style={{ cursor: 'pointer' }} className="btn-teal-outline text-[13px] py-2 px-3">
+                      Buka channel tim
+                    </button>
                   </div>
                 ) : (
-                  <div>
-                    <div className="bg-[#DCFCE7] border border-[#166534]/20 rounded-xl p-3 mb-3 text-center">
-                      <p className="text-sm font-bold text-[#166534] mb-1">Kontrak Berhasil Ditandatangani</p>
-                      <p className="text-xs text-[#166534]/80">Selamat bergabung di PT Vantara Nusantara!</p>
+                  <div className="max-w-[600px] mx-auto flex flex-col gap-2.5">
+                    <label className="flex items-start gap-2.5 text-[13px] text-[#2B2B28]" style={{ cursor: 'pointer' }}>
+                      <input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#0F6E56]" />
+                      Saya sudah membaca penawaran ini dan menerimanya.
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        value={signName}
+                        onChange={e => setSignName(e.target.value)}
+                        placeholder="Ketik nama lengkapmu sebagai tanda tangan"
+                        aria-label="Tanda tangan, ketik nama lengkap"
+                        autoComplete="name"
+                        className="flex-1 px-3 py-2.5 border border-[#D8D6CE] rounded-lg text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10"
+                      />
+                      <button
+                        onClick={() => onNextStep(3)}
+                        disabled={!canSign}
+                        style={{ cursor: canSign ? 'pointer' : 'not-allowed' }}
+                        className="btn-teal text-sm px-5 py-2.5"
+                        type="button"
+                      >
+                        Tanda tangani
+                      </button>
                     </div>
-                    <p className="text-xs text-[#888780] mb-3 leading-relaxed">
-                      Salinan kontrak fisik akan dikirim via kurir dalam 3 hari kerja. Dokumen digital ini sudah berlaku resmi. Sampai jumpa di hari pertama, {state.firstName}!
-                    </p>
-                    <button
-                      onClick={() => onNextStep(3)}
-                      style={{ cursor: 'pointer' }}
-                      className="btn-teal w-full py-3 text-sm font-semibold"
-                      type="button"
-                    >
-                      Mulai Hari Pertama di PT Vantara →
-                    </button>
+                    <p className="text-[12px] text-[#6B6A64]">Ragu soal isinya? Tutup dulu dan baca lagi, offering ini menunggumu.</p>
                   </div>
                 )
               ) : d.isInvite ? (
-                <button
-                  onClick={() => onViewChange('hr_office')}
-                  style={{ cursor: 'pointer' }}
-                  className="btn-teal w-full py-3 text-sm font-semibold"
-                  type="button"
-                >
-                  Mulai Interview dengan Sinta →
-                </button>
+                state.step === 0 && !state.interviewDone ? (
+                  <button onClick={() => onViewChange('hr_office')} style={{ cursor: 'pointer' }} className="btn-teal w-full sm:w-auto py-2.5 px-5 text-sm" type="button">
+                    Mulai interview dengan Sinta
+                  </button>
+                ) : (
+                  <p className="text-[13px] text-[#6B6A64]">Interview untuk undangan ini sudah berjalan.</p>
+                )
               ) : null}
             </div>
           </div>
@@ -2586,157 +2672,153 @@ function InboxView({ messages, onNextStep, onViewChange, state }: {
   )
 }
 
-function WorkspaceView({ state, pos, uploadedFile, extractedData, reviewResult, isSubmitting, onFileUpload, onSubmit, onClearUpload }: {
+function WorkspaceView({ state, pos, taskOpen, taskTitle, uploadedFile, extractedData, reviewResult, isSubmitting, error, onFileUpload, onSubmit, onClearUpload }: {
   state: SimState; pos?: typeof POSITIONS[string];
+  taskOpen: boolean; taskTitle: string;
   uploadedFile: File | null; extractedData: string;
   reviewResult: { review: string; isApproved: boolean } | null;
   isSubmitting: boolean;
+  error: string;
   onFileUpload: (f: File) => void;
   onSubmit: () => void;
   onClearUpload: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragOver, setDragOver] = useState(false)
+
+  // Belum ada task: dulu Workspace sudah menampilkan "Task aktif" sebelum supervisor
+  // memberi task, bikin user baru bingung harus mengerjakan apa
+  if (state.step < 5) {
+    return (
+      <div className="max-w-[560px] border border-[#E5E3DC] rounded-lg p-4 bg-white">
+        <p className="text-sm font-semibold text-[#1A1A18]">Belum ada task</p>
+        <p className="text-[13px] text-[#4A4A45] mt-1 leading-relaxed">
+          {callName(pos?.supervisor.name) || 'Supervisormu'} akan memberi task setelah standup. Hasil kerjanya nanti dikumpulkan di sini.
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col gap-4 pb-4">
-      {/* Task info */}
-      {pos && (
-        <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-xl p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] mb-1">Task Aktif</p>
-          <p className="text-sm font-semibold text-[#111111]">{pos.taskTitle}</p>
-          <p className="text-xs text-[#888780] mt-1">⏰ Deadline: Besok jam 09.00</p>
-        </div>
-      )}
-
-      {/* Roadmap minggu pertama, task mendatang terkunci (teaser premium) */}
-      {pos && pos.upcomingTasks.length > 0 && (
-        <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Minggu pertamamu di Vantara</p>
-          <div className="flex flex-col">
-            <div className="flex items-start gap-2.5 py-2 border-b border-[#F1EFE8]">
-              <span className="text-sm mt-0.5">✅</span>
-              <div>
-                <p className="text-xs font-semibold text-[#0F6E56]">Hari 1, {pos.taskTitle}</p>
-                <p className="text-[10px] text-[#888780]">Sedang kamu kerjakan sekarang</p>
-              </div>
-            </div>
-            {pos.upcomingTasks.map(t => (
-              <div
-                key={t.day}
-                className="flex items-start gap-2.5 py-2 border-b border-[#F1EFE8] last:border-0 opacity-50 select-none"
-                style={{ cursor: 'not-allowed' }}
-                title="Terbuka di Kantoran versi penuh"
-              >
-                <span className="text-sm mt-0.5">🔒</span>
-                <div>
-                  <p className="text-xs font-semibold text-[#444441]">Hari {t.day}, {t.title}</p>
-                  <p className="text-[10px] text-[#888780] leading-relaxed">{t.teaser}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-[#888780] mt-2">🔒 Terbuka di Kantoran versi penuh, selesaikan hari pertamamu dulu.</p>
-        </div>
-      )}
-
-      {/* Task selesai: tutup jalur upload supaya tidak bisa submit dobel */}
-      {state.step >= 10 && (
-        <div className="bg-[#DCFCE7] border border-[#166534]/20 rounded-xl p-4">
-          <p className="text-sm font-semibold text-[#166534]">Task hari ini sudah APPROVED.</p>
-          <p className="text-xs text-[#166534]/80 mt-1">Task berikutnya menunggumu besok. Cek chat supervisor untuk menutup harimu.</p>
-        </div>
-      )}
-
-      {/* Upload area */}
-      {state.step < 10 && (
-      <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
-        <p className="text-sm font-semibold text-[#111111] mb-3">Upload Hasil Kerja</p>
-
-        {!uploadedFile ? (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{ cursor: 'pointer' }}
-            className="border-2 border-dashed border-[#E5E3DC] rounded-xl p-8 text-center hover:border-[#0F6E56] hover:bg-[#FAFAF7] transition-all"
-          >
-            <div className="text-3xl mb-2">📊</div>
-            <p className="text-sm font-medium text-[#111111]">Klik untuk upload file Excel</p>
-            <p className="text-xs text-[#888780] mt-1">Format: .xlsx</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx"
-              className="hidden"
-              onChange={e => { if (e.target.files?.[0]) onFileUpload(e.target.files[0]) }}
-            />
-          </div>
-        ) : (
-          <div className="bg-[#F1EFE8] rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">📊</span>
-                <div>
-                  <p className="text-sm font-medium text-[#111111]">{uploadedFile.name}</p>
-                  <p className="text-xs text-[#888780]">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
-                </div>
-              </div>
-              <button
-                onClick={onClearUpload}
-                style={{ cursor: 'pointer' }}
-                className="text-xs text-[#888780] hover:text-red-500"
-              >
-                ✕ Hapus
-              </button>
-            </div>
-            {extractedData && (
-              <p className="text-xs text-[#0F6E56] font-medium">File berhasil dibaca, siap dikirim ke supervisor</p>
-            )}
-          </div>
-        )}
-      </div>
-      )}
-
-      {/* Submit button */}
-      {uploadedFile && extractedData && !reviewResult && (
-        <button
-          onClick={onSubmit}
-          disabled={isSubmitting}
-          style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
-          className="btn-teal text-sm disabled:opacity-40"
-        >
-          {isSubmitting ? 'Supervisor sedang mereview...' : 'Submit ke Supervisor untuk Review →'}
-        </button>
-      )}
-
-      {/* Review result in workspace */}
-      {reviewResult && (
-        <div className={`border rounded-xl p-4 ${reviewResult.isApproved ? 'bg-[#DCFCE7] border-[#166534]/20' : 'bg-[#FAEEDA] border-[#854F0B]/20'}`}>
-          <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${reviewResult.isApproved ? 'text-[#166534]' : 'text-[#854F0B]'}`}>
-            {reviewResult.isApproved ? 'TASK APPROVED' : 'REVISION NEEDED'}
+    <div className="flex flex-col gap-3 pb-4 max-w-[640px]">
+      {taskOpen ? (
+        <div className="border border-[#E5E3DC] rounded-lg p-4 bg-white">
+          <p className="text-[12px] text-[#6B6A64]">Task aktif · tenggat besok jam 09.00</p>
+          <p className="text-sm font-semibold text-[#1A1A18] mt-0.5">{taskTitle}</p>
+          <p className="text-[13px] text-[#4A4A45] mt-1.5 leading-relaxed">
+            Unduh filenya di File Manager, kerjakan di Excel, simpan sebagai .xlsx, lalu upload di bawah. Supervisor akan membaca dan membalas di chat.
           </p>
-          <p className="text-sm leading-relaxed text-[#111111]">{reviewResult.review}</p>
-          {!reviewResult.isApproved && (
+        </div>
+      ) : (
+        <div className="border border-[#166534]/20 bg-[#EEF8F1] rounded-lg p-4">
+          <p className="text-sm font-semibold text-[#166534]">Semua task hari ini sudah disetujui.</p>
+          <p className="text-[13px] text-[#166534]/90 mt-1">Cek chat supervisor untuk menutup harimu.</p>
+        </div>
+      )}
+
+      {taskOpen && (
+        <div className="border border-[#E5E3DC] rounded-lg p-4 bg-white">
+          <p className="text-sm font-semibold text-[#1A1A18] mb-3">Upload hasil kerja</p>
+          {!uploadedFile ? (
             <button
-              onClick={onClearUpload}
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) onFileUpload(f) }}
               style={{ cursor: 'pointer' }}
-              className="mt-3 text-xs font-medium text-[#854F0B] hover:underline"
+              className={`w-full border border-dashed rounded-lg px-4 py-8 text-center transition-colors ${dragOver ? 'border-[#0F6E56] bg-[#E1F5EE]/50' : 'border-[#C8C6BE] hover:border-[#0F6E56] hover:bg-[#FAFAF7]'}`}
             >
-              Upload ulang file yang sudah direvisi →
+              <FileSpreadsheet size={26} aria-hidden className="mx-auto text-[#6B6A64] mb-2" />
+              <p className="text-sm font-medium text-[#1A1A18]">Pilih file Excel atau tarik ke sini</p>
+              <p className="text-[12px] text-[#6B6A64] mt-1">Hanya .xlsx</p>
+            </button>
+          ) : (
+            <div className="flex items-center justify-between gap-3 bg-[#F7F6F2] rounded-lg px-3.5 py-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileSpreadsheet size={20} aria-hidden className="text-[#166534] flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-[#1A1A18] truncate">{uploadedFile.name}</p>
+                  <p className="text-[12px] text-[#6B6A64] tabular">{(uploadedFile.size / 1024).toFixed(1)} KB{extractedData ? ' · terbaca, siap dikirim' : ' · membaca...'}</p>
+                </div>
+              </div>
+              {!isSubmitting && (
+                <button onClick={onClearUpload} style={{ cursor: 'pointer' }} className="text-[13px] text-[#4A4A45] hover:text-[#B42318] flex-shrink-0">
+                  Ganti file
+                </button>
+              )}
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={e => { if (e.target.files?.[0]) onFileUpload(e.target.files[0]); e.target.value = '' }}
+          />
+
+          {uploadedFile && extractedData && !reviewResult && (
+            <button
+              onClick={onSubmit}
+              disabled={isSubmitting}
+              style={{ cursor: isSubmitting ? 'wait' : 'pointer' }}
+              className="btn-teal text-sm w-full mt-3 py-2.5"
+            >
+              {isSubmitting ? `${callName(pos?.supervisor.name) || 'Supervisor'} sedang membaca filemu...` : 'Kirim ke supervisor'}
             </button>
           )}
-          <p className="text-xs text-[#888780] mt-2">Feedback lengkap juga sudah dikirim ke chat Supervisor.</p>
+          {error && <p className="text-[13px] text-[#B42318] mt-3" role="alert">{error}</p>}
         </div>
       )}
 
-      {/* Data preview */}
+      {reviewResult && (
+        <div className={`border rounded-lg p-4 ${reviewResult.isApproved ? 'bg-[#EEF8F1] border-[#166534]/20' : 'bg-[#FDF6EA] border-[#854F0B]/20'}`}>
+          <p className={`text-[13px] font-semibold mb-1.5 ${reviewResult.isApproved ? 'text-[#166534]' : 'text-[#7A4708]'}`}>
+            {reviewResult.isApproved ? 'Disetujui' : 'Perlu revisi'}
+          </p>
+          <p className="text-sm leading-relaxed text-[#1A1A18]">{reviewResult.review}</p>
+          {!reviewResult.isApproved && (
+            <button onClick={onClearUpload} style={{ cursor: 'pointer' }} className="mt-3 text-[13px] font-medium text-[#7A4708] underline underline-offset-2">
+              Upload file revisi
+            </button>
+          )}
+        </div>
+      )}
+
       {extractedData && (
-        <div className="bg-white border border-[#E5E3DC] rounded-xl p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-2">Preview Data yang Dibaca</p>
-          <pre className="text-[10px] text-[#888780] bg-[#FAFAF7] rounded-lg p-3 overflow-x-auto max-h-[200px] whitespace-pre-wrap">
-            {extractedData.substring(0, 1000)}{extractedData.length > 1000 ? '\n...(truncated)' : ''}
+        <details className="border border-[#E5E3DC] rounded-lg bg-white group">
+          <summary className="px-4 py-3 text-[13px] font-medium text-[#4A4A45]" style={{ cursor: 'pointer' }}>
+            Lihat isi file yang terbaca
+          </summary>
+          <pre className="mx-4 mb-4 text-[12px] font-mono text-[#4A4A45] bg-[#FAFAF7] rounded-md p-3 overflow-x-auto max-h-[220px] whitespace-pre-wrap">
+            {extractedData.substring(0, 1500)}{extractedData.length > 1500 ? '\n...(dipotong)' : ''}
           </pre>
+        </details>
+      )}
+
+      {taskOpen && state.simDay === 1 && pos && pos.upcomingTasks.length > 0 && (
+        <div className="border border-[#E5E3DC] rounded-lg p-4 bg-white">
+          <p className="text-[13px] font-semibold text-[#1A1A18] mb-1">Minggu pertamamu</p>
+          <ul>
+            <li className="flex gap-2.5 py-2 border-b border-[#F1EFE8]">
+              <span className="w-[13px] h-[13px] mt-1 rounded-full border-2 border-[#0F6E56] flex-shrink-0" aria-hidden />
+              <div>
+                <p className="text-[13px] font-medium text-[#0F6E56]">Hari 1: {pos.taskTitle}</p>
+                <p className="text-[12px] text-[#6B6A64]">Sedang kamu kerjakan</p>
+              </div>
+            </li>
+            {pos.upcomingTasks.map(t => (
+              <li key={t.day} className="flex gap-2.5 py-2 border-b border-[#F1EFE8] last:border-0">
+                <Lock size={13} aria-hidden className="mt-1 text-[#A3A19A] flex-shrink-0" />
+                <div>
+                  <p className="text-[13px] font-medium text-[#4A4A45]">Hari {t.day}: {t.title}</p>
+                  <p className="text-[12px] text-[#6B6A64] leading-relaxed">{t.teaser}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
   )
 }
-

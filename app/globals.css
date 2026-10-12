@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Satu keluarga huruf untuk seluruh produk (IBM Plex Sans, di-load di layout.tsx).
+   font-serif sengaja dipetakan ke sans yang sama: heading lama yang masih memakai
+   class font-serif ikut konsisten tanpa perlu disentuh satu per satu. */
+@theme inline {
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-plex), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
 :root {
   --teal: #0F6E56;
   --teal-mid: #1D9E75;
@@ -7,35 +16,47 @@
   --teal-dark: #085041;
   --bg: #FAFAF7;
   --border: #E5E3DC;
-  --muted: #888780;
+  /* abu-abu teks sekunder: #6B6A64 lolos kontras AA di atas putih (#888780 tidak) */
+  --muted: #6B6A64;
+  --ink: #1A1A18;
 }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; -webkit-font-smoothing: antialiased; }
+body { color: var(--ink); }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-thumb { background: #E5E3DC; border-radius: 2px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #D8D6CE; border-radius: 3px; }
+
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes messageIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes dotBounce {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-4px); opacity: 1; }
+  30% { transform: translateY(-3px); opacity: 1; }
 }
 
-.animate-fadeUp { animation: fadeUp 0.3s ease; }
-.animate-messageIn { animation: messageIn 0.3s ease; }
+.animate-fadeUp { animation: fadeUp 0.2s ease-out; }
+.animate-messageIn { animation: messageIn 0.2s ease-out; }
 .dot-bounce { animation: dotBounce 1.2s ease infinite; }
 .dot-bounce:nth-child(2) { animation-delay: 0.15s; }
 .dot-bounce:nth-child(3) { animation-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeUp, .animate-messageIn, .dot-bounce { animation: none; }
+}
+
+/* Angka (gaji, coin, jam) rata lebar supaya tidak "menari" saat berubah */
+.tabular { font-variant-numeric: tabular-nums; }
 
 .btn-teal {
   background-color: #0F6E56;
@@ -43,7 +64,7 @@ html, body { height: 100%; -webkit-font-smoothing: antialiased; }
   border-radius: 0.5rem;
   padding: 0.625rem 1rem;
   font-weight: 500;
-  transition: all 0.15s;
+  transition: background-color 0.15s;
   border: none;
   cursor: pointer;
 }
@@ -51,19 +72,25 @@ html, body { height: 100%; -webkit-font-smoothing: antialiased; }
 .btn-teal:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-teal-outline {
-  border: 1.5px solid #0F6E56;
+  border: 1px solid #0F6E56;
   color: #0F6E56;
   border-radius: 0.5rem;
   padding: 0.625rem 1rem;
   font-weight: 500;
-  transition: all 0.15s;
+  transition: background-color 0.15s;
   background: transparent;
   cursor: pointer;
 }
-.btn-teal-outline:hover { background-color: #0F6E56; color: white; }
+.btn-teal-outline:hover { background-color: #E1F5EE; }
 
 .av-teal { background-color: #E1F5EE; color: #0F6E56; }
 .av-blue { background-color: #E8F0FC; color: #1A4A8A; }
 .av-purple { background-color: #F0EAF9; color: #5B2D8E; }
 .av-amber { background-color: #FAEEDA; color: #854F0B; }
 .av-green { background-color: #DCFCE7; color: #166534; }
+
+/* iOS Safari auto-zoom kalau font input < 16px. Dulu dicegah dengan mengunci zoom
+   (userScalable: false) — merugikan pengguna low-vision. Cukup naikkan font input. */
+@media (max-width: 767px) {
+  input, textarea, select { font-size: 16px !important; }
+}

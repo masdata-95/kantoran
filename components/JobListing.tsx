@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { POSITIONS, SALARY_RANGE, LEVELS, LEVEL_FOR_BG, normalizeLevel } from '@/lib/positions'
 import type { BackgroundType, LevelType } from '@/lib/positions'
-import { authFetch } from '@/lib/supabase'
+import { supabase, authFetch } from '@/lib/supabase'
 
 interface Props {
   background: BackgroundType | ''
@@ -20,9 +20,10 @@ interface RunInfo {
 }
 
 const runStatusLabel = (step: number) => {
-  if (step >= 10) return 'Hari-1 selesai'
+  if (step >= 10) return 'Hari 1 selesai'
   if (step >= 5) return 'Mengerjakan task'
-  if (step >= 2) return 'Onboarding'
+  if (step >= 3) return 'Hari pertama'
+  if (step >= 2) return 'Offering letter'
   return 'Tahap interview'
 }
 
@@ -136,6 +137,8 @@ export default function JobListing({ background, onApply }: Props) {
   const defaultLevel: LevelType = background ? (LEVEL_FOR_BG[background] || 'intern') : 'intern'
   const [pickedLevel, setPickedLevel] = useState<LevelType>(defaultLevel)
   const [resetting, setResetting] = useState(false)
+  const [confirmReplay, setConfirmReplay] = useState(false)
+  const [resetError, setResetError] = useState('')
   // Kehadiran sosial: jumlah orang aktif minggu ini (tampil kalau cukup ramai)
   const [activeCount, setActiveCount] = useState<number | null>(null)
 
@@ -146,14 +149,16 @@ export default function JobListing({ background, onApply }: Props) {
       .catch(() => {})
   }, [])
 
-  // Prevent body scroll when modal open
+  // Kunci scroll halaman + Escape untuk menutup saat modal terbuka
   useEffect(() => {
-    if (modalJob) {
-      document.body.style.overflow = 'hidden'
-    } else {
+    if (!modalJob) return
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setModalJob(null) }
+    window.addEventListener('keydown', onKey)
+    return () => {
       document.body.style.overflow = ''
+      window.removeEventListener('keydown', onKey)
     }
-    return () => { document.body.style.overflow = '' }
   }, [modalJob])
 
   // Muat status run tersimpan per posisi (Mulai / Lanjutkan / Selesai)
@@ -178,69 +183,55 @@ export default function JobListing({ background, onApply }: Props) {
   const openJobModal = (key: string) => {
     const run = runs[key]
     setPickedLevel(run?.level ? normalizeLevel(run.level) : defaultLevel)
+    setConfirmReplay(false)
+    setResetError('')
     setModalJob(key)
   }
 
-  const formatSalary = (n: number) => `${(n / 1000000).toFixed(1).replace(/\.0$/, '')}`
-  // Semua jenjang terbuka — kartu menampilkan rentang gaji lintas level
-  const salMin = SALARY_RANGE['intern'].min
-  const salMax = SALARY_RANGE['mid'].max
-
-  const getCategoryLabel = (bg: BackgroundType | '') => {
-    const map: Record<string, string> = {
-      fresh_grad: 'Fresh Graduate',
-      student: 'Mahasiswa',
-      jobseeker: 'Job Seeker',
-      career_switch: 'Career Switcher',
-    }
-    return bg ? map[bg] || '' : ''
-  }
+  const formatSalary = (n: number) => (n / 1000000).toFixed(1).replace(/\.0$/, '').replace('.', ',')
+  const salaryText = (lv: LevelType) => `Rp ${formatSalary(SALARY_RANGE[lv].min)} sampai ${formatSalary(SALARY_RANGE[lv].max)} juta`
 
   const handleReplay = async (positionId: string, level: LevelType) => {
     setResetting(true)
+    setResetError('')
     try {
-      await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({ position: positionId }) })
+      const res = await authFetch('/api/reset', { method: 'POST', body: JSON.stringify({ position: positionId }) })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       onApply(positionId, level)
     } catch {
-      alert('Gagal memulai ulang, coba lagi ya.')
+      setResetError('Gagal memulai ulang. Periksa koneksi lalu coba lagi.')
       setResetting(false)
     }
   }
 
+  const runCount = Object.keys(runs).length
+
   return (
     <div className="min-h-screen bg-[#FAFAF7]">
-      {/* Header */}
-      <div className="bg-white border-b border-[#E5E3DC] px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full bg-[#0F6E56]" />
-            <span className="font-serif font-bold text-[#0F6E56]">Kantoran</span>
-            <span className="text-[#E5E3DC] mx-1">·</span>
-            <span className="text-xs text-[#888780]">Lowongan Kerja</span>
-          </div>
-          <div className="flex items-end justify-between">
-            <div>
-              <h1 className="font-serif text-xl font-bold text-[#111111]">Pilih posisi yang ingin kamu lamar</h1>
-              <p className="text-xs text-[#888780] mt-0.5">PT Vantara Nusantara · Jakarta Selatan · Hybrid · Bisa coba lebih dari satu posisi</p>
-              {activeCount !== null && activeCount >= 3 && (
-                <p className="text-[10px] font-medium text-[#0F6E56] mt-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#1D9E75] mr-1 align-middle" />
-                  {activeCount} orang sedang menjalani simulasi di Vantara minggu ini
-                </p>
-              )}
-            </div>
-            {background && (
-              <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-full px-3 py-1 text-[10px] font-semibold text-[#0F6E56] flex-shrink-0">
-                {getCategoryLabel(background)}
-              </div>
-            )}
-          </div>
+      <header className="bg-white border-b border-[#E5E3DC] sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <span className="text-[15px] font-semibold text-[#0F6E56]">Kantoran</span>
+          <button onClick={() => supabase.auth.signOut()} style={{ cursor: 'pointer' }} className="text-[13px] text-[#6B6A64] hover:text-[#1A1A18]">
+            Keluar akun
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* Job Grid */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        <h1 className="text-[22px] font-semibold text-[#1A1A18]">Lowongan di PT Vantara Nusantara</h1>
+        <p className="text-sm text-[#4A4A45] mt-1 leading-relaxed">
+          Perusahaan personal care di Jakarta Selatan, kerja hybrid tiga hari di kantor.
+          {runCount === 0
+            ? ' Pilih satu posisi untuk dilamar. Posisi lain tetap bisa kamu coba nanti.'
+            : ' Lamaran yang sudah berjalan tersimpan, kamu bisa pindah posisi kapan saja.'}
+        </p>
+        {activeCount !== null && activeCount >= 3 && (
+          <p className="text-[13px] text-[#6B6A64] mt-2 tabular">
+            {activeCount} orang menjalani simulasi di sini minggu ini.
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
           {Object.entries(POSITIONS).map(([key, pos]) => {
             const detail = POSITION_DETAILS[key]
             const run = runs[key]
@@ -253,59 +244,41 @@ export default function JobListing({ background, onApply }: Props) {
                 key={key}
                 onClick={() => openJobModal(key)}
                 style={{ cursor: 'pointer' }}
-                className={`text-left p-4 rounded-2xl border bg-white hover:border-[#0F6E56] hover:shadow-sm transition-all group ${
-                  isActive ? 'border-[#0F6E56]/50' : 'border-[#E5E3DC]'
+                className={`text-left p-4 rounded-xl border bg-white hover:border-[#0F6E56] transition-colors ${
+                  isActive ? 'border-[#0F6E56]/60' : 'border-[#E5E3DC]'
                 }`}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#F1EFE8] flex items-center justify-center text-xl group-hover:bg-[#E1F5EE] transition-colors">
-                    {pos.icon}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-[#1A1A18]">{role}</p>
+                    <p className="text-[13px] text-[#6B6A64]">{pos.dept}</p>
                   </div>
                   {isDone ? (
-                    <span className="text-[9px] font-semibold bg-[#E1F5EE] text-[#0F6E56] px-2 py-0.5 rounded-full">
-                      Hari-1 selesai
-                    </span>
+                    <span className="text-[11px] font-medium bg-[#E1F5EE] text-[#0F6E56] px-2 py-0.5 rounded flex-shrink-0">Hari 1 selesai</span>
                   ) : isActive ? (
-                    <span className="text-[9px] font-semibold bg-[#FAEEDA] text-[#854F0B] px-2 py-0.5 rounded-full">
-                      {runStatusLabel(run.step)}
-                    </span>
-                  ) : (
-                    <span className="text-[9px] text-[#888780] font-medium bg-[#F1EFE8] px-2 py-0.5 rounded-full">
-                      Tersedia
-                    </span>
-                  )}
+                    <span className="text-[11px] font-medium bg-[#FAEEDA] text-[#854F0B] px-2 py-0.5 rounded flex-shrink-0">{runStatusLabel(run.step)}</span>
+                  ) : null}
                 </div>
 
-                <p className="text-[10px] font-medium text-[#888780] mb-0.5">PT Vantara Nusantara</p>
-                <p className="text-sm font-bold text-[#111111] mb-0.5 group-hover:text-[#0F6E56] transition-colors">{role}</p>
-                <p className="text-xs text-[#888780] mb-3">{pos.dept}</p>
+                <p className="text-[13px] text-[#4A4A45] mt-3 line-clamp-2">{detail?.responsibilities[0]}.</p>
 
-                <div className="flex items-center gap-1 mb-3">
-                  <span className="text-xs font-semibold text-[#0F6E56]">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F1EFE8]">
+                  <span className="text-[13px] text-[#1A1A18] tabular">
                     {run?.level
-                      ? `Rp ${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].min)}-${formatSalary(SALARY_RANGE[normalizeLevel(run.level)].max)} jt/bln`
-                      : `Rp ${formatSalary(salMin)}-${formatSalary(salMax)} jt/bln · semua jenjang`}
+                      ? salaryText(normalizeLevel(run.level))
+                      : `Rp ${formatSalary(SALARY_RANGE.intern.min)} sampai ${formatSalary(SALARY_RANGE.mid.max)} juta`}
+                  </span>
+                  <span className="text-[13px] font-medium text-[#0F6E56]">
+                    {isActive ? 'Lanjutkan' : isDone ? 'Lihat' : 'Detail'}
                   </span>
                 </div>
-
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {detail?.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="text-[9px] bg-[#F1EFE8] text-[#444441] px-1.5 py-0.5 rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <p className="text-[10px] text-[#0F6E56] font-medium group-hover:underline">
-                  {isActive ? 'Lanjutkan simulasi →' : isDone ? 'Lihat hasil / ulangi →' : 'Lihat detail →'}
-                </p>
               </button>
             )
           })}
         </div>
-      </div>
+        <p className="text-[13px] text-[#6B6A64] mt-4">Gaji per bulan, tergantung jenjang yang kamu pilih.</p>
+      </main>
 
-      {/* Modal Overlay */}
       {modalJob && (() => {
         const pos = POSITIONS[modalJob]
         const detail = POSITION_DETAILS[modalJob]
@@ -313,172 +286,157 @@ export default function JobListing({ background, onApply }: Props) {
         const run = runs[modalJob]
         const isDone = !!run && run.step >= 10
         const isActive = !!run && !isDone
-        const role = pos.getRole(isActive && run.level ? run.level : pickedLevel)
-        const pickedSal = SALARY_RANGE[isActive && run.level ? normalizeLevel(run.level) : pickedLevel]
+        const runLevel = run?.level ? normalizeLevel(run.level) : null
+        const shownLevel = isActive && runLevel ? runLevel : pickedLevel
+        const role = pos.getRole(shownLevel)
 
         return (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+            style={{ backgroundColor: 'rgba(20,20,18,0.55)' }}
             onClick={(e) => { if (e.target === e.currentTarget) setModalJob(null) }}
+            role="dialog" aria-modal="true" aria-labelledby="job-title"
           >
-            <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl animate-fadeUp">
-
-              {/* Modal header */}
-              <div className="bg-gradient-to-r from-[#0F6E56] to-[#1D9E75] px-6 py-5 relative">
+            <div className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-fadeUp">
+              <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#E5E3DC] flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[13px] text-[#6B6A64]">PT Vantara Nusantara · {pos.dept}</p>
+                  <h2 id="job-title" className="text-lg font-semibold text-[#1A1A18] leading-snug mt-0.5">{role}</h2>
+                  <p className="text-[13px] text-[#4A4A45] mt-1 tabular">Jakarta Selatan · Hybrid 3 hari WFO · {salaryText(shownLevel)}/bulan</p>
+                </div>
                 <button
                   onClick={() => setModalJob(null)}
                   style={{ cursor: 'pointer' }}
-                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors text-sm"
+                  aria-label="Tutup"
+                  className="w-8 h-8 -mr-2 rounded-md flex items-center justify-center text-[#6B6A64] hover:bg-[#F1EFE8] flex-shrink-0"
                 >
-                  ✕
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
                 </button>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0">
-                    {pos.icon}
-                  </div>
-                  <div className="flex-1 pr-8">
-                    <p className="text-white/75 text-xs mb-0.5">PT Vantara Nusantara</p>
-                    <h2 className="text-white font-bold text-lg leading-tight">{role}</h2>
-                    <p className="text-white/75 text-sm">{pos.dept}</p>
-                  </div>
-                </div>
-                <div className="flex gap-4 mt-4 text-white/85 text-xs">
-                  <span>📍 Jakarta Selatan</span>
-                  <span>🏠 Hybrid 3x/minggu</span>
-                  <span>💰 Rp {formatSalary(pickedSal.min)}-{formatSalary(pickedSal.max)} jt/bln</span>
-                </div>
               </div>
 
-              {/* Modal body - scrollable */}
-              <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
-                <div className="p-6 flex flex-col gap-5">
-                  {/* Status run tersimpan */}
+              <div className="overflow-y-auto flex-1">
+                <div className="px-5 sm:px-6 py-5 flex flex-col gap-6">
                   {isActive && (
-                    <div className="bg-[#FAEEDA] border border-[#854F0B]/15 rounded-xl px-4 py-3 text-xs text-[#854F0B]">
-                      <strong>Lamaran kamu sedang berjalan</strong> sebagai {role} ({runStatusLabel(run.step)}).
-                      Lanjutkan dari titik terakhir, semua chat dan progress tersimpan.
-                    </div>
+                    <p className="text-[13px] text-[#854F0B] bg-[#FAEEDA]/70 rounded-lg px-3.5 py-2.5 leading-relaxed">
+                      Lamaranmu di sini masih berjalan ({runStatusLabel(run.step).toLowerCase()}). Chat dan progress tersimpan, kamu lanjut dari titik terakhir.
+                    </p>
                   )}
                   {isDone && (
-                    <div className="bg-[#E1F5EE] border border-[#0F6E56]/15 rounded-xl px-4 py-3 text-xs text-[#0F6E56]">
-                      <strong>Hari pertama selesai</strong> di posisi ini, {run.coins} Kantor Coin dan {run.tasks_done} task.
-                      Kamu bisa mengulang dari awal dengan jenjang berbeda (progress lama akan terhapus).
-                    </div>
+                    <p className="text-[13px] text-[#0F6E56] bg-[#E1F5EE]/70 rounded-lg px-3.5 py-2.5 leading-relaxed">
+                      Hari pertama di posisi ini sudah selesai, dengan {run.tasks_done} task dan {run.coins} coin. Buka lagi untuk membaca surat referensi dan chat timmu.
+                    </p>
                   )}
 
-                  {/* Pilih jenjang — semua level terbuka, tidak dikunci ke background */}
                   {!isActive && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Pilih Jenjang</p>
-                      <div className="flex flex-col gap-2">
+                    <fieldset>
+                      <legend className="text-sm font-medium text-[#1A1A18] mb-2">Jenjang yang dilamar</legend>
+                      <div className="flex flex-col gap-2" role="radiogroup">
                         {LEVELS.map(lv => {
-                          const sal = SALARY_RANGE[lv.id]
                           const isPicked = pickedLevel === lv.id
                           const isSuggested = lv.id === defaultLevel
                           return (
                             <button
                               key={lv.id}
+                              type="button"
+                              role="radio"
+                              aria-checked={isPicked}
                               onClick={() => setPickedLevel(lv.id)}
                               style={{ cursor: 'pointer' }}
-                              className={`flex items-center justify-between text-left px-3.5 py-2.5 rounded-xl border transition-all text-sm ${
-                                isPicked
-                                  ? 'border-[#0F6E56] bg-[#E1F5EE]'
-                                  : 'border-[#E5E3DC] hover:border-[#0F6E56]'
+                              className={`flex items-start gap-3 text-left px-3.5 py-3 rounded-lg border transition-colors ${
+                                isPicked ? 'border-[#0F6E56] bg-[#E1F5EE]/60' : 'border-[#D8D6CE] hover:border-[#0F6E56]'
                               }`}
                             >
-                              <div>
-                                <span className={`font-semibold ${isPicked ? 'text-[#0F6E56]' : 'text-[#111111]'}`}>
-                                  {isPicked ? '● ' : '○ '}{lv.label}
-                                </span>
-                                {isSuggested && (
-                                  <span className="ml-1.5 text-[9px] font-semibold bg-[#F1EFE8] text-[#888780] px-1.5 py-0.5 rounded-full">
-                                    sesuai profilmu
-                                  </span>
-                                )}
-                                <p className="text-[11px] text-[#888780] mt-0.5">{lv.desc}</p>
-                              </div>
-                              <span className={`text-xs font-semibold flex-shrink-0 ml-3 ${isPicked ? 'text-[#0F6E56]' : 'text-[#888780]'}`}>
-                                Rp {formatSalary(sal.min)}-{formatSalary(sal.max)} jt
+                              <span className={`mt-0.5 w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center ${isPicked ? 'border-[#0F6E56]' : 'border-[#B8B6AE]'}`}>
+                                {isPicked && <span className="w-2 h-2 rounded-full bg-[#0F6E56]" />}
+                              </span>
+                              <span className="flex-1 min-w-0">
+                                <span className="text-sm font-medium text-[#1A1A18]">{lv.label}</span>
+                                {isSuggested && <span className="ml-2 text-[11px] text-[#6B6A64]">sesuai profilmu</span>}
+                                <span className="block text-[13px] text-[#4A4A45] mt-0.5">{lv.desc}</span>
+                              </span>
+                              <span className="text-[13px] text-[#4A4A45] flex-shrink-0 tabular">
+                                {formatSalary(SALARY_RANGE[lv.id].min)}–{formatSalary(SALARY_RANGE[lv.id].max)} jt
                               </span>
                             </button>
                           )
                         })}
                       </div>
-                      <p className="text-[10px] text-[#888780] mt-1.5">
-                        Jenjang menentukan gaji, ekspektasi interview, dan standar kerja yang dinilai.
+                      <p className="text-[13px] text-[#6B6A64] mt-2 leading-relaxed">
+                        Jenjang menentukan rentang gaji yang bisa kamu nego, kedalaman pertanyaan interview, dan standar penilaian task.
                       </p>
-                    </div>
+                    </fieldset>
                   )}
 
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Tentang Tim</p>
-                    <p className="text-sm leading-relaxed text-[#444441]">{detail.about}</p>
-                  </div>
+                  <section>
+                    <h3 className="text-sm font-medium text-[#1A1A18] mb-1.5">Tentang tim</h3>
+                    <p className="text-sm leading-relaxed text-[#4A4A45]">{detail.about}</p>
+                  </section>
 
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Yang Akan Kamu Kerjakan</p>
-                    <div className="flex flex-col gap-2">
-                      {detail.responsibilities.map((r, i) => (
-                        <div key={i} className="flex gap-2 text-sm text-[#444441]">
-                          <span className="text-[#0F6E56] flex-shrink-0 mt-0.5">→</span>
-                          <span>{r}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <section>
+                    <h3 className="text-sm font-medium text-[#1A1A18] mb-1.5">Pekerjaanmu</h3>
+                    <ul className="list-disc pl-5 flex flex-col gap-1 text-sm text-[#4A4A45] marker:text-[#B8B6AE]">
+                      {detail.responsibilities.map((r, i) => <li key={i}>{r}</li>)}
+                    </ul>
+                  </section>
 
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Yang Kami Cari</p>
-                    <div className="flex flex-col gap-2">
-                      {detail.qualifications.map((q, i) => (
-                        <div key={i} className="flex gap-2 text-sm text-[#444441]">
-                          <span className="text-[#0F6E56] flex-shrink-0 mt-0.5">✓</span>
-                          <span>{q}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <section>
+                    <h3 className="text-sm font-medium text-[#1A1A18] mb-1.5">Yang kami cari</h3>
+                    <ul className="list-disc pl-5 flex flex-col gap-1 text-sm text-[#4A4A45] marker:text-[#B8B6AE]">
+                      {detail.qualifications.map((q, i) => <li key={i}>{q}</li>)}
+                    </ul>
+                  </section>
                 </div>
               </div>
 
-              {/* Modal footer - CTA menyesuaikan status run */}
-              <div className="border-t border-[#E5E3DC] px-6 py-4 bg-[#FAFAF7]">
+              <div className="border-t border-[#E5E3DC] px-5 sm:px-6 py-4 bg-white">
                 {isActive ? (
                   <button
-                    onClick={() => {
-                      setModalJob(null)
-                      onApply(modalJob, normalizeLevel(run.level))
-                    }}
+                    onClick={() => { setModalJob(null); onApply(modalJob, normalizeLevel(run.level)) }}
                     style={{ cursor: 'pointer' }}
-                    className="btn-teal w-full py-3.5 text-sm font-semibold"
+                    className="btn-teal w-full py-3 text-sm"
                   >
-                    Lanjutkan Simulasi →
+                    Lanjutkan lamaran ini
                   </button>
                 ) : isDone ? (
-                  <button
-                    onClick={() => handleReplay(modalJob, pickedLevel)}
-                    disabled={resetting}
-                    style={{ cursor: resetting ? 'wait' : 'pointer' }}
-                    className="btn-teal w-full py-3.5 text-sm font-semibold disabled:opacity-50"
-                  >
-                    {resetting ? 'Menyiapkan...' : `Ulangi sebagai ${pos.getRole(pickedLevel)} →`}
-                  </button>
+                  confirmReplay ? (
+                    <div>
+                      <p className="text-[13px] text-[#4A4A45] mb-3 leading-relaxed">
+                        Mengulang akan menghapus chat, gaji, dan surat referensi di posisi ini, lalu mulai interview baru sebagai {pos.getRole(pickedLevel)}. Posisi lain tidak terpengaruh.
+                      </p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setConfirmReplay(false)} disabled={resetting} style={{ cursor: 'pointer' }} className="btn-teal-outline flex-1 py-2.5 text-sm">Batal</button>
+                        <button onClick={() => handleReplay(modalJob, pickedLevel)} disabled={resetting} style={{ cursor: resetting ? 'wait' : 'pointer' }} className="btn-teal flex-1 py-2.5 text-sm">
+                          {resetting ? 'Menyiapkan...' : 'Ya, ulangi'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button onClick={() => setConfirmReplay(true)} style={{ cursor: 'pointer' }} className="btn-teal-outline flex-1 py-2.5 text-sm">
+                        Ulangi dari awal
+                      </button>
+                      <button
+                        onClick={() => { setModalJob(null); onApply(modalJob, runLevel || pickedLevel) }}
+                        style={{ cursor: 'pointer' }}
+                        className="btn-teal flex-1 py-2.5 text-sm"
+                      >
+                        Buka lagi
+                      </button>
+                    </div>
+                  )
                 ) : (
                   <button
-                    onClick={() => {
-                      setModalJob(null)
-                      onApply(modalJob, pickedLevel)
-                    }}
+                    onClick={() => { setModalJob(null); onApply(modalJob, pickedLevel) }}
                     style={{ cursor: 'pointer' }}
-                    className="btn-teal w-full py-3.5 text-sm font-semibold"
+                    className="btn-teal w-full py-3 text-sm"
                   >
-                    Lamar sebagai {role} →
+                    Lamar sebagai {role}
                   </button>
                 )}
-                <p className="text-center text-xs text-[#888780] mt-2">
-                  {isActive ? 'Semua progress dan chat kamu tersimpan' : 'Kamu akan diinterview langsung setelah apply'}
-                </p>
+                {resetError && <p className="text-[13px] text-[#B42318] mt-2" role="alert">{resetError}</p>}
+                {!isActive && !isDone && (
+                  <p className="text-center text-[13px] text-[#6B6A64] mt-2">Setelah melamar, Sinta dari HR langsung mengajakmu interview lewat chat.</p>
+                )}
               </div>
             </div>
           </div>

@@ -84,19 +84,19 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
   }
 
   const tracks: { key: 'tools' | 'business'; label: string }[] = [
-    { key: 'tools', label: '🛠️ Tools' },
-    { key: 'business', label: '💼 Bisnis & Domain' },
+    { key: 'tools', label: 'Tools' },
+    { key: 'business', label: 'Bisnis dan domain' },
   ]
 
   return (
     <div className="flex flex-col gap-4 animate-fadeUp">
       <div>
-        <h2 className="font-serif font-bold text-[#111111] text-lg">🎓 Vantara Academy</h2>
-        <p className="text-xs text-[#888780] mt-0.5">Training module yang di-assign {supervisorName.split(' ')[0]} buat kamu. Selesaikan yang hari ini, itu bekal buat task-mu.</p>
+        <h2 className="font-semibold text-[#1A1A18] text-lg">Vantara Academy</h2>
+        <p className="text-[13px] text-[#4A4A45] mt-0.5">Training dari {supervisorName.split(' ')[0]} untukmu. Tidak wajib, tapi materinya pas untuk task hari ini.</p>
       </div>
 
       {modules.length === 0 && (
-        <p className="text-sm text-[#888780] py-8 text-center">Belum ada modul untuk posisimu. Cek lagi nanti ya.</p>
+        <p className="text-sm text-[#6B6A64] py-8 text-center">Belum ada modul untuk posisimu. Cek lagi nanti ya.</p>
       )}
 
       {tracks.map(track => {
@@ -104,7 +104,7 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
         if (trackModules.length === 0) return null
         return (
           <div key={track.key}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780] mb-2">{track.label}</p>
+            <p className="text-[11px] font-bold text-[#6B6A64] mb-2">{track.label}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {trackModules.map(mod => {
                 const done = mod.lessons.filter(l => l.progress?.status === 'completed').length
@@ -116,11 +116,10 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
                   return (
                     <div key={mod.id} className="bg-white border border-[#E5E3DC] rounded-xl p-3.5 opacity-60 select-none" style={{ cursor: 'not-allowed' }}>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm">🔒</span>
                         <p className="text-xs font-semibold text-[#444441] truncate">Hari {mod.day} · {mod.title}</p>
                       </div>
-                      {mod.teaser && <p className="text-[11px] text-[#888780] leading-relaxed">{mod.teaser}</p>}
-                      <p className="text-[10px] text-[#854F0B] mt-2 font-medium">Terbuka di Kantoran versi penuh</p>
+                      {mod.teaser && <p className="text-[11px] text-[#6B6A64] leading-relaxed">{mod.teaser}</p>}
+                      <p className="text-[12px] text-[#6B6A64] mt-2">Terbuka setelah hari kedua dirilis</p>
                     </div>
                   )
                 }
@@ -134,9 +133,9 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <p className="text-xs font-semibold text-[#111111] group-hover:text-[#0F6E56] transition-colors truncate">{mod.title}</p>
-                      {done === total && total > 0 && <span className="text-sm flex-shrink-0">✅</span>}
+                      {done === total && total > 0 && <span className="text-[12px] font-medium text-[#166534] flex-shrink-0">Selesai</span>}
                     </div>
-                    <p className="text-[11px] text-[#888780] mb-2.5">{total} materi · {done} selesai</p>
+                    <p className="text-[11px] text-[#6B6A64] mb-2.5">{total} materi · {done} selesai</p>
                     <div className="h-1.5 rounded-full bg-[#F1EFE8] overflow-hidden">
                       <div className="h-full bg-[#1D9E75] rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>

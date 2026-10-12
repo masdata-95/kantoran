@@ -16,7 +16,7 @@ export default function TermsPage() {
         </div>
 
         <h1 className="font-serif text-2xl font-bold text-[#111111] mb-1">Syarat &amp; Ketentuan</h1>
-        <p className="text-xs text-[#888780] mb-8">Berlaku sejak 19 Juli 2026</p>
+        <p className="text-xs text-[#6B6A64] mb-8">Berlaku sejak 19 Juli 2026</p>
 
         <div className="flex flex-col gap-6 text-sm leading-relaxed text-[#444441]">
           <section>
@@ -95,7 +95,7 @@ export default function TermsPage() {
           </section>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-[#E5E3DC] flex gap-4 text-xs text-[#888780]">
+        <div className="mt-10 pt-6 border-t border-[#E5E3DC] flex gap-4 text-xs text-[#6B6A64]">
           <Link href="/" className="hover:text-[#0F6E56]">Beranda</Link>
           <Link href="/privacy" className="hover:text-[#0F6E56]">Kebijakan Privasi</Link>
         </div>

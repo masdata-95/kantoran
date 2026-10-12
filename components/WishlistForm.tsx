@@ -20,29 +20,32 @@ interface Props {
 }
 
 const WISHLIST_OPTIONS = [
-  'Lanjut ke task hari ke-2 dan seterusnya',
-  'Simulasi 3 bulan penuh dengan promosi',
-  'Coba posisi yang berbeda',
-  'Mode multiplayer, kerja bareng orang lain',
-  'Sertifikat dan surat referensi digital',
-  'Fitur coaching dari mentor nyata',
-  'Leaderboard dan kompetisi antar user',
-  'Integrasi dengan lowongan kerja nyata',
-  'Versi mobile app',
-  'Koneksi langsung ke HRD perusahaan',
+  'Lanjut ke task hari kedua dan seterusnya',
+  'Simulasi beberapa minggu sampai performance review',
+  'Surat referensi yang bisa diunduh dan dibagikan',
+  'Sertifikat yang bisa dipasang di LinkedIn',
+  'Feedback dari mentor manusia, bukan hanya AI',
+  'Koneksi ke lowongan kerja sungguhan',
+  'Kerja bareng peserta lain dalam satu tim',
+  'Aplikasi di HP',
 ]
 
+const RATING_LABEL = ['', 'Mengecewakan', 'Kurang', 'Lumayan', 'Bagus', 'Bagus sekali']
+
 export default function WishlistForm({ user, positionTried, firstName, coins, tasksDone, shareText, onExplore }: Props) {
-  const defaultShare = `Baru coba Kantoran, platform simulasi kerja pertama di Indonesia yang terasa nyata. Diinterview, nego gaji, langsung dapat task dari supervisor. Recommended buat yang mau prepare sebelum kerja! kantoran.id`
+  const defaultShare = `Baru coba Kantoran: diinterview HR, nego gaji, lalu dapat task Excel dari supervisor, semuanya lewat chat. Lumayan buat latihan sebelum kerja beneran. kantoran.id`
   const share = shareText || defaultShare
   const [step, setStep] = useState(1)
   const [rating, setRating] = useState(0)
-  const [hoveredRating, setHoveredRating] = useState(0)
   const [feedback, setFeedback] = useState('')
   const [wishlist, setWishlist] = useState<string[]>([])
   const [email, setEmail] = useState(user.email || '')
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const emailValid = /^\S+@\S+\.\S+$/.test(email.trim())
 
   const toggleWish = (w: string) => {
     setWishlist(prev => prev.includes(w) ? prev.filter(x => x !== w) : [...prev, w])
@@ -50,253 +53,215 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
 
   const handleSubmit = async () => {
     setSubmitting(true)
+    setError('')
     try {
-      await authFetch('/api/waitlist', {
+      const res = await authFetch('/api/waitlist', {
         method: 'POST',
-        body: JSON.stringify({
-          email,
-          name: firstName,
-          rating,
-          feedback,
-          wishlist,
-          positionTried,
-        })
+        body: JSON.stringify({ email: email.trim(), name: firstName, rating, feedback, wishlist, positionTried }),
       })
+      // Dulu gagal simpan tetap ditampilkan "terdaftar": email hilang tanpa jejak
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       track('waitlist_submitted', { rating, positionTried })
       setDone(true)
     } catch (e) {
       console.error(e)
-      setDone(true) // show done anyway
+      setError('Belum tersimpan karena koneksi terputus. Coba kirim sekali lagi.')
     } finally {
       setSubmitting(false)
     }
   }
 
+  const copyShare = async () => {
+    try {
+      await navigator.clipboard.writeText(share)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch { /* clipboard diblokir browser: teks tetap bisa diseleksi manual */ }
+  }
+
   if (done) {
     return (
-      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center animate-fadeUp">
-          <div className="text-6xl mb-6">🎉</div>
-          <h1 className="font-serif text-3xl font-bold text-[#111111] mb-3">
-            Kamu sudah terdaftar!
-          </h1>
-          <p className="text-[#888780] leading-relaxed mb-6">
-            Hari pertama di Kantoran selesai, {firstName}. Kamu mengumpulkan{' '}
-            <strong className="text-[#0F6E56]">{coins} Kantor Coin</strong> dan menyelesaikan{' '}
-            <strong className="text-[#0F6E56]">{tasksDone} task</strong>.
-            <br /><br />
-            Kami akan hubungi kamu di <strong>{email}</strong> saat Kantoran penuh diluncurkan, dengan simulasi 3 bulan, task yang makin kompleks, dan surat referensi kerja nyata.
-          </p>
+      <div className="min-h-screen bg-[#FAFAF7] flex flex-col">
+        <header className="px-5 sm:px-8 h-14 flex items-center border-b border-[#E5E3DC] bg-white">
+          <span className="text-[15px] font-semibold text-[#0F6E56]">Kantoran</span>
+        </header>
+        <main className="flex-1 flex justify-center p-5 sm:p-8">
+          <div className="max-w-md w-full">
+            <h1 className="text-[22px] font-semibold text-[#1A1A18] mb-2">Terima kasih, {firstName}.</h1>
+            <p className="text-[15px] text-[#4A4A45] leading-relaxed mb-6">
+              Kami kabari ke <strong className="font-medium text-[#1A1A18]">{email}</strong> begitu hari kedua dibuka. Satu email, tidak lebih.
+            </p>
 
-          {/* Share card */}
-          <div className="bg-white border border-[#E5E3DC] rounded-2xl p-5 mb-6 text-left">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Bagikan pengalaman kamu</p>
-            <p className="text-sm text-[#444441] leading-relaxed mb-4">&ldquo;{share}&rdquo;</p>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(share).catch(() => {})
-                alert('Teks sudah dicopy! Tempel di Twitter/LinkedIn kamu.')
-              }}
-              style={{ cursor: 'pointer' }}
-              className="btn-teal text-sm w-full"
-            >
-              Copy teks untuk dibagikan
-            </button>
-          </div>
-
-          {onExplore ? (
-            <div className="flex flex-col gap-3 items-center">
-              <button onClick={onExplore} style={{ cursor: 'pointer' }} className="btn-teal text-sm w-full">
-                Penasaran divisi lain? Coba posisi berbeda →
+            <div className="bg-white border border-[#E5E3DC] rounded-xl p-5 mb-6">
+              <p className="text-sm font-medium text-[#1A1A18] mb-2">Mau cerita ke teman?</p>
+              <p className="text-sm text-[#4A4A45] leading-relaxed mb-4 select-all">{share}</p>
+              <button onClick={copyShare} style={{ cursor: 'pointer' }} className="btn-teal-outline text-sm w-full py-2.5">
+                {copied ? 'Tersalin' : 'Salin teks'}
               </button>
-              <p className="text-xs text-[#888780]">
-                Progress posisi yang sudah kamu selesaikan tetap tersimpan.
-              </p>
             </div>
-          ) : (
-            <Link href="/" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
-              Kembali ke Kantoran →
-            </Link>
-          )}
-        </div>
+
+            {onExplore ? (
+              <div>
+                <button onClick={onExplore} style={{ cursor: 'pointer' }} className="btn-teal text-sm w-full py-3">
+                  Coba posisi lain
+                </button>
+                <p className="text-[13px] text-[#6B6A64] mt-2 text-center">Hasil di posisi ini tetap tersimpan.</p>
+              </div>
+            ) : (
+              <Link href="/" className="text-sm text-[#0F6E56] font-medium hover:underline" style={{ cursor: 'pointer' }}>
+                Kembali ke Kantoran
+              </Link>
+            )}
+          </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7] flex flex-col items-center justify-center p-6">
-      <div className="fixed top-0 left-0 right-0 h-1 bg-[#0F6E56]" />
+    <div className="min-h-screen bg-[#FAFAF7] flex flex-col">
+      <header className="px-5 sm:px-8 h-14 flex items-center justify-between border-b border-[#E5E3DC] bg-white">
+        <span className="text-[15px] font-semibold text-[#0F6E56]">Kantoran</span>
+        <span className="text-[13px] text-[#6B6A64] tabular">{step}/3</span>
+      </header>
 
-      <div className="w-full max-w-lg animate-fadeUp">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-4">⏸️</div>
-          <h1 className="font-serif text-2xl font-bold text-[#111111] mb-2">
-            Hari pertama selesai, {firstName}.
-          </h1>
-          <p className="text-sm text-[#888780]">
-            Kamu mengumpulkan <strong className="text-[#0F6E56]">{coins} Kantor Coin</strong> dan menyelesaikan{' '}
-            <strong className="text-[#0F6E56]">{tasksDone} task</strong> hari ini.
+      <main className="flex-1 flex justify-center p-4 sm:p-8">
+        <div className="w-full max-w-lg">
+          <p className="text-[13px] text-[#6B6A64] mb-1 tabular">
+            Hari pertama selesai · {tasksDone} task · {coins} coin
           </p>
-        </div>
 
-        {/* Progress */}
-        <div className="flex gap-1.5 mb-6">
-          {[1, 2, 3].map(i => (
-            <div key={i} className={`flex-1 h-1 rounded-full transition-all ${
-              i < step ? 'bg-[#1D9E75]' : i === step ? 'bg-[#0F6E56]' : 'bg-[#E5E3DC]'
-            }`} />
-          ))}
-        </div>
+          {step === 1 && (
+            <>
+              <h1 className="text-[22px] font-semibold text-[#1A1A18] mb-1">Gimana rasanya, {firstName}?</h1>
+              <p className="text-sm text-[#4A4A45] mb-6">Jujur saja. Kami baca semua jawaban, dan ini yang menentukan apa yang kami perbaiki duluan.</p>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <h1 className="text-[22px] font-semibold text-[#1A1A18] mb-1">Apa yang paling kamu butuhkan berikutnya?</h1>
+              <p className="text-sm text-[#4A4A45] mb-6">Pilih sebanyak yang kamu mau, atau lewati.</p>
+            </>
+          )}
+          {step === 3 && (
+            <>
+              <h1 className="text-[22px] font-semibold text-[#1A1A18] mb-1">Hari kedua sedang disiapkan</h1>
+              <p className="text-sm text-[#4A4A45] mb-6 leading-relaxed">
+                Manager-mu sudah minta ketemu besok pagi, dan task minggu ini sudah menunggu. Tinggalkan email, kamu yang pertama diberi tahu saat dibuka, beserta harga untuk pendaftar awal.
+              </p>
+            </>
+          )}
 
-        <div className="bg-white rounded-2xl border border-[#E5E3DC] shadow-sm">
-          <div className="p-6">
-
-            {/* Step 1, Rating & Feedback */}
-            {step === 1 && (
-              <div>
-                <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Gimana pengalamannya?</h2>
-                <p className="text-sm text-[#888780] mb-6">Jujur aja, ini sangat membantu kami untuk berkembang.</p>
-
-                {/* Star rating */}
-                <div className="flex justify-center gap-3 mb-6">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button
-                      key={star}
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoveredRating(star)}
-                      onMouseLeave={() => setHoveredRating(0)}
-                      style={{ cursor: 'pointer' }}
-                      className="text-4xl transition-transform hover:scale-110"
-                    >
-                      {star <= (hoveredRating || rating) ? '⭐' : '☆'}
-                    </button>
-                  ))}
-                </div>
-
-                {rating > 0 && (
-                  <p className="text-center text-sm text-[#888780] mb-4">
-                    {rating === 5 ? 'Luar biasa! Senang sekali mendengar itu.' :
-                     rating === 4 ? 'Bagus! Ada yang bisa kami tingkatkan?' :
-                     rating === 3 ? 'Cukup. Apa yang kurang menurutmu?' :
-                     rating === 2 ? 'Kamu tidak puas, apa yang salah?' :
-                     'Waduh. Tolong ceritakan apa yang mengecewakan.'}
-                  </p>
-                )}
-
+          <div className="bg-white rounded-xl border border-[#E5E3DC]">
+            <div className="p-5 sm:p-6">
+              {step === 1 && (
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">
-                    Ceritakan pengalamanmu (opsional)
-                  </label>
-                  <textarea
-                    value={feedback}
-                    onChange={e => setFeedback(e.target.value)}
-                    placeholder="Apa yang paling berkesan? Apa yang perlu diperbaiki? Apakah terasa seperti kerja nyata?"
-                    className="w-full px-3 py-2.5 border border-[#E5E3DC] rounded-xl text-sm outline-none focus:border-[#0F6E56] resize-none min-h-[100px]"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 2, Wishlist */}
-            {step === 2 && (
-              <div>
-                <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Fitur apa yang paling kamu mau?</h2>
-                <p className="text-sm text-[#888780] mb-5">Pilih sebanyak yang kamu mau. Ini yang akan kami prioritaskan.</p>
-
-                <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
-                  {WISHLIST_OPTIONS.map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => toggleWish(opt)}
-                      style={{ cursor: 'pointer' }}
-                      className={`text-left px-4 py-3 rounded-xl border transition-all text-sm ${
-                        wishlist.includes(opt)
-                          ? 'border-[#0F6E56] bg-[#E1F5EE] text-[#0F6E56] font-medium'
-                          : 'border-[#E5E3DC] text-[#444441] hover:border-[#0F6E56]'
-                      }`}
-                    >
-                      <span className="mr-2">{wishlist.includes(opt) ? '✓' : '○'}</span>
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3, Email */}
-            {step === 3 && (
-              <div>
-                <h2 className="font-serif text-xl font-bold text-[#111111] mb-1">Jangan berhenti di hari pertama</h2>
-                <p className="text-sm text-[#888780] mb-6">
-                  Manager-mu sudah menunggumu besok pagi, dan task minggu ini sudah ada di mejamu.
-                  Daftar waitlist: kamu yang pertama dapat akses hari kedua, plus harga early-bird saat Kantoran penuh diluncurkan.
-                </p>
-
-                {/* Preview what they'll get */}
-                <div className="bg-[#F1EFE8] rounded-xl p-4 mb-5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-2">Yang kamu akan dapat saat launch:</p>
-                  <div className="flex flex-col gap-1.5">
-                    {[
-                      'Simulasi kerja 3 bulan penuh',
-                      'Task yang makin kompleks setiap harinya',
-                      'Performance review dan promosi jabatan',
-                      'Surat referensi kerja dari PT Vantara Nusantara',
-                      'Badge dan sertifikat digital yang bisa dibagikan',
-                    ].map(item => (
-                      <div key={item} className="flex gap-2 text-xs text-[#444441]">
-                        <span className="text-[#0F6E56]">→</span>
-                        <span>{item}</span>
-                      </div>
+                  <p className="text-[13px] font-medium text-[#1A1A18] mb-2">Nilai pengalamanmu</p>
+                  <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Nilai 1 sampai 5">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={rating === n}
+                        aria-label={`${n}, ${RATING_LABEL[n]}`}
+                        onClick={() => setRating(n)}
+                        style={{ cursor: 'pointer' }}
+                        className={`h-11 rounded-lg border text-sm font-medium tabular transition-colors ${
+                          rating === n ? 'border-[#0F6E56] bg-[#0F6E56] text-white' : 'border-[#D8D6CE] text-[#1A1A18] hover:border-[#0F6E56]'
+                        }`}
+                      >
+                        {n}
+                      </button>
                     ))}
                   </div>
-                </div>
+                  <div className="flex justify-between text-[12px] text-[#6B6A64] mt-1.5">
+                    <span>Mengecewakan</span><span>Bagus sekali</span>
+                  </div>
+                  {rating > 0 && (
+                    <p className="text-[13px] text-[#4A4A45] mt-3">
+                      {RATING_LABEL[rating]}. {rating <= 3 ? 'Bagian mana yang paling mengganggu?' : 'Bagian mana yang paling terasa nyata?'}
+                    </p>
+                  )}
 
+                  <label htmlFor="wl-feedback" className="block text-[13px] font-medium text-[#1A1A18] mt-5 mb-1.5">
+                    Ceritakan sedikit <span className="font-normal text-[#6B6A64]">(opsional)</span>
+                  </label>
+                  <textarea
+                    id="wl-feedback"
+                    value={feedback}
+                    onChange={e => setFeedback(e.target.value)}
+                    placeholder="Misalnya: interviewnya terasa nyata, tapi task Excel-nya kurang jelas"
+                    className="w-full px-3 py-2.5 border border-[#D8D6CE] rounded-lg text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10 resize-none min-h-[96px]"
+                  />
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="flex flex-col gap-1.5">
+                  {WISHLIST_OPTIONS.map(opt => {
+                    const on = wishlist.includes(opt)
+                    return (
+                      <label key={opt} style={{ cursor: 'pointer' }} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg border text-sm transition-colors ${
+                        on ? 'border-[#0F6E56] bg-[#E1F5EE]/60 text-[#1A1A18]' : 'border-[#D8D6CE] text-[#3A3A36] hover:border-[#0F6E56]'
+                      }`}>
+                        <input type="checkbox" checked={on} onChange={() => toggleWish(opt)} className="w-4 h-4 accent-[#0F6E56]" />
+                        {opt}
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
+              {step === 3 && (
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">Email untuk notifikasi *</label>
+                  <label htmlFor="wl-email" className="block text-[13px] font-medium text-[#1A1A18] mb-1.5">Email</label>
                   <input
+                    id="wl-email"
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="email@kamu.com"
-                    className="w-full px-3 py-2.5 border border-[#E5E3DC] rounded-xl text-sm outline-none focus:border-[#0F6E56] mb-1"
+                    placeholder="nama@email.com"
+                    autoComplete="email"
+                    className="w-full px-3 py-2.5 border border-[#D8D6CE] rounded-lg text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56]/10"
                   />
-                  <p className="text-xs text-[#888780]">Tidak ada spam. Hanya notifikasi launch dan update penting.</p>
+                  <p className="text-[13px] text-[#6B6A64] mt-1.5">Hanya untuk kabar pembukaan hari kedua.</p>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Footer */}
-          <div className="border-t border-[#E5E3DC] px-6 py-4 flex justify-between items-center bg-[#FAFAF7]">
-            {step > 1 ? (
-              <button onClick={() => setStep(s => s - 1)} style={{ cursor: 'pointer' }} className="text-sm text-[#888780] hover:text-[#111111]">
-                ← Kembali
-              </button>
-            ) : <div />}
+            <div className="border-t border-[#E5E3DC] px-5 sm:px-6 py-4 flex justify-between items-center">
+              {step > 1 ? (
+                <button onClick={() => setStep(s => s - 1)} style={{ cursor: 'pointer' }} className="text-sm text-[#4A4A45] hover:text-[#1A1A18]">
+                  Kembali
+                </button>
+              ) : <span />}
 
-            {step < 3 ? (
-              <button
-                onClick={() => setStep(s => s + 1)}
-                disabled={step === 1 && rating === 0}
-                style={{ cursor: step === 1 && rating === 0 ? 'not-allowed' : 'pointer' }}
-                className="btn-teal text-sm disabled:opacity-40"
-              >
-                {step === 2 && wishlist.length === 0 ? 'Lewati →' : 'Lanjut →'}
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={submitting || !email.trim()}
-                style={{ cursor: submitting || !email ? 'not-allowed' : 'pointer' }}
-                className="btn-teal text-sm disabled:opacity-40"
-              >
-                {submitting ? 'Mendaftarkan...' : 'Daftar Waitlist →'}
-              </button>
-            )}
+              {step < 3 ? (
+                <button
+                  onClick={() => setStep(s => s + 1)}
+                  disabled={step === 1 && rating === 0}
+                  style={{ cursor: step === 1 && rating === 0 ? 'not-allowed' : 'pointer' }}
+                  className="btn-teal text-sm"
+                >
+                  {step === 2 && wishlist.length === 0 ? 'Lewati' : 'Lanjut'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || !emailValid}
+                  style={{ cursor: submitting || !emailValid ? 'not-allowed' : 'pointer' }}
+                  className="btn-teal text-sm"
+                >
+                  {submitting ? 'Menyimpan...' : 'Kabari saya'}
+                </button>
+              )}
+            </div>
           </div>
+          {error && <p className="mt-3 text-sm text-[#B42318]" role="alert">{error}</p>}
+          {step === 1 && rating === 0 && <p className="mt-3 text-[13px] text-[#6B6A64]">Pilih angka dulu untuk lanjut.</p>}
         </div>
-      </div>
+      </main>
     </div>
   )
 }

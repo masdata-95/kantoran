@@ -102,25 +102,25 @@ export default function GuidedTour({ steps, onDone, onStepChange }: {
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="bg-white rounded-2xl shadow-2xl p-4 animate-fadeUp"
+        className="bg-white rounded-xl shadow-xl p-4 animate-fadeUp"
         style={{ ...ttStyle, zIndex: 92 }}
         onClick={e => e.stopPropagation()}
       >
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] mb-1">
+        <p className="text-[12px] text-[#6B6A64] mb-1 tabular">
           {idx + 1} dari {steps.length}
         </p>
-        <p className="text-sm font-bold text-[#111111] mb-1">{step.title}</p>
-        <p className="text-xs text-[#444441] leading-relaxed mb-3">{step.body}</p>
+        <p className="text-[15px] font-semibold text-[#1A1A18] mb-1">{step.title}</p>
+        <p className="text-[13px] text-[#3A3A36] leading-relaxed mb-4">{step.body}</p>
         <div className="flex items-center justify-between">
           <button
             onClick={onDone}
             style={{ cursor: 'pointer' }}
-            className="text-xs text-[#888780] hover:text-[#111111]"
+            className="text-[13px] text-[#4A4A45] hover:text-[#1A1A18]"
           >
             Lewati tur
           </button>
-          <button onClick={next} style={{ cursor: 'pointer' }} className="btn-teal text-xs px-4 py-2">
-            {isLast ? 'Mulai kerja' : 'Lanjut'} →
+          <button onClick={next} style={{ cursor: 'pointer' }} className="btn-teal text-[13px] px-4 py-2">
+            {isLast ? 'Mulai' : 'Lanjut'}
           </button>
         </div>
       </div>

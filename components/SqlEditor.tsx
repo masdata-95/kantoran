@@ -252,7 +252,7 @@ export default function SqlEditor({ userId, onCoins }: {
           <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
           <div className="w-2 h-2 rounded-full bg-[#0F6E56] dot-bounce" />
         </div>
-        <p className="text-xs text-[#888780]">Menyambungkan ke database Vantara...</p>
+        <p className="text-xs text-[#6B6A64]">Menyambungkan ke database Vantara...</p>
       </div>
     </div>
   )
@@ -273,12 +273,12 @@ export default function SqlEditor({ userId, onCoins }: {
 
       {/* Schema browser */}
       <div className="bg-white border border-[#E5E3DC] rounded-xl p-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">Tabel yang tersedia</p>
+        <p className="text-[11px] font-bold text-[#6B6A64] mb-2">Tabel yang tersedia</p>
         <div className="flex flex-col gap-1.5">
           {schema.map(t => (
             <div key={t.table} className="text-xs">
               <span className="font-semibold text-[#0F6E56]">{t.table}</span>
-              <span className="text-[#888780]"> ({t.columns.join(', ')})</span>
+              <span className="text-[#6B6A64]"> ({t.columns.join(', ')})</span>
             </div>
           ))}
         </div>
@@ -297,7 +297,7 @@ export default function SqlEditor({ userId, onCoins }: {
           placeholder="SELECT * FROM sales LIMIT 10"
         />
         <div className="flex items-center justify-between mt-2">
-          <p className="text-[10px] text-[#888780]">Ctrl+Enter untuk menjalankan</p>
+          <p className="text-[11px] text-[#6B6A64]">Ctrl+Enter untuk menjalankan</p>
           <button onClick={handleRun} style={{ cursor: 'pointer' }} className="btn-teal text-xs px-4 py-2">
             Jalankan Query
           </button>
@@ -312,7 +312,7 @@ export default function SqlEditor({ userId, onCoins }: {
       )}
       {result && (
         <div className="bg-white border border-[#E5E3DC] rounded-xl p-3 overflow-hidden">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">
+          <p className="text-[11px] font-bold text-[#6B6A64] mb-2">
             Hasil: {rowCount} baris{rowCount > MAX_DISPLAY_ROWS ? ` (ditampilkan ${MAX_DISPLAY_ROWS} pertama)` : ''}
           </p>
           <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
@@ -340,7 +340,7 @@ export default function SqlEditor({ userId, onCoins }: {
 
       {/* Tantangan dari supervisor — dinilai otomatis, tanpa AI */}
       <div className="bg-white border border-[#E5E3DC] rounded-xl p-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-2">
+        <p className="text-[11px] font-bold text-[#6B6A64] mb-2">
           Latihan dari supervisormu ({Object.values(done).filter(Boolean).length}/{CHALLENGES.length} selesai)
         </p>
         <div className="bg-[#FAFAF7] border border-[#E5E3DC] rounded-lg px-3 py-2.5 mb-3">
@@ -354,21 +354,21 @@ export default function SqlEditor({ userId, onCoins }: {
           {CHALLENGES.map((ch, idx) => (
             <Fragment key={ch.id}>
             {(idx === 0 || CHALLENGES[idx - 1].level !== ch.level) && (
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] mt-1">{LEVEL_GROUP[ch.level]}</p>
+              <p className="text-[11px] font-bold text-[#0F6E56] mt-1">{LEVEL_GROUP[ch.level]}</p>
             )}
             <div className={`border rounded-xl p-3 ${done[ch.id] ? 'border-[#0F6E56]/30 bg-[#E1F5EE]/40' : 'border-[#E5E3DC]'}`}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-xs font-semibold text-[#111111]">
                   {done[ch.id] ? '✓ ' : `Soal ${idx + 1}. `}{ch.title}
                 </p>
-                <span className="text-[10px] font-semibold text-[#854F0B] bg-[#FAEEDA] px-2 py-0.5 rounded-full flex-shrink-0">
+                <span className="text-[11px] font-semibold text-[#854F0B] bg-[#FAEEDA] px-2 py-0.5 rounded-full flex-shrink-0">
                   +{ch.reward} coin
                 </span>
               </div>
               <p className="text-xs text-[#444441] leading-relaxed mb-1.5">{ch.brief}</p>
               <details className="mb-2">
-                <summary className="text-[10px] text-[#0F6E56] font-medium" style={{ cursor: 'pointer' }}>Lihat petunjuk</summary>
-                <p className="text-[11px] text-[#888780] mt-1 font-mono">{ch.hint}</p>
+                <summary className="text-[11px] text-[#0F6E56] font-medium" style={{ cursor: 'pointer' }}>Lihat petunjuk</summary>
+                <p className="text-[11px] text-[#6B6A64] mt-1 font-mono">{ch.hint}</p>
               </details>
               <div className="flex items-center gap-2 flex-wrap">
                 <button

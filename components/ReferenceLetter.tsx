@@ -43,17 +43,17 @@ export default function ReferenceLetter({ firstName, bgRole, step, tasksDone, tr
   return (
     <div className="max-w-lg mx-auto w-full pb-4">
       {/* Kertas surat */}
-      <div className="bg-white border border-[#E5E3DC] rounded-2xl overflow-hidden shadow-sm">
-        <div className="bg-gradient-to-r from-[#0F6E56] to-[#1D9E75] px-5 py-4 text-center">
-          <p className="text-white font-serif font-bold text-sm tracking-wide">PT VANTARA NUSANTARA</p>
-          <p className="text-white/75 text-[10px]">FMCG Personal Care · Jakarta Selatan</p>
+      <div className="bg-white border border-[#E5E3DC] rounded-md overflow-hidden">
+        <div className="mx-5 sm:mx-7 pt-6 pb-3 border-b-2 border-[#1A1A18]">
+          <p className="text-[15px] font-semibold tracking-[0.04em] text-[#1A1A18]">PT VANTARA NUSANTARA</p>
+          <p className="text-[12px] text-[#6B6A64]">Personal care · Jakarta Selatan</p>
         </div>
 
-        <div className="px-5 py-5">
-          <p className="text-center font-serif font-bold text-[#111111] text-sm mb-1">SURAT REFERENSI KERJA</p>
-          <p className="text-center text-[10px] text-[#888780] mb-4">No. VN/HR/{new Date().getFullYear()}/…</p>
+        <div className="px-5 sm:px-7 py-5">
+          <p className="text-center font-semibold text-[#1A1A18] text-sm tracking-[0.04em] mb-0.5">SURAT REFERENSI KERJA</p>
+          <p className="text-center text-[12px] text-[#6B6A64] mb-5 tabular">No. VN/HR/{new Date().getFullYear()}/... (terbit saat simulasi selesai)</p>
 
-          <p className="text-xs leading-relaxed text-[#444441] mb-4">
+          <p className="text-[13px] leading-relaxed text-[#2B2B28] mb-4">
             Dengan ini kami menerangkan bahwa <strong className="text-[#111111]">{firstName}</strong> bekerja
             sebagai <strong className="text-[#111111]">{bgRole}</strong> di tim {pos?.dept || ''} PT Vantara Nusantara,
             dengan catatan pencapaian sebagai berikut:
@@ -63,9 +63,9 @@ export default function ReferenceLetter({ firstName, bgRole, step, tasksDone, tr
           <div className="flex flex-col mb-4">
             {milestones.map((m, i) => (
               <div key={i} className={`flex items-start gap-2 py-1.5 border-b border-[#F1EFE8] last:border-0 ${m.done ? '' : 'opacity-45'}`}>
-                <span className={`text-xs mt-0.5 flex-shrink-0 ${m.done ? 'text-[#0F6E56]' : 'text-[#888780]'}`}>{m.done ? '✓' : '·'}</span>
-                <p className={`text-xs leading-relaxed ${m.done ? 'text-[#111111]' : 'text-[#888780] italic'}`}>
-                  {m.done ? m.text : 'Belum tercapai, lanjutkan simulasimu'}
+                <span className={`text-[13px] mt-px flex-shrink-0 w-3 ${m.done ? 'text-[#0F6E56]' : 'text-[#A3A19A]'}`} aria-hidden>{m.done ? '✓' : '○'}</span>
+                <p className={`text-[13px] leading-relaxed ${m.done ? 'text-[#1A1A18]' : 'text-[#6B6A64]'}`}>
+                  {m.done ? m.text : 'Terisi setelah langkah ini kamu lalui'}
                 </p>
               </div>
             ))}
@@ -74,16 +74,16 @@ export default function ReferenceLetter({ firstName, bgRole, step, tasksDone, tr
           {/* Penilaian + kutipan supervisor, muncul setelah task pertama dinilai */}
           {taskDone && (
             <div className="bg-[#FAFAF7] border border-[#E5E3DC] rounded-xl p-3 mb-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-1">Penilaian Hari Pertama</p>
-              <p className="text-xs font-semibold text-[#0F6E56] mb-1.5">{GRADE_LABEL[grade]}</p>
+              <p className="text-[12px] text-[#6B6A64] mb-0.5">Penilaian hari pertama</p>
+              <p className="text-[13px] font-semibold text-[#0F6E56] mb-1.5">{GRADE_LABEL[grade]}</p>
               {supQuote && (
-                <p className="text-xs text-[#444441] leading-relaxed italic">
+                <p className="text-[13px] text-[#2B2B28] leading-relaxed">
                   &ldquo;{supQuote}&rdquo;
-                  <span className="not-italic text-[#888780]"> — {pos?.supervisor.name}, {pos?.supervisor.role.split('·')[0].trim()}</span>
+                  <span className="block text-[12px] text-[#6B6A64] mt-1">{pos?.supervisor.name}, {pos?.supervisor.role.split('·')[0].trim()}</span>
                 </p>
               )}
               {workStyle && (
-                <p className="text-xs text-[#444441] leading-relaxed mt-1.5">{workStyle.letterNote}</p>
+                <p className="text-[13px] text-[#2B2B28] leading-relaxed mt-1.5">{workStyle.letterNote}</p>
               )}
             </div>
           )}
@@ -91,12 +91,12 @@ export default function ReferenceLetter({ firstName, bgRole, step, tasksDone, tr
           {/* Baris masa depan: terkunci, terisi saat dikerjakan (teaser premium) */}
           {(pos?.upcomingTasks.length || 0) > 0 && (
             <div className="mb-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#888780] mb-1.5">Baris berikutnya di suratmu</p>
+              <p className="text-[12px] text-[#6B6A64] mb-1">Baris berikutnya di suratmu</p>
               <div className="flex flex-col opacity-50 select-none" style={{ cursor: 'not-allowed' }} title="Terisi saat kamu mengerjakannya">
                 {pos!.upcomingTasks.map(t => (
                   <div key={t.day} className="flex items-start gap-2 py-1 border-b border-[#F1EFE8] last:border-0">
-                    <span className="text-[10px] mt-0.5">🔒</span>
-                    <p className="text-[11px] text-[#888780]">Hari {t.day}: {t.title}</p>
+                    <span className="text-[12px] mt-px text-[#A3A19A] w-3" aria-hidden>○</span>
+                    <p className="text-[12px] text-[#6B6A64]">Hari {t.day}: {t.title}</p>
                   </div>
                 ))}
               </div>
@@ -106,19 +106,19 @@ export default function ReferenceLetter({ firstName, bgRole, step, tasksDone, tr
           {/* Blok tanda tangan, terkunci sampai simulasi selesai */}
           <div className="flex justify-between items-end pt-2 opacity-50">
             <div className="text-center">
-              <div className="h-8 border-b border-dashed border-[#888780] w-28 mb-1" />
-              <p className="text-[10px] text-[#888780]">{pos?.supervisor.name || 'Supervisor'}</p>
+              <div className="h-8 border-b border-dashed border-[#6B6A64] w-28 mb-1" />
+              <p className="text-[11px] text-[#6B6A64]">{pos?.supervisor.name || 'Supervisor'}</p>
             </div>
             <div className="text-center">
-              <div className="h-8 border-b border-dashed border-[#888780] w-28 mb-1" />
-              <p className="text-[10px] text-[#888780]">{pos?.manager.name || 'Manager'}</p>
+              <div className="h-8 border-b border-dashed border-[#6B6A64] w-28 mb-1" />
+              <p className="text-[11px] text-[#6B6A64]">{pos?.manager.name || 'Manager'}</p>
             </div>
           </div>
-          <p className="text-center text-[10px] text-[#888780] mt-2">Ditandatangani resmi di akhir simulasi</p>
+          <p className="text-center text-[11px] text-[#6B6A64] mt-2">Ditandatangani resmi di akhir simulasi</p>
         </div>
       </div>
 
-      <p className="text-center text-[11px] text-[#888780] mt-3 leading-relaxed px-4">
+      <p className="text-center text-[11px] text-[#6B6A64] mt-3 leading-relaxed px-4">
         Surat ini milikmu dan terus bertambah. Setiap task yang selesai menambah satu baris,
         dan kualitas kerjamu menentukan bunyinya.
       </p>

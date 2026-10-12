@@ -12,7 +12,7 @@ export default function YouTubeEmbed({ videoId, title }: { videoId?: string | nu
     return (
       <div className="rounded-xl border border-dashed border-[#E5E3DC] bg-[#FAFAF7] aspect-video flex flex-col items-center justify-center gap-2 select-none">
         <span className="text-2xl">🎬</span>
-        <p className="text-xs text-[#888780]">Video menyusul. Materi teksnya sudah lengkap di bawah.</p>
+        <p className="text-xs text-[#6B6A64]">Video menyusul. Materi teksnya sudah lengkap di bawah.</p>
       </div>
     )
   }

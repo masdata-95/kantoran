@@ -26,7 +26,7 @@ export default function Home() {
           background: '#0F6E56', margin: '0 auto 12px',
           animation: 'pulse 1s infinite'
         }}></div>
-        <p style={{ color: '#888780', fontSize: 14 }}>Memuat Kantoran...</p>
+        <p style={{ color: '#6B6A64', fontSize: 14 }}>Memuat Kantoran...</p>
       </div>
     </div>
   )

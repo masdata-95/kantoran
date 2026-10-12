@@ -7,7 +7,7 @@ import type { UserContext } from '@/lib/prompts'
 import MarkdownLite from './MarkdownLite'
 import YouTubeEmbed from './YouTubeEmbed'
 
-const TYPE_ICON: Record<string, string> = { text: '📖', video: '🎬', mission: '🎯' }
+const TYPE_LABEL: Record<string, string> = { text: 'Bacaan', video: 'Video', mission: 'Misi' }
 
 export default function LessonView({ module: mod, positionId, userContext, supervisorName, supervisorInitials, supervisorAvClass, onBack, onLessonComplete }: {
   module: ModuleDTO
@@ -75,23 +75,23 @@ export default function LessonView({ module: mod, positionId, userContext, super
 
   return (
     <div className="flex flex-col gap-3 animate-fadeUp">
-      <button onClick={onBack} style={{ cursor: 'pointer' }} className="self-start text-xs text-[#888780] hover:text-[#0F6E56] transition-colors">
+      <button onClick={onBack} style={{ cursor: 'pointer' }} className="self-start text-xs text-[#6B6A64] hover:text-[#0F6E56] transition-colors">
         ← Kembali ke Academy
       </button>
 
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#888780]">{mod.track === 'tools' ? '🛠️ Tools' : '💼 Bisnis & Domain'} · Hari {mod.day}</p>
+        <p className="text-[11px] font-bold text-[#6B6A64]">{mod.track === 'tools' ? 'Tools' : 'Bisnis dan domain'} · Hari {mod.day}</p>
         <h2 className="font-serif font-bold text-[#111111] text-lg mt-0.5">{mod.title}</h2>
       </div>
 
       {/* Intro modul — suara supervisor, tampil seperti bubble chat biar tetap in-story */}
       {mod.storyIntro && (
         <div className="flex gap-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${supervisorAvClass}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${supervisorAvClass}`}>
             {supervisorInitials}
           </div>
           <div className="bg-white border border-[#E5E3DC] rounded-[0_8px_8px_8px] px-3 py-2.5 text-sm text-[#444441] max-w-[560px]">
-            <p className="text-[10px] font-semibold text-[#0F6E56] mb-0.5">{supervisorName}</p>
+            <p className="text-[11px] font-semibold text-[#0F6E56] mb-0.5">{supervisorName}</p>
             {mod.storyIntro}
           </div>
         </div>
@@ -116,10 +116,10 @@ export default function LessonView({ module: mod, positionId, userContext, super
                 style={{ cursor: unlocked ? 'pointer' : 'not-allowed' }}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left"
               >
-                <span className="text-base">{completed ? '✅' : unlocked ? TYPE_ICON[lesson.type] : '🔒'}</span>
-                <span className={`flex-1 text-sm truncate ${completed ? 'text-[#888780]' : 'text-[#111111] font-medium'}`}>{lesson.title}</span>
-                {lesson.type === 'mission' && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#FAEEDA] text-[#854F0B] flex-shrink-0">Misi</span>}
-                <span className="text-[10px] text-[#888780] flex-shrink-0">🪙 {lesson.xp}</span>
+                <span className={`w-5 h-5 rounded-full border text-[11px] flex items-center justify-center flex-shrink-0 tabular ${completed ? 'bg-[#0F6E56] border-[#0F6E56] text-white' : 'border-[#C8C6BE] text-[#6B6A64]'}`} aria-label={completed ? 'Selesai' : unlocked ? TYPE_LABEL[lesson.type] : 'Terkunci'}>{completed ? '✓' : idx + 1}</span>
+                <span className={`flex-1 text-sm truncate ${completed ? 'text-[#6B6A64]' : 'text-[#111111] font-medium'}`}>{lesson.title}</span>
+                {lesson.type !== 'text' && <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#F1EFE8] text-[#4A4A45] flex-shrink-0">{TYPE_LABEL[lesson.type]}</span>}
+                <span className="text-[12px] text-[#6B6A64] flex-shrink-0 tabular">+{lesson.xp} coin</span>
               </button>
 
               {open && (
@@ -134,20 +134,20 @@ export default function LessonView({ module: mod, positionId, userContext, super
                     <div className="flex flex-col gap-2">
                       {lesson.missionBrief && (
                         <div className="bg-[#FAFAF7] border border-[#E5E3DC] rounded-lg p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#854F0B] mb-1">🎯 Misi dari {supervisorName.split(' ')[0]}</p>
+                          <p className="text-[11px] font-bold text-[#854F0B] mb-1">Misi dari {supervisorName.split(' ')[0]}</p>
                           <p className="text-sm text-[#444441] whitespace-pre-line">{lesson.missionBrief}</p>
                         </div>
                       )}
 
                       {feedback && (
                         <div className="flex gap-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${supervisorAvClass}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${supervisorAvClass}`}>
                             {supervisorInitials}
                           </div>
                           <div className={`border rounded-[0_8px_8px_8px] px-3 py-2.5 text-sm max-w-[560px] ${feedback.isApproved ? 'bg-[#DCFCE7] border-[#166534]/20 text-[#166534]' : 'bg-white border-[#E5E3DC] text-[#444441]'}`}>
-                            <p className="text-[10px] font-semibold text-[#0F6E56] mb-0.5">{supervisorName}</p>
+                            <p className="text-[11px] font-semibold text-[#0F6E56] mb-0.5">{supervisorName}</p>
                             {feedback.review}
-                            {feedback.isApproved && <p className="text-xs font-semibold mt-1.5">✅ Misi selesai!</p>}
+                            {feedback.isApproved && <p className="text-xs font-semibold mt-1.5">Misi selesai.</p>}
                           </div>
                         </div>
                       )}
@@ -181,7 +181,7 @@ export default function LessonView({ module: mod, positionId, userContext, super
                         style={{ cursor: busyId === lesson.id ? 'wait' : 'pointer' }}
                         className="self-start text-xs font-medium bg-[#0F6E56] text-white px-4 py-2 rounded-lg hover:bg-[#085041] disabled:opacity-40 transition-all"
                       >
-                        {busyId === lesson.id ? 'Menyimpan...' : '✓ Tandai selesai'}
+                        {busyId === lesson.id ? 'Menyimpan...' : 'Tandai selesai'}
                       </button>
                     )
                   )}

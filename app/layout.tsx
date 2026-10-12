@@ -1,8 +1,24 @@
 import type { Metadata, Viewport } from 'next'
+import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 import ClientMonitor from '@/components/ClientMonitor'
 
 const SITE_URL = 'https://kantoran.id'
+
+// Satu keluarga huruf: Plex terasa seperti dokumen kantor (bukan template landing
+// page generik). Mono hanya untuk angka/kode: nomor task, nama file, query SQL.
+const plex = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex',
+  display: 'swap',
+})
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-plex-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -34,16 +50,15 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  // cegah browser mobile auto-zoom saat fokus ke input
-  userScalable: false,
+  // Zoom TIDAK dikunci (aksesibilitas). Auto-zoom iOS saat fokus input dicegah
+  // dengan font input >= 16px di mobile (lihat globals.css), bukan userScalable.
   themeColor: '#0F6E56',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id">
-      <body style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+    <html lang="id" className={`${plex.variable} ${plexMono.variable}`}>
+      <body className="font-sans">
         <ClientMonitor />
         {children}
       </body>

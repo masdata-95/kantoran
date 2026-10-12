@@ -139,8 +139,7 @@ export default function CVPage() {
           <span className="font-serif text-2xl font-bold text-[#111111]">CV Kantoran</span>
         </div>
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-[#E5E3DC]">
-          <div className="text-4xl mb-3">📄</div>
-          <h1 className="font-serif text-xl font-bold text-[#111111] mb-2">Cek skor CV-mu dalam 30 detik</h1>
+                    <h1 className="font-serif text-xl font-bold text-[#111111] mb-2">Cek skor CV-mu dalam 30 detik</h1>
           <p className="text-sm text-[#6B6B6B] mb-6 leading-relaxed">
             AI menilai CV-mu seperti rekruter sungguhan: skor ATS, keyword yang kurang, dan rewrite bullet point biar lebih kuat. Gratis.
           </p>
@@ -170,7 +169,7 @@ export default function CVPage() {
             <div className="w-2 h-2 rounded-full bg-[#0F6E56]" />
             <span className="font-serif font-bold text-[#0F6E56]">CV Kantoran</span>
           </div>
-          <a href="/simulator" className="text-xs text-[#888780] hover:text-[#0F6E56] transition-colors" style={{ cursor: 'pointer' }}>
+          <a href="/simulator" className="text-xs text-[#6B6A64] hover:text-[#0F6E56] transition-colors" style={{ cursor: 'pointer' }}>
             Kantoran →
           </a>
         </div>
@@ -181,12 +180,12 @@ export default function CVPage() {
           <>
             <div>
               <h1 className="font-serif text-2xl font-bold text-[#111111] mb-1">Scan CV kamu</h1>
-              <p className="text-sm text-[#888780]">AI menilai seperti rekruter, lalu kasih skor ATS dan saran perbaikan konkret.</p>
+              <p className="text-sm text-[#6B6A64]">AI menilai seperti rekruter, lalu kasih skor ATS dan saran perbaikan konkret.</p>
             </div>
 
             {/* Target role */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">Posisi yang dituju</label>
+              <label className="block text-xs font-semibold text-[#6B6A64] mb-1.5">Posisi yang dituju</label>
               <input
                 value={targetRole}
                 onChange={e => setTargetRole(e.target.value)}
@@ -215,33 +214,32 @@ export default function CVPage() {
                   <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce" />
                   <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce" />
                   <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce" />
-                  <span className="text-xs text-[#888780] ml-1">Membaca file...</span>
+                  <span className="text-xs text-[#6B6A64] ml-1">Membaca file...</span>
                 </div>
               ) : uploadedName ? (
                 <div>
-                  <div className="text-2xl mb-1">📄</div>
-                  <p className="text-sm font-medium text-[#0F6E56]">{uploadedName}</p>
-                  <p className="text-[10px] text-[#888780] mt-0.5">Terbaca. Cek hasilnya di bawah, klik untuk ganti file.</p>
+                                    <p className="text-sm font-medium text-[#0F6E56]">{uploadedName}</p>
+                  <p className="text-[11px] text-[#6B6A64] mt-0.5">Terbaca. Cek hasilnya di bawah, klik untuk ganti file.</p>
                 </div>
               ) : (
                 <div>
                   <div className="text-2xl mb-1">⬆️</div>
                   <p className="text-sm font-medium text-[#111111]">Upload CV kamu</p>
-                  <p className="text-[10px] text-[#888780] mt-0.5">PDF, DOCX, atau TXT. Atau tarik file ke sini.</p>
+                  <p className="text-[11px] text-[#6B6A64] mt-0.5">PDF, DOCX, atau TXT. Atau tarik file ke sini.</p>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-[#E5E3DC]" />
-              <span className="text-[10px] text-[#888780] uppercase tracking-wider">atau tulis manual</span>
+              <span className="text-[11px] text-[#6B6A64]">atau tulis manual</span>
               <div className="flex-1 h-px bg-[#E5E3DC]" />
             </div>
 
             {/* CV text */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-[#888780]">Isi CV kamu</label>
+                <label className="text-xs font-semibold text-[#6B6A64]">Isi CV kamu</label>
                 {profile && (
                   <button onClick={autofill} style={{ cursor: 'pointer' }} className="text-xs text-[#0F6E56] font-medium hover:underline">
                     Isi dari profil Kantoran
@@ -263,7 +261,7 @@ export default function CVPage() {
               </button>
             ) : (
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#888780] mb-1.5">Deskripsi lowongan (opsional)</label>
+                <label className="block text-xs font-semibold text-[#6B6A64] mb-1.5">Deskripsi lowongan (opsional)</label>
                 <textarea
                   value={jobDesc}
                   onChange={e => setJobDesc(e.target.value)}
@@ -283,7 +281,7 @@ export default function CVPage() {
             >
               {loading ? 'Sedang dianalisis AI...' : 'Scan CV Sekarang →'}
             </button>
-            <p className="text-center text-[10px] text-[#888780]">Gratis. CV kamu tidak disimpan.</p>
+            <p className="text-center text-[11px] text-[#6B6A64]">Gratis. CV kamu tidak disimpan.</p>
           </>
         )}
 
@@ -304,11 +302,11 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
           style={{ background: scoreBg(s), color: scoreColor(s) }}
         >
           <span className="text-3xl font-bold leading-none">{s}</span>
-          <span className="text-[10px] font-semibold opacity-70">dari 100</span>
+          <span className="text-[11px] font-semibold opacity-70">dari 100</span>
         </div>
         <p className="text-sm font-medium text-[#111111] leading-relaxed">{result.verdict}</p>
         <div className="inline-flex items-center gap-1.5 mt-3 bg-[#FAFAF7] border border-[#E5E3DC] rounded-full px-3 py-1 text-xs">
-          <span className="text-[#888780]">Skor ATS</span>
+          <span className="text-[#6B6A64]">Skor ATS</span>
           <span className="font-bold" style={{ color: scoreColor(result.atsScore || 0) }}>{Math.round(result.atsScore || 0)}/100</span>
         </div>
       </div>
@@ -316,7 +314,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
       {/* Sections */}
       {result.sections?.length > 0 && (
         <div className="bg-white border border-[#E5E3DC] rounded-2xl p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">Rincian penilaian</p>
+          <p className="text-xs font-bold text-[#6B6A64] mb-3">Rincian penilaian</p>
           <div className="flex flex-col gap-3">
             {result.sections.map((sec, i) => (
               <div key={i}>
@@ -327,7 +325,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
                 <div className="h-1.5 bg-[#F1EFE8] rounded-full overflow-hidden mb-1">
                   <div className="h-full rounded-full" style={{ width: `${Math.min(100, sec.score)}%`, background: scoreColor(sec.score) }} />
                 </div>
-                <p className="text-xs text-[#888780] leading-relaxed">{sec.note}</p>
+                <p className="text-xs text-[#6B6A64] leading-relaxed">{sec.note}</p>
               </div>
             ))}
           </div>
@@ -338,7 +336,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
         {/* Strengths */}
         {result.strengths?.length > 0 && (
           <div className="bg-[#DCFCE7] border border-[#166534]/20 rounded-2xl p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#166534] mb-2">💪 Kekuatan</p>
+            <p className="text-xs font-bold text-[#166534] mb-2">Kekuatan</p>
             <ul className="flex flex-col gap-1.5">
               {result.strengths.map((x, i) => <li key={i} className="text-xs text-[#14532D] leading-relaxed">{x}</li>)}
             </ul>
@@ -347,7 +345,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
         {/* Gaps */}
         {result.gaps?.length > 0 && (
           <div className="bg-[#FEE2E2] border border-[#B91C1C]/20 rounded-2xl p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#B91C1C] mb-2">⚠️ Perlu diperbaiki</p>
+            <p className="text-xs font-bold text-[#B91C1C] mb-2">Perlu diperbaiki</p>
             <ul className="flex flex-col gap-1.5">
               {result.gaps.map((x, i) => <li key={i} className="text-xs text-[#7F1D1D] leading-relaxed">{x}</li>)}
             </ul>
@@ -358,7 +356,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
       {/* Missing keywords */}
       {result.missingKeywords?.length > 0 && (
         <div className="bg-white border border-[#E5E3DC] rounded-2xl p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-2">🔑 Keyword yang sebaiknya ditambah</p>
+          <p className="text-xs font-bold text-[#6B6A64] mb-2">Keyword yang sebaiknya ditambah</p>
           <div className="flex flex-wrap gap-1.5">
             {result.missingKeywords.map((k, i) => (
               <span key={i} className="text-xs bg-[#FAEEDA] text-[#854F0B] px-2.5 py-1 rounded-full font-medium">{k}</span>
@@ -370,16 +368,16 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
       {/* Rewrites */}
       {result.rewrites?.length > 0 && (
         <div className="bg-white border border-[#E5E3DC] rounded-2xl p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#888780] mb-3">✍️ Saran rewrite bullet point</p>
+          <p className="text-xs font-bold text-[#6B6A64] mb-3">Saran rewrite bullet point</p>
           <div className="flex flex-col gap-3">
             {result.rewrites.map((r, i) => (
               <div key={i} className="border border-[#F1EFE8] rounded-xl overflow-hidden">
                 <div className="px-3 py-2 bg-[#FEE2E2]/40 border-b border-[#F1EFE8]">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#B91C1C] mb-0.5">Sebelum</p>
+                  <p className="text-[11px] font-bold text-[#B91C1C] mb-0.5">Sebelum</p>
                   <p className="text-xs text-[#7F1D1D] leading-relaxed">{r.before}</p>
                 </div>
                 <div className="px-3 py-2 bg-[#DCFCE7]/40">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#166534] mb-0.5">Sesudah</p>
+                  <p className="text-[11px] font-bold text-[#166534] mb-0.5">Sesudah</p>
                   <p className="text-xs text-[#14532D] leading-relaxed">{r.after}</p>
                 </div>
               </div>
@@ -391,7 +389,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
       {/* Next steps */}
       {result.nextSteps?.length > 0 && (
         <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-2xl p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#0F6E56] mb-2">Langkah selanjutnya</p>
+          <p className="text-xs font-bold text-[#0F6E56] mb-2">Langkah selanjutnya</p>
           <ul className="flex flex-col gap-1.5">
             {result.nextSteps.map((x, i) => (
               <li key={i} className="flex gap-2 text-xs text-[#085041] leading-relaxed">
@@ -403,7 +401,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
       )}
 
       {/* CTA Kantoran */}
-      <div className="bg-gradient-to-br from-[#0F6E56] to-[#1D9E75] rounded-2xl p-5 text-center">
+      <div className="bg-[#0F6E56] rounded-xl p-5 text-center">
         <p className="text-white font-semibold text-sm mb-1">CV bagus itu langkah pertama.</p>
         <p className="text-white/80 text-xs mb-3 leading-relaxed">Latih wawancara dan kerja beneran di Kantoran, lalu dapat surat referensi untuk memperkuat CV-mu.</p>
         <a href="/simulator" className="inline-block bg-white text-[#0F6E56] font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-white/90 transition-all" style={{ cursor: 'pointer' }}>
@@ -411,7 +409,7 @@ function CVResultView({ result, onReset }: { result: CVResult; onReset: () => vo
         </a>
       </div>
 
-      <button onClick={onReset} style={{ cursor: 'pointer' }} className="text-sm text-[#888780] hover:text-[#0F6E56] transition-colors">
+      <button onClick={onReset} style={{ cursor: 'pointer' }} className="text-sm text-[#6B6A64] hover:text-[#0F6E56] transition-colors">
         ← Scan CV lain
       </button>
     </div>

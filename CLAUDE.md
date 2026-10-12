@@ -221,11 +221,16 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - app/api/waitlist/route.ts — waitlist submission
 - app/simulator/page.tsx — flow orchestration
 
-## Styling Conventions
-- Warna utama: #0F6E56 (teal)
-- Background: #FAFAF7
-- Border: #E5E3DC
-- Font: system font stack
+## Styling Conventions (anti AI-slop, dirombak 12 Okt 2026)
+- Warna utama: #0F6E56 (teal) — hanya untuk aksi utama & status, bukan dekorasi
+- Background: #FAFAF7 · Border: #E5E3DC · Teks: #1A1A18 · Teks sekunder: #4A4A45 / #6B6A64
+  (#888780 lama TIDAK lolos kontras AA, jangan dipakai lagi)
+- Font: IBM Plex Sans (+ Plex Mono untuk nama file/kode) via next/font di layout.tsx;
+  landing.html memuat dari Google Fonts. Class font-serif dipetakan ke Plex (globals.css @theme).
+- DILARANG: emoji sebagai ikon UI (pakai lucide-react), gradient, label uppercase+tracking,
+  teks < 11px, badge pill "pertama di Indonesia", klaim fitur yang belum ada, alert() untuk error
+  (pakai pesan inline). Copy: kalimat biasa, jujur, tanpa tanda seru beruntun.
+- Zoom tidak dikunci (aksesibilitas); auto-zoom iOS dicegah dengan font input 16px di mobile.
 - Semua button pakai style={{ cursor: 'pointer' }}
 - Class btn-teal sudah didefinisikan di globals.css
 - NPC avatar classes: av-teal, av-blue, av-purple, av-amber
