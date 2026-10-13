@@ -5,8 +5,8 @@
 GEMINI_API_KEY_1=
 # GEMINI_API_KEY_2..5 opsional
 
-GROQ_API_KEY_1=
-# GROQ_API_KEY_2..5 opsional
+# Groq lama sudah mati — isi hanya kalau ada key baru
+# GROQ_API_KEY_1=
 
 OPENROUTER_API_KEY=
 
@@ -14,3 +14,11 @@ SUPABASE_SERVICE_ROLE_KEY=
 # Opsional tapi disarankan: verifikasi JWT lokal tanpa network round-trip.
 # Ambil dari Supabase Studio -> Project Settings -> API -> JWT Secret (legacy).
 SUPABASE_JWT_SECRET=
+
+# Email founder (dipisah koma) yang boleh membuka /admin. Kosong = semua ditolak.
+ADMIN_EMAILS=
+
+# Opsional: override model tanpa deploy ulang (default gemini-3.5-flash di lib/ai.ts)
+# GEMINI_MODEL=
+# Opsional: ambang lulus review task (default 70)
+# KANTORAN_PASS_SCORE=
