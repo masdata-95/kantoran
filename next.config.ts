@@ -19,16 +19,8 @@ const nextConfig: NextConfig = {
       { source: '/:path*', has: [{ type: 'host', value: 'www.kantoran.id' }], destination: `${CANONICAL}/:path*`, permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'kantoran.vercel.app' }], destination: `${CANONICAL}/:path*`, permanent: true },
       { source: '/landing.html', destination: '/', permanent: true },
+      { source: '/index.html', destination: '/', permanent: true },
     ]
-  },
-  // Sajikan landing langsung di / tanpa redirect client-side — tanpa ini user
-  // melihat flash "Memuat Kantoran..." dulu (app/page.tsx tetap ada sebagai fallback)
-  async rewrites() {
-    return {
-      beforeFiles: [{ source: '/', destination: '/landing.html' }],
-      afterFiles: [],
-      fallback: [],
-    }
   },
 }
 

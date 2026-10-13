@@ -9,7 +9,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // "/" dilayani public/index.html (salinan landing, dibuat scripts/embed-landing.mjs) langsung
+    // dari static assets tanpa menjalankan Worker. html_handling default (auto-trailing-slash)
+    // memetakan "/" → index.html.
+    // /landing.html harus lewat Worker dulu supaya redirect 308 → "/" (SEO, satu alamat) berlaku;
+    // tanpa ini file statis dilayani langsung tanpa menyentuh Worker.
+    "run_worker_first": ["/landing.html"]
   },
   "observability": {
     "enabled": true
