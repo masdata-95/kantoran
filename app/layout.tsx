@@ -24,10 +24,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: 'Kantoran | Simulasi Dunia Kerja',
   description: 'Simulasi dunia kerja pertama yang terasa nyata. Belajar kerja, sambil kerja beneran.',
+  // Raster kelipatan 48px untuk Google (favicon di hasil pencarian) + SVG untuk tab browser
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icon-96.png', type: 'image/png', sizes: '96x96' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
   // Open Graph: tanpa ini, share ke WhatsApp/LinkedIn cuma URL telanjang
   openGraph: {
