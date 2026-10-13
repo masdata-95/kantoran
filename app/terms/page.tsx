@@ -17,7 +17,11 @@ export default function TermsPage() {
         </div>
 
         <h1 className="font-serif text-2xl font-bold text-[#111111] mb-1">Syarat &amp; Ketentuan</h1>
-        <p className="text-xs text-[#6B6A64] mb-8">Berlaku sejak 19 Juli 2026</p>
+        <p className="text-xs text-[#6B6A64] mb-2">Berlaku sejak 19 Juli 2026</p>
+        <p className="text-sm text-[#444441] mb-8">
+          Kantoran (kantoran.id) dikelola secara perorangan oleh Zhofar Murry Setiawan, Indonesia. Dalam dokumen ini, &ldquo;kami&rdquo; berarti pengelola tersebut. 
+          <Link href="/tentang" className="text-[#0F6E56] hover:underline">Tentang pengelola</Link>
+        </p>
 
         <div className="flex flex-col gap-6 text-sm leading-relaxed text-[#444441]">
           <section>
@@ -90,8 +94,8 @@ export default function TermsPage() {
           <section>
             <h2 className="font-semibold text-[#111111] mb-1.5">8. Hukum yang berlaku &amp; kontak</h2>
             <p>
-              Ketentuan ini diatur oleh hukum Republik Indonesia. Pertanyaan:
-              <strong> halo@kantoran.id</strong>
+              Ketentuan ini diatur oleh hukum Republik Indonesia. Pengelola: Zhofar Murry Setiawan.
+              Pertanyaan: <strong>halo@kantoran.id</strong>
             </p>
           </section>
         </div>

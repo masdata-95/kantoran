@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${BASE}/`, lastModified: LAST_UPDATED, changeFrequency: 'weekly', priority: 1 },
     { url: `${BASE}/cv`, lastModified: LAST_UPDATED, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/tentang`, lastModified: LAST_UPDATED, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/simulator`, lastModified: LAST_UPDATED, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/privacy`, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${BASE}/terms`, changeFrequency: 'yearly', priority: 0.2 },

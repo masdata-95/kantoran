@@ -19,7 +19,11 @@ export default function PrivacyPage() {
         </div>
 
         <h1 className="font-serif text-2xl font-bold text-[#111111] mb-1">Kebijakan Privasi</h1>
-        <p className="text-xs text-[#6B6A64] mb-8">Berlaku sejak 19 Juli 2026 · Kantoran (kantoran.id)</p>
+        <p className="text-xs text-[#6B6A64] mb-2">Berlaku sejak 19 Juli 2026 · Kantoran (kantoran.id)</p>
+        <p className="text-sm text-[#444441] mb-8">
+          Kantoran (kantoran.id) dikelola secara perorangan oleh Zhofar Murry Setiawan, Indonesia. Pengelola ini adalah pengendali data pribadimu menurut UU PDP. 
+          <Link href="/tentang" className="text-[#0F6E56] hover:underline">Tentang pengelola</Link>
+        </p>
 
         <div className="flex flex-col gap-6 text-sm leading-relaxed text-[#444441]">
           <section>
@@ -89,7 +93,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-semibold text-[#111111] mb-1.5">Kontak</h2>
             <p>
-              Pertanyaan atau permintaan terkait privasi: <strong>halo@kantoran.id</strong>
+              Pertanyaan atau permintaan terkait privasi ditujukan ke pengelola, Zhofar Murry Setiawan,
+              melalui <strong>halo@kantoran.id</strong>
             </p>
           </section>
 
