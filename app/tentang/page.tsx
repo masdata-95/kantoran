@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 
 const LINKEDIN_COMPANY = 'https://www.linkedin.com/company/kantoran/'
 const INSTAGRAM = 'https://www.instagram.com/kantoranid_/'
+const FOUNDER_LINKEDIN = 'https://www.linkedin.com/in/zhofarms1/'
 
 export default function TentangPage() {
   return (
@@ -47,6 +48,9 @@ export default function TentangPage() {
                 Kreator konten seputar data, Excel, dan karier. Kantoran dibangun dari pertanyaan yang paling
                 sering datang dari audiensnya: bagaimana rasanya kerja kantoran, dan bagaimana menyiapkan diri sebelum masuk.
               </p>
+              <a href={FOUNDER_LINKEDIN} rel="noopener" target="_blank" className="inline-block mt-3 text-sm font-medium text-[#0F6E56] hover:underline">
+                Profil LinkedIn
+              </a>
             </div>
           </section>
 
