@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase, authFetch } from '@/lib/supabase'
-import type { User } from '@supabase/supabase-js'
+import { authFetch, getUser } from '@/lib/authClient'
+import type { AppUser as User } from '@/lib/authClient'
 import LoginPage from '@/components/LoginPage'
 import ProfileSetup from '@/components/ProfileSetup'
 import JobListing from '@/components/JobListing'
@@ -74,11 +74,10 @@ export default function SimulatorPage() {
   }
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined
-
+    // Sesi ada di cookie HttpOnly: cukup tanya server siapa yang masuk. Login dan logout
+    // keduanya memuat ulang halaman penuh, jadi tidak perlu berlangganan perubahan sesi.
     const initApp = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const u = session?.user ?? null
+      const u = await getUser()
       setUser(u)
 
       if (!u) {
@@ -88,24 +87,9 @@ export default function SimulatorPage() {
       }
 
       await checkUserState(u.id)
-
-      // Listen for auth changes — simpan subscription supaya bisa di-unsubscribe
-      // (tanpa ini, remount menumpuk listener duplikat)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        const newUser = session?.user ?? null
-        setUser(newUser)
-        if (!newUser) {
-          setStage('login')
-        } else if (newUser.id !== u?.id) {
-          // Different user logged in
-          await checkUserState(newUser.id)
-        }
-      })
-      unsubscribe = () => subscription.unsubscribe()
     }
 
     initApp()
-    return () => unsubscribe?.()
   }, [])
 
   // Selesai hari-1 sebuah posisi: form wishlist hanya sekali seumur akun,

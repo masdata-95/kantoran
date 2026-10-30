@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { AppUser as User } from '@/lib/authClient'
 import type { UserProfile, Education, Experience } from '@/lib/profile'
 import { MONTHS, YEARS } from '@/lib/profile'
 import { SKILLS_PRESET } from '@/lib/skills'
-import { authFetch } from '@/lib/supabase'
+import { authFetch } from '@/lib/authClient'
 
 interface Props {
   user: User

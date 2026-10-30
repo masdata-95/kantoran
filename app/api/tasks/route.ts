@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { all } from '@/lib/db'
 import { hasSeasonAccess } from '@/lib/entitlements'
 import { POSITIONS } from '@/lib/positions'
 
 export const dynamic = 'force-dynamic'
 
-// Daftar task per posisi (tabel tasks, migration 006).
+interface TaskRow {
+  slug: string
+  position_id: string
+  day: number
+  sort_order: number
+  title: string
+  teaser: string | null
+  brief: string
+  context: string | null
+  task_type: string
+  file_name: string | null
+  cross_ref: string | null
+}
+
+// Daftar task per posisi (tabel tasks).
 // Gate premium DI SERVER: day 1 gratis; day >= 2 butuh entitlement.
 // Task terkunci hanya mengirim {day, title, teaser} — brief/file tidak pernah bocor.
 // Rubric TIDAK PERNAH dikirim ke client dalam kondisi apa pun (dinilai server-side).
@@ -19,23 +34,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
     }
 
-    const db = getServiceClient()
-    const { data: rows, error } = await db
-      .from('tasks')
-      .select('slug, position_id, day, sort_order, title, teaser, brief, context, task_type, file_name, cross_ref')
-      .eq('position_id', position)
-      .eq('is_published', true)
-      .order('day', { ascending: true })
-      .order('sort_order', { ascending: true })
+    const rows = await all<TaskRow>(
+      `SELECT slug, position_id, day, sort_order, title, teaser, brief, context,
+              task_type, file_name, cross_ref
+         FROM tasks WHERE position_id = ? AND is_published = 1
+        ORDER BY day, sort_order`,
+      position
+    )
 
-    if (error) {
-      // Tabel belum ada (migration 006 belum jalan) → daftar kosong, bukan error
-      return NextResponse.json({ tasks: [], note: 'Jalankan migration 006.' })
-    }
+    const premium = await hasSeasonAccess(user.id)
 
-    const premium = await hasSeasonAccess(db, user.id)
-
-    const tasks = (rows || []).map(t => {
+    const tasks = rows.map(t => {
       const locked = t.day >= 2 && !premium
       return locked
         ? { slug: t.slug, day: t.day, title: t.title, teaser: t.teaser, locked: true }

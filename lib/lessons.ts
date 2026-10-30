@@ -17,6 +17,9 @@ export interface LessonDTO {
   sortOrder: number
   contentMd?: string
   youtubeVideoId?: string | null
+  // Link HLS bertoken (berlaku 3 jam) dari pustaka video Mas Data. Kode videonya
+  // sendiri tidak pernah dikirim ke client.
+  videoUrl?: string | null
   missionBrief?: string       // rubric TIDAK pernah dikirim ke client
   xp: number
   progress: { status: 'in_progress' | 'completed'; score: number | null } | null

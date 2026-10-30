@@ -8,7 +8,7 @@ Repo: github.com/masdata-95/kantoran (Private)
 
 ## Tech Stack
 - Frontend: Next.js 16.2.7 + TypeScript + Tailwind v4
-- Auth + DB: Supabase (Google OAuth, PostgreSQL, RLS)
+- Auth + DB: Cloudflare D1 (SQLite) + login Google sendiri (sesi cookie `kt_sesi`, hash-nya di tabel `sessions`); file task premium di R2 `kantoran-task-files`. Supabase TIDAK dipakai lagi di branch ini (rencana: RENCANA-PINDAH-D1.md).
 - AI: Multi-provider — Gemini (paid, primary) → Groq (fallback) → OpenRouter (last resort)
 - Deploy: Vercel (team: masdatabusiness-9486)
 - Tailwind: v4 — pakai @import "tailwindcss" di globals.css, BUKAN tailwind.config.ts
@@ -111,8 +111,8 @@ Multi-provider dengan key rotation, urutan: Gemini (paid) → Groq → OpenRoute
 - `callAI(messages, systemPrompt, opts)` — opts: `{ maxTokens, temperature, json, clean, deadlineMs }`. Return `AIResult | null` (null = semua provider gagal; route yang menentukan pesan error).
 - `json: true` → structured output (Gemini responseMimeType / Groq response_format), temp 0.3, cleanResponse dimatikan. Wajib untuk endpoint yang parse JSON (cv-review, review via lib/reviewTask.ts).
 - Deadline budget total 25s mencegah rantai fallback melewati maxDuration 30s.
-- Rate limiting harian per user via lib/rateLimit.ts + RPC bump_usage (chat 300, review 25, cv 10, mission 30). Migration: supabase-migrations/002_rate_limits.sql.
-- Auth API: verifikasi JWT lokal (jose) di lib/serverAuth.ts; set SUPABASE_JWT_SECRET di env untuk jalur tercepat, fallback otomatis ke JWKS lalu auth.getUser network.
+- Rate limiting harian per user via lib/rateLimit.ts (UPSERT ... RETURNING di tabel api_usage; chat 300, review 25, cv 10, mission 30). Fail-open kalau D1 error.
+- Auth API: `getAuthUser(req)` di lib/serverAuth.ts membaca cookie sesi dari D1 (bentuk kembalian { id, email } sama seperti dulu). Permintaan POST/PUT/DELETE dari Origin lain ditolak (CSRF). Route /api/auth/{google,callback,me,logout} = login Google (Authorization Code + PKCE, id_token diverifikasi dengan JWKS Google). Secret: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
 
 ## CV Kantoran (/cv — satelit AI CV scorer)
 - app/cv/page.tsx — upload PDF/DOCX/TXT (maks 4MB, pre-check client) atau tempel manual, autofill dari profil
@@ -126,15 +126,18 @@ task tetap turun tanpa training; supervisor menyarankan Academy saat revisi pert
 ("belajar sebagai penyelamat"). Room 'academy' di sidebar (terbuka step >= 4),
 supervisor meng-assign "training module" (in-story). Modul day 1 gratis; day >= 2
 tampil sebagai kartu teaser terkunci (umpan premium, konten tidak dikirim API).
-- Konten di Supabase (lesson_modules, lessons, lesson_progress) — update tanpa deploy. Migration: supabase-migrations/003_academy.sql.
+- Konten di D1 (lesson_modules, lessons, lesson_progress) — update tanpa deploy lewat `npm run seed:lessons:remote`. Skema: migrations/0001_awal.sql.
 - Tiap posisi: modul tools (+ modul bisnis bersama position_id='all'), track 'tools' | 'business'. Lesson type: text | video | mission.
-- Video: kolom youtube_video_id nullable — isi di Supabase Studio kapan saja (lite-embed di YouTubeEmbed.tsx, placeholder "Video menyusul" kalau kosong).
+- Video: dua sumber. `video_code` (pustaka video Mas Data, diputar HLS lewat VideoPlayer dengan link bertoken 3 jam yang dibuat server di /api/lessons) atau `youtube_video_id` (lite-embed di YouTubeEmbed.tsx). Keduanya kosong = placeholder "Video menyusul".
 - Misi direview AI supervisor via lib/reviewTask.ts (engine sama dengan task review → suara konsisten). Rubric mission JSONB tidak pernah dikirim ke client.
-- Authoring: content/lessons/*.md (frontmatter) + modules.json → `npm run seed:lessons` (idempotent, upsert by slug). Seed TIDAK menimpa youtube_video_id yang diisi manual.
+- Authoring: content/lessons/*.md (frontmatter) + modules.json → `npm run seed:lessons` (idempotent, upsert by slug). Seed TIDAK menimpa video_code / youtube_video_id yang sudah terisi bila frontmatter tidak menyebutnya.
 - API: GET /api/lessons?position=..., POST /api/lessons/progress, POST /api/lessons/submit.
 - UI: components/academy/ (AcademyPanel, LessonView, MarkdownLite, YouTubeEmbed) — di-load dinamis, react-markdown tidak membebani bundle chat.
 
-## Database (Supabase)
+## Database (D1)
+Skema: `migrations/0001_awal.sql` (pasang: `npm run db:migrate` lokal, `db:migrate:remote` produksi). Akses lewat `lib/db.ts` (`one`, `all`, `run`, `batch`, `envVar`); tidak ada RLS, jadi `user_id` SELALU dari sesi, bukan dari body. JSONB dan TEXT[] disimpan sebagai teks JSON; waktu sebagai teks ISO UTC. Seed konten: `npm run seed:lessons` / `seed:tasks` (lokal) dan `...:remote`. Video Academy: kolom `lessons.video_code` -> link HLS bertoken dari Worker video Mas Data (lib/videoToken.ts, secret KUNCI_VIDEO + var VIDEO_BASE).
+
+Catatan di bawah ini adalah riwayat skema Supabase (nama kolom tetap sama di D1):
 Project ID: owgxrhtmljwjxzvjcdlt
 Tables:
 - user_progress: MULTI-ROLE — unique (user_id, position), satu baris per run posisi.
@@ -247,7 +250,7 @@ Migrations baru ada di supabase-migrations/*.sql — jalankan manual di Studio S
 - Lint: 0 error; 3 rule React Compiler diturunkan ke warning KHUSUS SimulatorApp/
   GuidedTour/SqlEditor (eslint.config.mjs) sampai refactor besar — file baru wajib lolos penuh.
 - Tailwind v4: tidak pakai tailwind.config.ts, semua lewat @import di globals.css
-- Supabase RLS: pakai SUPABASE_SERVICE_ROLE_KEY untuk server-side, bukan anon key
+- D1: tidak ada RLS; semua akses lewat route API server-side dan `user_id` diambil dari sesi
 - addMsg race condition: untuk pesan kritis (inbox email), langsung update setState, jangan pakai addMsg lewat setTimeout
 - Cursor tidak aktif: useEffect watching loading state + requestAnimationFrame
 - Nama posisi redundant: bgRole sudah include full role name, jangan append pos.title lagi

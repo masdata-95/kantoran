@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { supabase, authFetch } from '@/lib/supabase'
-import type { User } from '@supabase/supabase-js'
+import { authFetch, getUser, loginWithGoogle } from '@/lib/authClient'
+import type { AppUser as User } from '@/lib/authClient'
 import type { UserProfile } from '@/lib/profile'
 
 interface Section { name: string; score: number; note: string }
@@ -58,8 +58,7 @@ export default function CVPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const u = session?.user ?? null
+      const u = await getUser()
       setUser(u)
       setAuthLoading(false)
       if (u) {
@@ -72,8 +71,7 @@ export default function CVPage() {
     })()
   }, [])
 
-  const handleLogin = () =>
-    supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/cv` } })
+  const handleLogin = () => loginWithGoogle('/cv')
 
   const autofill = () => { if (profile) { setCvText(buildCVText(profile)); setUploadedName('') } }
 

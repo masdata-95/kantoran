@@ -21,3 +21,9 @@ skills-lock.json
 
 # salinan landing hasil scripts/embed-landing.mjs (dibuat saat build)
 public/index.html
+
+# keluaran skrip seed (SQL turunan dari content/)
+.seed/
+
+# ekspor data Supabase (berisi data pribadi pengguna)
+migrasi-data/

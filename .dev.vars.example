@@ -10,10 +10,14 @@ GEMINI_API_KEY_1=
 
 OPENROUTER_API_KEY=
 
-SUPABASE_SERVICE_ROLE_KEY=
-# Opsional tapi disarankan: verifikasi JWT lokal tanpa network round-trip.
-# Ambil dari Supabase Studio -> Project Settings -> API -> JWT Secret (legacy).
-SUPABASE_JWT_SECRET=
+# Login Google (Google Cloud Console -> Credentials -> OAuth client, tipe Web).
+# Redirect URI yang didaftarkan: https://kantoran.id/api/auth/callback
+# (dan http://localhost:3000/api/auth/callback untuk dev).
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Kunci tanda tangan link video; HARUS sama dengan secret KUNCI_VIDEO di Worker masdata-video.
+KUNCI_VIDEO=
 
 # Email founder (dipisah koma) yang boleh membuka /admin. Kosong = semua ditolak.
 ADMIN_EMAILS=

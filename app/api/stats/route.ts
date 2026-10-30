@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { one } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,17 +11,11 @@ export async function GET(req: NextRequest) {
     const user = await getAuthUser(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const db = getServiceClient()
     const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
-    const { data, error } = await db
-      .from('user_progress')
-      .select('user_id')
-      .gt('last_active', since)
-      .limit(1000)
-
-    if (error) return NextResponse.json({ activeThisWeek: 0 })
-    const activeThisWeek = new Set((data || []).map(r => r.user_id)).size
-    return NextResponse.json({ activeThisWeek })
+    const row = await one<{ n: number }>(
+      'SELECT COUNT(DISTINCT user_id) AS n FROM user_progress WHERE last_active > ?', since
+    )
+    return NextResponse.json({ activeThisWeek: row?.n ?? 0 })
   } catch {
     return NextResponse.json({ activeThisWeek: 0 })
   }

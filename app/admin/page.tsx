@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { authFetch } from '@/lib/supabase'
+import { authFetch } from '@/lib/authClient'
 
 // Dashboard monitoring founder — akses diatur env ADMIN_EMAILS (lihat /api/admin/stats).
 // Sengaja ringan: tanpa chart library, funnel digambar dengan div bar.

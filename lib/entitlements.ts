@@ -1,18 +1,16 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { one, nowIso } from '@/lib/db'
 
-// Cek akses konten premium (day >= 2). Sumber entitlement: webhook Xendit (nanti)
-// atau insert manual di Studio (pre-sale early-bird sekarang).
-// Toleran kalau migration 006 belum jalan: tabel tidak ada → false (semua terkunci, aman).
-export async function hasSeasonAccess(db: SupabaseClient, userId: string): Promise<boolean> {
+// Cek akses konten premium (day >= 2). Sumber entitlement: webhook Midtrans (nanti)
+// atau insert manual lewat `wrangler d1 execute` (pre-sale early-bird).
+// Error apa pun → false (semua terkunci, aman).
+export async function hasSeasonAccess(userId: string): Promise<boolean> {
   try {
-    const { data, error } = await db
-      .from('entitlements')
-      .select('id, expires_at')
-      .eq('user_id', userId)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-      .limit(1)
-    if (error) return false
-    return (data || []).length > 0
+    const row = await one(
+      `SELECT 1 AS ok FROM entitlements
+        WHERE user_id = ? AND (expires_at IS NULL OR expires_at > ?) LIMIT 1`,
+      userId, nowIso()
+    )
+    return row !== null
   } catch {
     return false
   }

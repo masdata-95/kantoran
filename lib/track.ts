@@ -1,6 +1,6 @@
 // Event tracking first-party — fire and forget, TIDAK PERNAH mengganggu UX.
 // Event masuk ke tabel `events` (migration 005) via /api/track, dibaca dashboard /admin.
-import { authFetch } from '@/lib/supabase'
+import { authFetch } from '@/lib/authClient'
 
 // Batasi banjir error client (loop error bisa mengirim ribuan event)
 let clientErrorCount = 0

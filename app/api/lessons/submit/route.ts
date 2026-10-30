@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { one, run, parseJson, nowIso } from '@/lib/db'
 import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 import { reviewSubmission } from '@/lib/reviewTask'
 import { POSITIONS } from '@/lib/positions'
@@ -35,22 +36,24 @@ export async function POST(req: NextRequest) {
     const position = POSITIONS[positionId]
     if (!position) return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
 
-    const db = getServiceClient()
-    const { data: lesson } = await db
-      .from('lessons')
-      .select('id, title, type, mission, xp, is_published, lesson_modules!inner(day, is_published)')
-      .eq('id', lessonId)
-      .single()
+    const lesson = await one<{
+      title: string; type: string; mission: string | null; xp: number
+      is_published: number; day: number; module_published: number
+    }>(
+      `SELECT l.title, l.type, l.mission, l.xp, l.is_published, m.day, m.is_published AS module_published
+         FROM lessons l JOIN lesson_modules m ON m.id = l.module_id
+        WHERE l.id = ?`,
+      lessonId
+    )
 
-    const moduleInfo = lesson?.lesson_modules as unknown as { day: number; is_published: boolean } | null
-    if (!lesson || !lesson.is_published || !moduleInfo?.is_published || lesson.type !== 'mission') {
+    if (!lesson || !lesson.is_published || !lesson.module_published || lesson.type !== 'mission') {
       return NextResponse.json({ error: 'Misi tidak ditemukan' }, { status: 404 })
     }
-    if (moduleInfo.day > 1) {
+    if (lesson.day > 1) {
       return NextResponse.json({ error: 'Misi ini belum terbuka' }, { status: 403 })
     }
 
-    const mission = lesson.mission as MissionSpec | null
+    const mission = parseJson<MissionSpec | null>(lesson.mission, null)
     if (!mission?.rubric?.mustFind?.length) {
       return NextResponse.json({ error: 'Misi belum dikonfigurasi' }, { status: 500 })
     }
@@ -72,22 +75,29 @@ export async function POST(req: NextRequest) {
     }
 
     // Update progress: attempts selalu naik, completed hanya saat APPROVED
-    const { data: existing } = await db
-      .from('lesson_progress')
-      .select('attempts, status')
-      .eq('user_id', user.id)
-      .eq('lesson_id', lessonId)
-      .single()
-
+    const existing = await one<{ attempts: number; status: string; score: number | null; completed_at: string | null }>(
+      'SELECT attempts, status, score, completed_at FROM lesson_progress WHERE user_id = ? AND lesson_id = ?',
+      user.id, lessonId
+    )
     const alreadyCompleted = existing?.status === 'completed'
-    await db.from('lesson_progress').upsert({
-      user_id: user.id,
-      lesson_id: lessonId,
-      attempts: (existing?.attempts || 0) + 1,
-      ...(result.isApproved
-        ? { status: 'completed', score: result.score, completed_at: new Date().toISOString() }
-        : alreadyCompleted ? {} : { status: 'in_progress' }),
-    }, { onConflict: 'user_id,lesson_id' })
+
+    let status: string, score: number | null, completedAt: string | null
+    if (result.isApproved) {
+      status = 'completed'; score = result.score; completedAt = nowIso()
+    } else if (alreadyCompleted) {
+      status = existing!.status; score = existing!.score; completedAt = existing!.completed_at
+    } else {
+      status = 'in_progress'; score = existing?.score ?? null; completedAt = null
+    }
+
+    await run(
+      `INSERT INTO lesson_progress (user_id, lesson_id, status, score, attempts, completed_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (user_id, lesson_id) DO UPDATE SET
+         status = excluded.status, score = excluded.score,
+         attempts = excluded.attempts, completed_at = excluded.completed_at`,
+      user.id, lessonId, status, score, (existing?.attempts || 0) + 1, completedAt
+    )
 
     return NextResponse.json({
       review: result.review,

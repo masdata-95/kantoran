@@ -1,4 +1,8 @@
 import type { NextConfig } from 'next'
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
+
+// Memberi binding D1/R2 lokal ke `next dev` (kosong efeknya saat build dan produksi).
+initOpenNextCloudflareForDev()
 
 const CANONICAL = 'https://kantoran.id'
 

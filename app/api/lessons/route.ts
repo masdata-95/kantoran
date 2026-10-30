@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { all, envVar, parseJson, placeholders } from '@/lib/db'
+import { buatLinkVideo } from '@/lib/videoToken'
 import { POSITIONS } from '@/lib/positions'
 import type { LessonDTO, ModuleDTO } from '@/lib/lessons'
 
@@ -26,7 +28,8 @@ interface LessonRow {
   sort_order: number
   content_md: string | null
   youtube_video_id: string | null
-  mission: { brief?: string } | null
+  video_code: string | null
+  mission: string | null
   xp: number
 }
 
@@ -46,53 +49,50 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid position' }, { status: 400 })
     }
 
-    const db = getServiceClient()
-
     // Modul untuk posisi ini + modul bersama ('all')
-    const { data: modules, error: modErr } = await db
-      .from('lesson_modules')
-      .select('id, slug, title, track, day, sort_order, npc_id, story_intro, teaser')
-      .in('position_id', [position, 'all'])
-      .eq('is_published', true)
-      .order('day')
-      .order('sort_order')
+    const moduleRows = await all<ModuleRow>(
+      `SELECT id, slug, title, track, day, sort_order, npc_id, story_intro, teaser
+         FROM lesson_modules
+        WHERE position_id IN (?, 'all') AND is_published = 1
+        ORDER BY day, sort_order`,
+      position
+    )
+    if (moduleRows.length === 0) return NextResponse.json({ modules: [] })
 
-    if (modErr) {
-      console.error('Lessons modules error:', modErr)
-      return NextResponse.json({ error: 'Gagal memuat Academy.' }, { status: 500 })
-    }
-
-    const moduleRows = (modules || []) as ModuleRow[]
-    const moduleIds = moduleRows.map(m => m.id)
-    if (moduleIds.length === 0) return NextResponse.json({ modules: [] })
-
-    const [{ data: lessons, error: lesErr }, { data: progress }] = await Promise.all([
-      db.from('lessons')
-        .select('id, module_id, slug, title, type, sort_order, content_md, youtube_video_id, mission, xp')
-        .in('module_id', moduleIds)
-        .eq('is_published', true)
-        .order('sort_order'),
-      db.from('lesson_progress')
-        .select('lesson_id, status, score')
-        .eq('user_id', user.id),
+    const ids = moduleRows.map(m => m.id)
+    const [lessonRows, progressRows] = await Promise.all([
+      all<LessonRow>(
+        `SELECT id, module_id, slug, title, type, sort_order, content_md, youtube_video_id,
+                video_code, mission, xp
+           FROM lessons
+          WHERE module_id IN (${placeholders(ids.length)}) AND is_published = 1
+          ORDER BY sort_order`,
+        ...ids
+      ),
+      all<ProgressRow>('SELECT lesson_id, status, score FROM lesson_progress WHERE user_id = ?', user.id),
     ])
 
-    if (lesErr) {
-      console.error('Lessons error:', lesErr)
-      return NextResponse.json({ error: 'Gagal memuat Academy.' }, { status: 500 })
-    }
+    const progressMap = new Map(progressRows.map(p => [p.lesson_id, p]))
 
-    const progressMap = new Map<string, ProgressRow>(
-      ((progress || []) as ProgressRow[]).map(p => [p.lesson_id, p])
-    )
+    // Link video bertoken dibuat di server hanya untuk lesson yang terbuka dan punya kode.
+    const kunci = envVar('KUNCI_VIDEO')
+    const videoBase = envVar('VIDEO_BASE')
+    const videoUrls = new Map<string, string>()
+    if (kunci && videoBase) {
+      const modDay = new Map(moduleRows.map(m => [m.id, m.day]))
+      await Promise.all(lessonRows
+        .filter(l => l.video_code && (modDay.get(l.module_id) ?? 2) <= 1)
+        .map(async l => { videoUrls.set(l.id, await buatLinkVideo(kunci, videoBase, l.video_code!)) }))
+    }
 
     const result: ModuleDTO[] = moduleRows.map(m => {
       // Gate premium di API — konten modul day >= 2 tidak pernah dikirim ke client
       const locked = m.day > 1
-      const moduleLessons: LessonDTO[] = ((lessons || []) as LessonRow[])
+      const moduleLessons: LessonDTO[] = lessonRows
         .filter(l => l.module_id === m.id)
         .map(l => {
           const p = progressMap.get(l.id)
+          const mission = parseJson<{ brief?: string } | null>(l.mission, null)
           return {
             id: l.id,
             slug: l.slug,
@@ -102,7 +102,8 @@ export async function GET(req: NextRequest) {
             ...(locked ? {} : {
               contentMd: l.content_md || undefined,
               youtubeVideoId: l.youtube_video_id,
-              missionBrief: l.mission?.brief || undefined,
+              videoUrl: videoUrls.get(l.id) ?? null,
+              missionBrief: mission?.brief || undefined,
             }),
             xp: l.xp,
             progress: p ? { status: p.status, score: p.score } : null,

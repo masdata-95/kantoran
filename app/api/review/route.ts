@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { reviewSubmission } from '@/lib/reviewTask'
 import { POSITIONS, normalizeLevel } from '@/lib/positions'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { one, run, parseJson } from '@/lib/db'
 import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
 
 export const maxDuration = 30
@@ -37,14 +38,14 @@ export async function POST(req: NextRequest) {
     let taskTitle = position.taskTitle
     let rubric = position.taskRubric
     if (taskSlug) {
-      const { data: task } = await getServiceClient()
-        .from('tasks')
-        .select('title, rubric')
-        .eq('slug', String(taskSlug))
-        .eq('position_id', positionId)
-        .maybeSingle()
+      const task = await one<{ title: string; rubric: string }>(
+        'SELECT title, rubric FROM tasks WHERE slug = ? AND position_id = ?',
+        String(taskSlug), positionId
+      )
+      type RubricLevel = { must_find?: string[]; good_to_mention?: string[] }
+      const rubricByLevel = parseJson<Record<string, RubricLevel>>(task?.rubric, {})
       const level = normalizeLevel(userContext?.level)
-      const r = task?.rubric?.[level] || task?.rubric?.junior
+      const r = rubricByLevel[level] || rubricByLevel.junior
       if (!task || !Array.isArray(r?.must_find) || r.must_find.length === 0) {
         return NextResponse.json({ error: 'Task atau rubrik tidak ditemukan' }, { status: 404 })
       }
@@ -71,11 +72,12 @@ export async function POST(req: NextRequest) {
     // Catat skor mentah di server untuk kalibrasi ambang lulus (best-effort, TIDAK
     // pernah dikirim ke client — user hanya melihat feedback bahasa manusia)
     try {
-      await getServiceClient().from('events').insert({
-        user_id: user.id, type: 'task_scored',
-        meta: { position: positionId, slug: taskSlug || null, score: result.score, approved: result.isApproved },
-      })
-    } catch { /* events belum ada / gagal → abaikan */ }
+      await run(
+        'INSERT INTO events (user_id, type, meta) VALUES (?, ?, ?)',
+        user.id, 'task_scored',
+        JSON.stringify({ position: positionId, slug: taskSlug || null, score: result.score, approved: result.isApproved })
+      )
+    } catch { /* gagal mencatat → abaikan */ }
 
     // Skor sengaja TIDAK disertakan di respons
     return NextResponse.json({

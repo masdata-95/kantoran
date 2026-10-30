@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { run } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 10
 
 // Penerima event funnel + error client (first-party analytics).
 // Prinsip: endpoint ini TIDAK PERNAH mengganggu app — selalu balas 200,
-// kegagalan insert (termasuk tabel belum ada / migration 005 belum jalan) diabaikan.
+// kegagalan insert diabaikan.
 const VALID_TYPES = new Set([
   'profile_done', 'apply',
   'interview_start', 'interview_done', 'interview_rejected',
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
       meta = raw.length > 2000 ? { truncated: raw.slice(0, 2000) } : body.meta
     }
 
-    await getServiceClient().from('events').insert({ user_id: user.id, type, meta })
+    await run('INSERT INTO events (user_id, type, meta) VALUES (?, ?, ?)', user.id, type, JSON.stringify(meta))
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ ok: false })

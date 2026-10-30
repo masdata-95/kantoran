@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { authFetch } from '@/lib/supabase'
+import { authFetch } from '@/lib/authClient'
 import type { ModuleDTO } from '@/lib/lessons'
 import type { UserContext } from '@/lib/prompts'
 import LessonView from './LessonView'

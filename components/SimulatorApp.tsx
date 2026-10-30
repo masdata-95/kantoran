@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import dynamicImport from 'next/dynamic'
-import type { User } from '@supabase/supabase-js'
-import { supabase, authFetch } from '@/lib/supabase'
+import type { AppUser as User } from '@/lib/authClient'
+import { authFetch, logout } from '@/lib/authClient'
 import { POSITIONS, getSalaryRange, normalizeLevel, LEVEL_FOR_BG, type BackgroundType, type LevelType } from '@/lib/positions'
 import type { ModuleDTO } from '@/lib/lessons'
 // xlsx di-load dinamis saat upload file saja — library berat, jangan masuk bundle awal
@@ -1016,7 +1016,7 @@ PT Vantara Nusantara`
 
   const handleLogout = async () => {
     await saveProgress()
-    await supabase.auth.signOut()
+    await logout()
   }
 
   // Keluar ke hub karir (job listing) — progress tersimpan, bisa lanjut atau coba posisi lain

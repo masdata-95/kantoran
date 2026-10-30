@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import type { User } from '@supabase/supabase-js'
-import { authFetch } from '@/lib/supabase'
+import type { AppUser as User } from '@/lib/authClient'
+import { authFetch } from '@/lib/authClient'
 import { track } from '@/lib/track'
 
 interface Props {

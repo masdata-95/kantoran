@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser, getServiceClient } from '@/lib/serverAuth'
+import { getAuthUser } from '@/lib/serverAuth'
+import { one, run, parseJson } from '@/lib/db'
 
 export const maxDuration = 10
 
@@ -8,8 +9,6 @@ export async function POST(req: NextRequest) {
     const user = await getAuthUser(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const db = getServiceClient()
-
     // Multi-role: body { position } → reset run posisi itu saja; tanpa position → reset semua
     let position: string | undefined
     try {
@@ -17,41 +16,30 @@ export async function POST(req: NextRequest) {
       position = body?.position || undefined
     } catch { /* body kosong = reset semua */ }
 
-    let del = db.from('user_progress').delete().eq('user_id', user.id)
-    if (position) del = del.eq('position', position)
-    const { error } = await del
-
-    if (error) {
-      console.error('Reset error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (position) {
+      await run('DELETE FROM user_progress WHERE user_id = ? AND position = ?', user.id, position)
+    } else {
+      await run('DELETE FROM user_progress WHERE user_id = ?', user.id)
     }
 
     // Pengalaman simulasi ditulis ke profil saat task approved — bersihkan hanya kalau
     // tidak ada run lain yang masih punya task selesai (run posisi lain tetap dihargai)
-    const { data: remaining } = await db
-      .from('user_progress')
-      .select('tasks_done')
-      .eq('user_id', user.id)
-      .gt('tasks_done', 0)
-      .limit(1)
+    const remaining = await one(
+      'SELECT 1 AS ok FROM user_progress WHERE user_id = ? AND tasks_done > 0 LIMIT 1',
+      user.id
+    )
 
-    if (!remaining || remaining.length === 0) {
-      const { data: prof } = await db
-        .from('user_profiles')
-        .select('experience')
-        .eq('user_id', user.id)
-        .single()
-
-      if (prof?.experience && Array.isArray(prof.experience)) {
-        const cleaned = prof.experience.filter(
-          (e: { id?: string }) => e?.id !== 'kantoran-sim'
+    if (!remaining) {
+      const prof = await one<{ experience: string }>(
+        'SELECT experience FROM user_profiles WHERE user_id = ?', user.id
+      )
+      const experience = parseJson<{ id?: string }[]>(prof?.experience, [])
+      const cleaned = experience.filter(e => e?.id !== 'kantoran-sim')
+      if (cleaned.length !== experience.length) {
+        await run(
+          'UPDATE user_profiles SET experience = ? WHERE user_id = ?',
+          JSON.stringify(cleaned), user.id
         )
-        if (cleaned.length !== prof.experience.length) {
-          await db
-            .from('user_profiles')
-            .update({ experience: cleaned })
-            .eq('user_id', user.id)
-        }
       }
     }
 

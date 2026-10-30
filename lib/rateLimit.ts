@@ -1,6 +1,6 @@
-// Rate limiting harian per user — counter atomic di Postgres (RPC bump_usage).
-// Bekerja identik di Vercel dan Cloudflare Workers (tidak bergantung state in-memory).
-import { getServiceClient } from '@/lib/serverAuth'
+// Rate limiting harian per user — counter atomic di D1 (UPSERT ... RETURNING),
+// pengganti RPC bump_usage di Postgres.
+import { one } from '@/lib/db'
 
 export type RateBucket = 'chat' | 'review' | 'cv' | 'mission'
 
@@ -13,20 +13,18 @@ export const DAILY_LIMITS: Record<RateBucket, number> = {
   mission: 30,
 }
 
-// TRUE = boleh lanjut. Fail-open: kalau RPC error (mis. migration belum jalan),
-// request tetap diizinkan supaya fitur tidak mati total.
+// TRUE = boleh lanjut. Fail-open: kalau D1 error, request tetap diizinkan
+// supaya fitur tidak mati total.
 export async function checkLimit(userId: string, bucket: RateBucket): Promise<boolean> {
   try {
-    const { data, error } = await getServiceClient().rpc('bump_usage', {
-      uid: userId,
-      b: bucket,
-      max_count: DAILY_LIMITS[bucket],
-    })
-    if (error) {
-      console.warn(`Rate limit RPC error (${bucket}):`, error.message)
-      return true
-    }
-    return data === true
+    const day = new Date().toISOString().slice(0, 10)
+    const row = await one<{ count: number }>(
+      `INSERT INTO api_usage (user_id, bucket, day, count) VALUES (?, ?, ?, 1)
+       ON CONFLICT (user_id, bucket, day) DO UPDATE SET count = count + 1
+       RETURNING count`,
+      userId, bucket, day
+    )
+    return (row?.count ?? 0) <= DAILY_LIMITS[bucket]
   } catch (e) {
     console.warn(`Rate limit check gagal (${bucket}):`, e)
     return true

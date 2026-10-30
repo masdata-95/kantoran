@@ -1,0 +1,50 @@
+// STAGING: Worker terpisah (kantoran-staging.kantoran.workers.dev), memakai D1 dan R2 yang sama. Tidak menyentuh Worker "kantoran".
+// Deploy: npm run deploy | Preview lokal (workerd): npm run preview
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kantoran-staging",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-01",
+  // nodejs_compat wajib: Buffer dipakai di app/api/cv-extract (unpdf/mammoth)
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+    // "/" dilayani public/index.html (salinan landing, dibuat scripts/embed-landing.mjs) langsung
+    // dari static assets tanpa menjalankan Worker. html_handling default (auto-trailing-slash)
+    // memetakan "/" → index.html.
+    // /landing.html harus lewat Worker dulu supaya redirect 308 → "/" (SEO, satu alamat) berlaku;
+    // tanpa ini file statis dilayani langsung tanpa menyentuh Worker.
+    "run_worker_first": ["/landing.html"]
+  },
+  "observability": {
+    "enabled": true
+  },
+
+  // Database dan penyimpanan (menggantikan Supabase).
+  // database_id diisi setelah `npx wrangler d1 create kantoran --location apac`.
+  // Selama masih nol, hanya mode lokal (`next dev`, `wrangler ... --local`) yang jalan;
+  // JANGAN deploy sebelum diganti.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kantoran",
+      "database_id": "9cad1af4-936c-4d25-b013-d7b8296d5774",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "TASK_FILES", "bucket_name": "kantoran-task-files" }
+  ],
+  "vars": {
+    // Worker video Mas Data (HLS di R2, link bertoken). Ganti ke video.<domain> setelah domain jadi.
+    "VIDEO_BASE": "https://masdata-video.kantoran.workers.dev"
+  }
+  // Secrets di-set via CLI, JANGAN ditulis di sini:
+  //   npx wrangler secret put GEMINI_API_KEY_1
+  //   npx wrangler secret put GROQ_API_KEY_1
+  //   npx wrangler secret put OPENROUTER_API_KEY
+  //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+  //   npx wrangler secret put SUPABASE_JWT_SECRET
+  // NEXT_PUBLIC_* bersifat build-time (di-inline saat next build dari .env.local / env CI).
+}

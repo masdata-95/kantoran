@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { AppUser as User } from '@/lib/authClient'
 import type { UserProfile, Education, Experience } from '@/lib/profile'
 import { EMPTY_PROFILE, MONTHS, YEARS } from '@/lib/profile'
 import { SKILLS_PRESET } from '@/lib/skills'
-import { authFetch } from '@/lib/supabase'
+import { authFetch } from '@/lib/authClient'
 
 interface Props {
   user: User
@@ -41,8 +41,8 @@ export default function ProfileSetup({ user, onComplete }: Props) {
   const [saveError, setSaveError] = useState('')
   const [profile, setProfile] = useState<UserProfile & { category?: string }>({
     ...EMPTY_PROFILE,
-    full_name: user.user_metadata?.full_name || '',
-    avatar_url: user.user_metadata?.avatar_url || '',
+    full_name: user.name || '',
+    avatar_url: user.avatar_url || '',
     // Satu baris pendidikan kosong sejak awal: user langsung mengetik, tidak perlu
     // mencari tombol "tambah" dulu (dulu ada dua tombol tambah yang sama persis)
     education: [newEducation()],

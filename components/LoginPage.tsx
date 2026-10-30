@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { loginWithGoogle } from '@/lib/authClient'
 
 // Urutan yang akan dialami user setelah login — ditampilkan apa adanya supaya
 // orang tahu berapa lama dan apa yang diminta sebelum menyerahkan akun Google-nya.
@@ -12,21 +12,25 @@ const NEXT_STEPS = [
   { title: 'Interview dengan HR', note: 'Lewat chat, 15 sampai 20 menit, termasuk nego gaji.' },
 ]
 
+const PESAN_GAGAL: Record<string, string> = {
+  dibatalkan: 'Login dibatalkan atau sudah kedaluwarsa. Coba sekali lagi.',
+  email_belum_terverifikasi: 'Email Google-mu belum terverifikasi, jadi belum bisa dipakai masuk.',
+  belum_diatur: 'Login Google sedang kami perbaiki. Coba lagi sebentar lagi.',
+}
+const pesanGagal = (kode: string | null) =>
+  kode ? (PESAN_GAGAL[kode] ?? 'Login Google gagal. Coba sekali lagi.') : ''
+
 export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false)
-  const [error, setError] = useState('')
+  // Callback login yang gagal mengalihkan balik ke /simulator?login=<alasan>.
+  // Halaman ini hanya dirender di client (page.tsx menampilkan loading dulu), jadi aman membaca window.
+  const [error, setError] = useState(() =>
+    typeof window === 'undefined' ? '' : pesanGagal(new URLSearchParams(window.location.search).get('login')))
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setRedirecting(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/simulator` },
-    })
-    if (error) {
-      setRedirecting(false)
-      setError('Login Google gagal dibuka. Coba sekali lagi, atau matikan pemblokir pop-up.')
-    }
+    loginWithGoogle('/simulator')
   }
 
   return (

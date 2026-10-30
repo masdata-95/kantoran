@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { authFetch } from '@/lib/supabase'
+import { authFetch } from '@/lib/authClient'
 import type { ModuleDTO, LessonDTO } from '@/lib/lessons'
 import type { UserContext } from '@/lib/prompts'
 import MarkdownLite from './MarkdownLite'
 import YouTubeEmbed from './YouTubeEmbed'
+import VideoPlayer from './VideoPlayer'
 
 const TYPE_LABEL: Record<string, string> = { text: 'Bacaan', video: 'Video', mission: 'Misi' }
 
@@ -125,7 +126,9 @@ export default function LessonView({ module: mod, positionId, userContext, super
               {open && (
                 <div className="border-t border-[#F1EFE8] px-3 sm:px-4 py-4 flex flex-col gap-3">
                   {lesson.type === 'video' && (
-                    <YouTubeEmbed videoId={lesson.youtubeVideoId} title={lesson.title} />
+                    lesson.videoUrl
+                      ? <VideoPlayer src={lesson.videoUrl} title={lesson.title} />
+                      : <YouTubeEmbed videoId={lesson.youtubeVideoId} title={lesson.title} />
                   )}
 
                   {lesson.contentMd && <MarkdownLite content={lesson.contentMd} />}

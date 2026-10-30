@@ -19,6 +19,26 @@
   },
   "observability": {
     "enabled": true
+  },
+
+  // Database dan penyimpanan (menggantikan Supabase).
+  // database_id diisi setelah `npx wrangler d1 create kantoran --location apac`.
+  // Selama masih nol, hanya mode lokal (`next dev`, `wrangler ... --local`) yang jalan;
+  // JANGAN deploy sebelum diganti.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kantoran",
+      "database_id": "9cad1af4-936c-4d25-b013-d7b8296d5774",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "TASK_FILES", "bucket_name": "kantoran-task-files" }
+  ],
+  "vars": {
+    // Worker video Mas Data (HLS di R2, link bertoken). Ganti ke video.<domain> setelah domain jadi.
+    "VIDEO_BASE": "https://masdata-video.kantoran.workers.dev"
   }
   // Secrets di-set via CLI, JANGAN ditulis di sini:
   //   npx wrangler secret put GEMINI_API_KEY_1

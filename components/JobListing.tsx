@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { POSITIONS, SALARY_RANGE, LEVELS, LEVEL_FOR_BG, normalizeLevel } from '@/lib/positions'
 import type { BackgroundType, LevelType } from '@/lib/positions'
-import { supabase, authFetch } from '@/lib/supabase'
+import { authFetch, logout } from '@/lib/authClient'
 
 interface Props {
   background: BackgroundType | ''
@@ -222,7 +222,7 @@ export default function JobListing({ background, onApply }: Props) {
       <header className="bg-white border-b border-[#E5E3DC] sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <span className="text-[15px] font-semibold text-[#0F6E56]">Kantoran</span>
-          <button onClick={() => supabase.auth.signOut()} style={{ cursor: 'pointer' }} className="text-[13px] text-[#6B6A64] hover:text-[#1A1A18]">
+          <button onClick={() => logout()} style={{ cursor: 'pointer' }} className="text-[13px] text-[#6B6A64] hover:text-[#1A1A18]">
             Keluar akun
           </button>
         </div>

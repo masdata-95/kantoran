@@ -1,57 +1,61 @@
 {
-  "name": "kantoran-app",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "predev": "node scripts/embed-landing.mjs",
-    "dev": "next dev",
-    "prebuild": "node scripts/embed-landing.mjs",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "test": "vitest run",
-    "seed:lessons": "tsx scripts/seed-lessons.ts",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf:tail": "wrangler tail kantoran",
-    "generate:universe": "tsx scripts/generate-universe.ts",
-    "seed:tasks": "tsx scripts/seed-tasks.ts"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.107.0",
-    "exceljs": "^4.4.0",
-    "jose": "^6.2.3",
-    "lucide-react": "^1.17.0",
-    "mammoth": "^1.12.0",
-    "next": "16.2.7",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
-    "sql.js": "^1.14.1",
-    "unpdf": "^1.6.2"
-  },
-  "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.1",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/sql.js": "^1.4.11",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.7",
-    "gray-matter": "^4.0.3",
-    "tailwindcss": "^4",
-    "tsx": "^4.23.0",
-    "typescript": "^5",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.107.0",
-    "xlsx": "^0.18.5"
-  },
-  "overrides": {
-    "exceljs": {
-      "uuid": "^11.1.1"
-    }
-  }
+    "name":  "kantoran-app",
+    "version":  "0.1.0",
+    "private":  true,
+    "scripts":  {
+                    "predev":  "node scripts/embed-landing.mjs",
+                    "dev":  "next dev",
+                    "prebuild":  "node scripts/embed-landing.mjs",
+                    "build":  "next build",
+                    "start":  "next start",
+                    "lint":  "eslint",
+                    "test":  "vitest run",
+                    "seed:lessons":  "tsx scripts/seed-lessons.ts",
+                    "preview":  "opennextjs-cloudflare build \u0026\u0026 opennextjs-cloudflare preview",
+                    "deploy":  "opennextjs-cloudflare build \u0026\u0026 opennextjs-cloudflare deploy",
+                    "cf:tail":  "wrangler tail kantoran",
+                    "generate:universe":  "tsx scripts/generate-universe.ts",
+                    "seed:tasks":  "tsx scripts/seed-tasks.ts",
+                    "seed:lessons:remote":  "tsx scripts/seed-lessons.ts --remote",
+                    "seed:tasks:remote":  "tsx scripts/seed-tasks.ts --remote",
+                    "db:migrate":  "wrangler d1 migrations apply kantoran --local",
+                    "db:migrate:remote":  "wrangler d1 migrations apply kantoran --remote"
+                },
+    "dependencies":  {
+                         "exceljs":  "^4.4.0",
+                         "hls.js":  "^1.6.15",
+                         "jose":  "^6.2.3",
+                         "lucide-react":  "^1.17.0",
+                         "mammoth":  "^1.12.0",
+                         "next":  "16.2.7",
+                         "react":  "19.2.4",
+                         "react-dom":  "19.2.4",
+                         "react-markdown":  "^10.1.0",
+                         "remark-gfm":  "^4.0.1",
+                         "sql.js":  "^1.14.1",
+                         "unpdf":  "^1.6.2"
+                     },
+    "devDependencies":  {
+                            "@cloudflare/workers-types":  "^4.20260702.1",
+                            "@opennextjs/cloudflare":  "^1.20.1",
+                            "@tailwindcss/postcss":  "^4",
+                            "@types/node":  "^20",
+                            "@types/react":  "^19",
+                            "@types/react-dom":  "^19",
+                            "@types/sql.js":  "^1.4.11",
+                            "eslint":  "^9",
+                            "eslint-config-next":  "16.2.7",
+                            "gray-matter":  "^4.0.3",
+                            "tailwindcss":  "^4",
+                            "tsx":  "^4.23.0",
+                            "typescript":  "^5",
+                            "vitest":  "^4.1.10",
+                            "wrangler":  "^4.107.0",
+                            "xlsx":  "^0.18.5"
+                        },
+    "overrides":  {
+                      "exceljs":  {
+                                      "uuid":  "^11.1.1"
+                                  }
+                  }
 }
