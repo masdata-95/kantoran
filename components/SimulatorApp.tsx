@@ -20,19 +20,21 @@ import { track } from '@/lib/track'
 import {
   Mail, Handshake, MessagesSquare, Monitor, GraduationCap, Folder, Database, ScrollText,
   Coffee, LogOut, RotateCcw, Briefcase, Menu, X, Coins, SendHorizontal, Lock, FileSpreadsheet, Download,
-  BellRing, Volume2, VolumeX,
+  BellRing, Volume2, VolumeX, Check,
 } from 'lucide-react'
 import { bunyiNotif, bacaPengaturanSuara, simpanPengaturanSuara } from '@/lib/notifikasi'
+import { TOPIK_PANEL, topikAktif, tahapUntuk, PANEL_MAKS } from '@/lib/interviewPanel'
+import type { UmpanBalikPanel } from '@/lib/panelFeedback'
 
 // Tur pengenalan UI untuk user yang baru pertama kali masuk simulasi.
 // Selector menunjuk atribut data-tour di elemen bersangkutan.
 const TOUR_STEPS: TourStep[] = [
   { title: 'Ini kantor barumu', body: 'Semuanya terjadi lewat chat dan email, persis kerja kantoran. Tur ini cuma enam langkah singkat.' },
-  { title: 'Undangan sudah di Inbox', body: 'Email undangan interview masuk ke Inbox. Tidak perlu dibuka dulu, interview-nya langsung di layar ini (HR Office).' },
-  { target: '[data-tour="team"]', title: 'Orang-orang di kantor', body: 'Sekarang baru Sinta dari HR yang bisa diajak bicara. Supervisor dan rekan tim muncul setelah kamu tanda tangan kontrak.', needsSidebar: true },
+  { title: 'Undangan sudah di Inbox', body: 'Email undangan interview masuk ke Inbox. Tidak perlu dibuka dulu, interview-nya langsung di layar ini (Ruang Interview).' },
+  { target: '[data-tour="team"]', title: 'Orang-orang di kantor', body: 'Sekarang yang bisa diajak bicara baru Sinta dari HR dan calon atasanmu. Rekan tim muncul setelah kamu tanda tangan kontrak.', needsSidebar: true },
   { target: '[data-tour="rooms"]', title: 'Ruangan', body: 'Yang bergembok terbuka satu per satu sesuai perjalananmu. Kalau ada pesan baru, notifikasinya muncul di atas layar.', needsSidebar: true },
   { target: '[data-tour="coins"]', title: 'Coin', body: 'Bertambah tiap kamu membalas chat, menyelesaikan latihan, atau task disetujui. Anggap saja skor.' },
-  { title: 'Sinta sudah menyapamu', body: 'Balas seperti chat dengan HR sungguhan: jujur, jelas, tidak perlu terlalu formal. Interviewnya sekitar 15 menit, di akhir ada nego gaji.' },
+  { title: 'Interview panel dimulai', body: 'Hari ini kamu diwawancarai dua orang: Sinta dari HR dan calon atasanmu. Jawab seperti ngobrol sungguhan, jujur dan tidak perlu terlalu formal. Sekitar 10 menit, di akhir ada nego gaji dan catatan untukmu.' },
 ]
 
 // ── TYPES ─────────────────────────────────────────
@@ -180,6 +182,13 @@ const callName = (full?: string) => {
   return ['Mbak', 'Pak', 'Bu', 'Kak', 'Mas'].includes(w[0]) ? w.slice(0, 2).join(' ') : w[0] || ''
 }
 
+// Catatan atasan dari umpan balik interview panel; dirujuk supervisor saat briefing supaya interview
+// terasa bagian dari cerita, bukan gerbang yang terpisah.
+const catatanInterviewDari = (history: Record<string, Message[]>): string => {
+  const kartu = (history['hr_office'] || []).find(m => m.role === 'action' && m.data?.type === 'interview_feedback')
+  return String((kartu?.data?.umpanBalik as { catatanAtasan?: string } | undefined)?.catatanAtasan || '')
+}
+
 const fmtJuta = (n: number) => (n / 1000000).toFixed(1).replace(/\.0$/, '').replace('.', ',')
 
 // ── MAIN COMPONENT ────────────────────────────────
@@ -207,6 +216,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const suaraRef = useRef(true)
   // Interview baru saja ditolak server: kunci input SEKETIKA, tanpa menunggu kartu aksi (jeda 1,5 dtk).
   const [hrDitolakSegera, setHrDitolakSegera] = useState(false)
+  // Penanya panel yang sedang "mengetik" di sela dua gelembung dalam satu giliran (null = ikuti naskah tahap).
+  const [mengetikNpc, setMengetikNpc] = useState<string | null>(null)
   const roomTerbaru = useRef<string | null>(null)
   const timerNotif = useRef<ReturnType<typeof setTimeout> | null>(null)
   const judulAsal = useRef('Kantoran')
@@ -692,9 +703,9 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
 
 Terima kasih sudah melamar posisi ${role} di PT Vantara Nusantara.
 
-Kami dengan senang hati mengundang kamu ke tahap seleksi awal berupa sesi interview singkat. Estimasi waktu: 15-20 menit.
+Kami dengan senang hati mengundang kamu ke tahap seleksi berupa interview panel bersama aku dan calon atasanmu. Estimasi waktu: sekitar 10 menit.
 
-Silakan buka menu HR Office untuk memulai sesi interview dengan Sinta Maharani, HR Business Partner kami.
+Silakan buka Ruang Interview untuk memulai. Kamu akan bertemu aku dan ${callName(pos.supervisor.name)}, calon atasanmu di tim ${pos.dept}.
 
 Sampai jumpa!
 
@@ -708,13 +719,26 @@ PT Vantara Nusantara`
         id: sintaMsgId,
         role: 'npc' as const,
         npcId: 'sinta',
-        // Satu pertanyaan saja (aturan prompt Sinta) + bukti CV sudah dibaca
+        // Sapaan + bukti CV sudah dibaca; pertanyaan pembuka menyusul sebagai pesan terpisah (tanyaMsg)
         text: (() => {
           const edu = userProfile?.education?.find(e => e.institution?.trim() && e.major?.trim())
           return edu
-            ? `Halo ${firstName}, aku Sinta dari HR Vantara. CV kamu udah aku baca, ${edu.major} di ${edu.institution} ya. Santai aja, anggap ngobrol biasa. Gimana kabarnya hari ini?`
-            : `Halo ${firstName}, aku Sinta dari HR Vantara. Santai aja, anggap ngobrol biasa. Gimana kabarnya hari ini?`
+            ? `Halo ${firstName}, aku Sinta dari HR Vantara. CV kamu udah aku baca, ${edu.major} di ${edu.institution} ya. Hari ini kamu ngobrol sama dua orang: aku, dan ${callName(pos.supervisor.name)} yang bakal jadi calon atasanmu. Santai aja, anggap ngobrol biasa.`
+            : `Halo ${firstName}, aku Sinta dari HR Vantara. Hari ini kamu ngobrol sama dua orang: aku, dan ${callName(pos.supervisor.name)} yang bakal jadi calon atasanmu. Santai aja, anggap ngobrol biasa.`
         })()
+      }
+
+      const supMsg = {
+        id: `sup-${Date.now() + 2}`,
+        role: 'npc' as const,
+        npcId: 'sup',
+        text: `Halo ${firstName}, aku ${callName(pos.supervisor.name)}. Nanti aku ikut nanya soal cara kerja ya, Sinta soal kamu.`,
+      }
+      const tanyaMsg = {
+        id: `sinta-${Date.now() + 3}`,
+        role: 'npc' as const,
+        npcId: 'sinta',
+        text: 'Kita mulai dari kamu dulu ya. Boleh perkenalkan diri singkat: siapa kamu, dan lagi sibuk belajar atau ngerjain apa sekarang?',
       }
 
       const initState: SimState = {
@@ -728,7 +752,7 @@ PT Vantara Nusantara`
         step: 0,
         chatHistory: {
           inbox: [inviteEmail],
-          hr_office: [sintaMsg],
+          hr_office: [sintaMsg, supMsg, tanyaMsg],
         },
         unreadCounts: {
           inbox: 1,
@@ -742,7 +766,7 @@ PT Vantara Nusantara`
       // Email undangan tetap di Inbox (badge unread) untuk imersi, tapi bukan penghalang.
       setView('hr_office')
       setTimeout(() => {
-        showNotif('hr_office', 'Sinta Maharani', 'Sinta sudah menyapamu. Balas untuk mulai interview.')
+        showNotif('hr_office', 'Interview panel', 'Sinta dan calon atasanmu sudah menyapa. Perkenalkan dirimu untuk mulai.')
       }, 800)
     }
   }, [progLoading, showApp, initialPosition])
@@ -880,6 +904,12 @@ PT Vantara Nusantara`
       if (msg.isError) continue
       if (msg.role === 'user' && msg.text) {
         history.push({ role: 'user', content: msg.text })
+      } else if (msg.role === 'npc' && msg.text && room === 'hr_office' && (msg.npcId === 'sinta' || msg.npcId === 'sup')) {
+        // Panel: kedua penanya masuk riwayat dengan penanda supaya model tahu siapa bertanya apa.
+        const kata = `[${msg.npcId === 'sup' ? 'ATASAN' : 'SINTA'}] ${msg.text}`
+        const akhir = history[history.length - 1]
+        if (akhir && akhir.role === 'assistant') akhir.content += '\n' + kata
+        else history.push({ role: 'assistant', content: kata })
       } else if (msg.role === 'npc' && msg.text && msg.npcId === npcId) {
         history.push({ role: 'assistant', content: msg.text })
       }
@@ -887,7 +917,7 @@ PT Vantara Nusantara`
     return history.slice(-30)
   }, [state.chatHistory])
 
-  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; interviewDone: boolean; interviewOutcome?: string; failed: boolean }> => {
+  const callChat = async (npcId: string, userMsg: string, room: string): Promise<{ reply: string; pesan?: { npc: string; text: string }[]; interviewDone: boolean; interviewOutcome?: string; failed: boolean }> => {
     setLoading(true)
     try {
       const history = buildHistory(room, npcId)
@@ -895,7 +925,7 @@ PT Vantara Nusantara`
       const res = await authFetch('/api/chat', {
         method: 'POST',
         body: JSON.stringify({
-          npcId,
+          npcId: npcId === 'sinta' ? 'panel' : npcId,
           messages,
           userContext: {
             firstName: state.firstName,
@@ -907,6 +937,7 @@ PT Vantara Nusantara`
             experience: state.experience || buildCvSummary(profile),
             motivation: state.motivation,
             step: state.step,
+            catatanInterview: catatanInterviewDari(state.chatHistory),
           },
           positionId: state.position,
         })
@@ -914,6 +945,7 @@ PT Vantara Nusantara`
       const data = await res.json()
       return {
         reply: (data.reply as string) || 'Maaf, ada gangguan sebentar. Coba lagi ya!',
+        pesan: Array.isArray(data.pesan) ? (data.pesan as { npc: string; text: string }[]) : undefined,
         interviewDone: Boolean(data.interviewDone),
         interviewOutcome: data.interviewOutcome as string | undefined,
         failed: Boolean(data.failed) || !data.reply,
@@ -925,11 +957,36 @@ PT Vantara Nusantara`
     }
   }
 
+  // Umpan balik singkat dari kedua penanya di akhir interview. Dinanti paling lama 10 detik (indikator
+  // mengetik tampil); gagal atau lambat berarti kartunya dilewati dan interview tetap bisa dilanjutkan.
+  const tampilkanUmpanBalik = async () => {
+    const s = stateRef.current
+    const transkrip = (s.chatHistory['hr_office'] || [])
+      .filter(m => !m.isError && m.text && (m.role === 'user' || m.role === 'npc'))
+      .map(m => ({ who: m.role === 'user' ? 'user' : m.npcId === 'sup' ? 'sup' : 'sinta', text: m.text }))
+    setLoading(true)
+    setMengetikNpc('sinta')
+    try {
+      const minta = authFetch('/api/interview-feedback', {
+        method: 'POST',
+        body: JSON.stringify({ transkrip, positionId: s.position, firstName: s.firstName, bgRole: s.bgRole }),
+      }).then(r => r.json())
+      const data = await Promise.race([minta, new Promise<null>(selesai => setTimeout(() => selesai(null), 10000))])
+      const umpanBalik = (data as { umpanBalik?: UmpanBalikPanel | null } | null)?.umpanBalik
+      if (umpanBalik) addMsg('hr_office', { role: 'action', data: { type: 'interview_feedback', umpanBalik } }, true)
+    } catch {
+      // tidak kritis: tanpa kartu umpan balik interview tetap lanjut
+    } finally {
+      setMengetikNpc(null)
+      setLoading(false)
+    }
+  }
+
   // Kirim userMsg ke NPC dan proses balasannya. Dipakai handleSend (pesan baru)
   // dan handleRetry (kirim ulang pesan user terakhir tanpa menduplikasinya di history).
   const deliverReply = async (npcId: string, userMsg: string, room: string) => {
     // callChat builds full history from chatHistory for AI memory
-    const { reply, interviewDone: serverSaysDone, interviewOutcome, failed } = await callChat(npcId, userMsg, room)
+    const { reply, pesan, interviewDone: serverSaysDone, interviewOutcome, failed } = await callChat(npcId, userMsg, room)
 
     if (failed) {
       // Gangguan koneksi → banner error + tombol "Kirim ulang", BUKAN bubble NPC.
@@ -939,7 +996,19 @@ PT Vantara Nusantara`
       return
     }
 
-    addMsg(room, { role: 'npc', npcId, text: reply }, true)
+    // Panel: satu giliran bisa berisi dua gelembung dari dua penanya; gelembung kedua muncul sesudah jeda
+    // "sedang mengetik" supaya terasa seperti dua orang yang bergantian.
+    const gelembung = npcId === 'sinta' && pesan?.length ? pesan : [{ npc: npcId, text: reply }]
+    for (let i = 0; i < gelembung.length; i++) {
+      if (i > 0) {
+        setLoading(true)
+        setMengetikNpc(gelembung[i].npc)
+        await new Promise(r => setTimeout(r, Math.min(1800, 700 + gelembung[i].text.length * 14)))
+        setMengetikNpc(null)
+        setLoading(false)
+      }
+      addMsg(room, { role: 'npc', npcId: gelembung[i].npc, text: gelembung[i].text }, true)
+    }
     addCoins(2)
 
     // Notify if user navigated to a different room while waiting for reply
@@ -1006,7 +1075,8 @@ PT Vantara Nusantara`
             (userMsgCount >= 8 && !endsWithQuestion && doneSignals.some(s => reply.toLowerCase().includes(s))))
           if (isDone) {
             track('interview_done', { position: prev.position, level: prev.level, conditional })
-            setTimeout(() => {
+            setTimeout(async () => {
+              await tampilkanUmpanBalik()
               addMsg('hr_office', {
                 role: 'action',
                 data: {
@@ -1021,7 +1091,7 @@ PT Vantara Nusantara`
                   conditional,
                 }
               })
-            }, 1500)
+            }, 1200)
             return { ...prev, interviewDone: true }
           }
         }
@@ -1667,7 +1737,7 @@ PT Vantara Nusantara`
   // Ruang "Meeting" dihapus: tidak pernah berisi apa pun (temuan QA Okt 2026).
   const rooms: { id: string; Icon: typeof Mail; label: string; locked: boolean }[] = [
     { id: 'inbox', Icon: Mail, label: 'Inbox', locked: false },
-    { id: 'hr_office', Icon: Handshake, label: 'HR Office', locked: false },
+    { id: 'hr_office', Icon: Handshake, label: 'Ruang Interview', locked: false },
     { id: 'slack', Icon: MessagesSquare, label: `#${channelName}`, locked: state.phaseUnlocked < 1 },
     { id: 'file_manager', Icon: Folder, label: 'File Manager', locked: state.step < 5 },
     { id: 'workspace', Icon: Monitor, label: 'Workspace', locked: state.phaseUnlocked < 1 },
@@ -1686,6 +1756,11 @@ PT Vantara Nusantara`
   // petunjuk langkah berikutnya supaya tidak ada pesan yang menggantung tanpa balasan yang masuk akal.
   const hrDitutup = view === 'hr_office' && (interviewRejected || hrDitolakSegera || (state.interviewDone && state.step < 3))
   const offerSalary = getOfferSalary(state.chatHistory)
+  // Penanya yang sedang mengetik di ruang interview panel: nama dan inisial ikut penanya, bukan selalu Sinta.
+  const jawabanPanel = (state.chatHistory['hr_office'] || []).filter(m => m.role === 'user').length
+  const pengetikPanel = view === 'hr_office'
+    ? (mengetikNpc ?? (state.interviewDone ? 'sinta' : tahapUntuk(jawabanPanel).pembicara[0]))
+    : null
 
   // Task yang sedang terbuka. Task-1 hari-1 dari POSITIONS; sesudahnya dari pipeline
   // seasonTasks (cursor = tasksDone). Dulu Workspace menutup upload di step 10, padahal
@@ -1698,7 +1773,7 @@ PT Vantara Nusantara`
     ? activeSeasonTask.title : (pos?.taskTitle || '')
 
   const inputPlaceholder =
-    view === 'hr_office' ? 'Balas Sinta' :
+    view === 'hr_office' ? 'Jawab pertanyaan mereka' :
     view === 'slack' ? 'Sapa tim, misalnya perkenalkan diri singkat' :
     view === 'sup_chat' ? `Tulis ke ${callName(pos?.supervisor.name)}` :
     view === 'mgr_chat' ? `Tulis ke ${callName(pos?.manager.name)}` :
@@ -2108,13 +2183,18 @@ PT Vantara Nusantara`
               {/* Typing indicator */}
               {loading && canChat && (
                 <div className="flex gap-2 animate-messageIn">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${view === 'hr_office' ? 'av-teal' : view === 'sup_chat' ? 'av-blue' : view === 'mgr_chat' ? 'av-purple' : 'av-amber'}`}>
-                    {view === 'hr_office' ? 'SM' : NPC_INITIALS[state.position]?.[view === 'sup_chat' ? 'sup' : view === 'mgr_chat' ? 'mgr' : 'jnr'] || '?'}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${view === 'hr_office' ? (pengetikPanel === 'sup' ? (pos?.supervisor.avClass || 'av-blue') : 'av-teal') : view === 'sup_chat' ? 'av-blue' : view === 'mgr_chat' ? 'av-purple' : 'av-amber'}`}>
+                    {view === 'hr_office' ? (pengetikPanel === 'sup' ? (NPC_INITIALS[state.position]?.sup || '??') : 'SM') : NPC_INITIALS[state.position]?.[view === 'sup_chat' ? 'sup' : view === 'mgr_chat' ? 'mgr' : 'jnr'] || '?'}
                   </div>
                   <div className="bg-white border border-[#E5E3DC] rounded-[0_8px_8px_8px] px-3 py-2.5 flex gap-1 items-center">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
                     <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
                     <div className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] dot-bounce"></div>
+                    {pengetikPanel && (
+                      <span className="text-[12px] text-[#6B6A64] ml-2" role="status">
+                        {pengetikPanel === 'sup' ? callName(pos?.supervisor.name) : 'Sinta'} sedang mengetik
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -2230,11 +2310,14 @@ function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state
   // Interview ditargetkan sekitar 9 jawaban; penghitung membantu pengguna tahu seberapa jauh lagi.
   const jawabanHr = (state.chatHistory['hr_office'] || []).filter(m => m.role === 'user').length
   const hrDitolak = (state.chatHistory['hr_office'] || []).some(m => m.role === 'action' && m.data?.type === 'interview_rejected')
-  const progresHr = jawabanHr === 0 ? 'sekitar 9 pertanyaan' : jawabanHr <= 9 ? `jawaban ${jawabanHr} dari ±9` : `jawaban ke-${jawabanHr}`
+  // Interview panel: progres per topik (bukan hitungan jawaban) supaya jelas apa yang sedang dibahas.
+  const panelAktif = view === 'hr_office' && state.step < 2 && !state.interviewDone && !hrDitolak
+  const topikSkrg = topikAktif(jawabanHr, false)
+  const supNama = callName(pos?.supervisor.name)
   const npc: Record<string, { initials: string; avClass: string; name: string; status: string }> = {
     hr_office: {
       initials: 'SM', avClass: 'av-teal', name: 'Sinta Maharani',
-      status: state.step < 2 && !state.interviewDone ? (hrDitolak ? `Interview ${pos?.title || ''} · ditutup` : `Interview ${pos?.title || ''} · sekitar 10 menit · ${progresHr}`) : 'HR Business Partner',
+      status: hrDitolak ? 'Interview ditutup' : 'HR Business Partner',
     },
     sup_chat: { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu` },
     mgr_chat: { initials: NPC_INITIALS[state.position]?.mgr || '??', avClass: pos?.manager.avClass || 'av-purple', name: pos?.manager.name || 'Manager', status: `${pos?.manager.status || ''} · ${pos?.manager.role || ''}` },
@@ -2257,21 +2340,40 @@ function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state
   const hrMsgs = state.chatHistory['hr_office'] || []
   const answered = hrMsgs.filter(m => m.role === 'user').length
   const rejected = hrMsgs.some(m => m.role === 'action' && m.data?.type === 'interview_rejected')
-  const showSkip = view === 'hr_office' && !state.interviewDone && state.step < 2 && !rejected && answered >= 10 && !!onOfferingClick
+  const showSkip = view === 'hr_office' && !state.interviewDone && state.step < 2 && !rejected && answered >= PANEL_MAKS && !!onOfferingClick
 
   const h = npc[view]
   const r = rooms[view] || rooms.inbox
   return (
     <div className="flex items-center gap-3 px-4 h-[56px] border-b border-[#E5E3DC] bg-white flex-shrink-0">
-      {h ? (
+      {panelAktif ? (
+        <div className="flex -space-x-2 flex-shrink-0" aria-hidden>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-semibold av-teal ring-2 ring-white">SM</div>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-semibold ring-2 ring-white ${pos?.supervisor.avClass || 'av-blue'}`}>{NPC_INITIALS[state.position]?.sup || '??'}</div>
+        </div>
+      ) : h ? (
         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0 ${h.avClass}`}>{h.initials}</div>
       ) : (
         <div className="w-9 h-9 rounded-lg bg-[#F1EFE8] text-[#4A4A45] flex items-center justify-center flex-shrink-0"><r.Icon size={17} aria-hidden /></div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#1A1A18] truncate">{h ? h.name : r.name}</p>
-        <p className="text-[12px] text-[#6B6A64] truncate">{h ? h.status : r.status}</p>
+        <p className="text-sm font-semibold text-[#1A1A18] truncate">{panelAktif ? `Interview ${pos?.title || ''}` : h ? h.name : r.name}</p>
+        <p className="text-[12px] text-[#6B6A64] truncate">{panelAktif ? `Sinta (HR) dan ${supNama} (calon atasan) · ${TOPIK_PANEL[topikSkrg]}` : h ? h.status : r.status}</p>
       </div>
+      {panelAktif && (
+        <ol className="hidden md:flex items-center gap-1 flex-shrink-0" aria-label="Topik interview">
+          {TOPIK_PANEL.map((t, i) => (
+            <li
+              key={t}
+              aria-current={i === topikSkrg ? 'step' : undefined}
+              className={`text-[12px] px-2 py-1 rounded-md flex items-center gap-1 ${i === topikSkrg ? 'bg-[#E1F5EE] text-[#0F6E56] font-medium' : i < topikSkrg ? 'text-[#0F6E56]' : 'text-[#6B6A64]'}`}
+            >
+              {i < topikSkrg && <Check size={12} aria-hidden />}
+              {t}
+            </li>
+          ))}
+        </ol>
+      )}
       {showSkip && (
         <button
           onClick={onOfferingClick}
@@ -2289,7 +2391,7 @@ function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state
 function EmptyRoom({ view, state }: { view: string; state: SimState }) {
   const hints: Record<string, string> = {
     inbox: 'Belum ada email.',
-    hr_office: 'Sinta akan menyapamu di sini.',
+    hr_office: 'Sinta dan calon atasanmu akan menyapamu di sini.',
     pantry: 'Belum ada obrolan. Mampir dan sapa rekan timmu.',
     slack: 'Channel tim aktif setelah kamu tanda tangan kontrak.',
     sup_chat: state.step >= 3 ? 'Supervisormu akan mengajakmu standup sebentar lagi. Sambil menunggu, sapa timmu di channel tim.' : 'Terbuka setelah kamu tanda tangan kontrak.',
@@ -2489,6 +2591,36 @@ function MessageBubble({ msg, state, pos, onNextStep, onViewChange, onRetry, ret
             <p className="text-center text-[12px] text-[#6B6A64] mt-2 leading-relaxed">
               Hari kedua sedang disiapkan. Setelah ini ada dua pertanyaan singkat, lalu kamu bisa mencoba posisi lain.
             </p>
+          )}
+        </div>
+      )
+    }
+
+    if (d.type === 'interview_feedback') {
+      const u = d.umpanBalik as UmpanBalikPanel
+      const bagian = [
+        { ini: 'SM', av: 'av-teal', nama: 'Sinta', peran: 'HR', c: u.hr },
+        { ini: NPC_INITIALS[state.position]?.sup || '??', av: pos?.supervisor.avClass || 'av-blue', nama: callName(pos?.supervisor.name), peran: 'calon atasan', c: u.atasan },
+      ]
+      return (
+        <div className="max-w-[560px] animate-messageIn border border-[#E5E3DC] bg-white rounded-xl p-4 sm:p-5">
+          <p className="text-[15px] font-semibold text-[#1A1A18]">Catatan dari panel interview</p>
+          <p className="text-[13px] text-[#4A4A45] mt-1 leading-relaxed">Dua penanya, dua sudut pandang. Ini yang bisa kamu bawa ke interview berikutnya, di mana pun.</p>
+          {bagian.map(b => (
+            <div key={b.nama} className="mt-4 flex gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${b.av}`} aria-hidden>{b.ini}</div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-medium text-[#1A1A18]">{b.nama} <span className="font-normal text-[#6B6A64]">· {b.peran}</span></p>
+                <p className="text-[13px] text-[#4A4A45] leading-relaxed mt-1"><span className="font-medium text-[#1A1A18]">Sudah bagus: </span>{b.c.bagus}</p>
+                <p className="text-[13px] text-[#4A4A45] leading-relaxed mt-1"><span className="font-medium text-[#1A1A18]">Bisa dipertajam: </span>{b.c.tajam}</p>
+              </div>
+            </div>
+          ))}
+          {u.contoh && (
+            <div className="mt-4 rounded-lg bg-[#F7F6F2] px-3.5 py-3">
+              <p className="text-[13px] font-semibold text-[#1A1A18]">Contoh jawaban yang lebih kuat</p>
+              <p className="text-[13px] text-[#4A4A45] leading-relaxed mt-1">{u.contoh}</p>
+            </div>
           )}
         </div>
       )

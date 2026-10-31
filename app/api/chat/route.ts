@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, getLastAIFailure, type ChatMessage } from '@/lib/ai'
 import { catatEvent } from '@/lib/events'
-import { getSintaPrompt, getSupPrompt, getJnrPrompt, getMgrPrompt } from '@/lib/prompts'
+import { getSintaPrompt, getSupPrompt, getJnrPrompt, getMgrPrompt, getPanelPrompt, type UserContext } from '@/lib/prompts'
+import { tahapUntuk, pecahGelembung, PANEL_MAKS, PANEL_TUTUP_MULAI } from '@/lib/interviewPanel'
 import { POSITIONS } from '@/lib/positions'
 import { getAuthUser } from '@/lib/serverAuth'
 import { checkLimit, LIMIT_MESSAGE } from '@/lib/rateLimit'
@@ -13,13 +14,57 @@ export const dynamic = 'force-dynamic'
 // wajib membatasi supaya biaya token terkendali dan konteks tidak bisa dikarang bebas
 const MAX_MESSAGES = 40
 const MAX_MSG_LEN = 2000
-const VALID_NPC = new Set(['sinta', 'sup', 'jnr', 'mgr'])
+const VALID_NPC = new Set(['sinta', 'sup', 'jnr', 'mgr', 'panel'])
 
 const capStr = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 
 // Dipakai bila model berkeras menolak sebelum 6 jawaban walau sudah diminta ulang: teks penolakannya
 // tidak boleh tampil karena interview belum resmi ditutup.
 const AJAKAN_TOLAK_DINI = 'Aku mau kasih kamu kesempatan sekali lagi. Coba ceritakan beberapa kalimat saja tentang dirimu, atau satu hal yang pernah kamu kerjakan, supaya aku bisa kenal kamu.'
+
+// Interview panel (HR + calon atasan). Server memegang naskah giliran: tahap ditentukan dari jumlah
+// jawaban kandidat, penanya yang boleh bicara dikunci, dan interview PASTI ditutup di PANEL_MAKS.
+async function jawabPanel(userId: string, messages: ChatMessage[], userContext: UserContext, positionId: unknown) {
+  const position = POSITIONS[String(positionId)]
+  const jawaban = messages.filter(m => m.role === 'user').length
+  const tahap = tahapUntuk(jawaban)
+  const paksaTutup = jawaban >= PANEL_MAKS
+  const hasil = await callAI(messages, getPanelPrompt(userContext, position, tahap, paksaTutup), { maxTokens: 400 })
+
+  if (!hasil) {
+    await catatEvent(userId, 'ai_error', { npc: 'panel', alasan: getLastAIFailure() })
+    return NextResponse.json({
+      reply: 'Maaf, ada gangguan koneksi. Coba kirim pesan lagi ya!',
+      failed: true,
+    })
+  }
+
+  const tokenCatatan = hasil.text.includes('[SELESAI_CATATAN]')
+  const tokenLulus = !tokenCatatan && hasil.text.includes('[SELESAI]')
+  const teks = hasil.text.replace(/\s*\[(SELESAI_CATATAN|SELESAI|TOLAK)\]\s*/g, '\n').trim()
+
+  // Menutup hanya sah sesudah topik gaji dibahas (jawaban >= PANEL_TUTUP_MULAI) dan gaji sungguh disebut;
+  // di batas keras server menutup sendiri walau model lupa memberi token.
+  const gajiDibahas = messages.some(m => /gaji|juta|salary/i.test(m.content))
+  const sahTutup = (tokenCatatan || tokenLulus) && tahap.bolehTutup && jawaban >= PANEL_TUTUP_MULAI && gajiDibahas
+  const selesai = sahTutup || paksaTutup
+  const outcome: 'pass' | 'conditional' | undefined = selesai ? (tokenCatatan ? 'conditional' : 'pass') : undefined
+
+  let pesan = pecahGelembung(teks, tahap)
+  // Saat negosiasi berlanjut (belum ditutup) hanya HR yang bicara.
+  if (!selesai && tahap.id === 'nego') {
+    const hanyaHr = pesan.filter(g => g.npc === 'sinta')
+    if (hanyaHr.length) pesan = hanyaHr
+  }
+  if (pesan.length === 0) pesan = [{ npc: tahap.pembicara[0], text: teks || '...' }]
+
+  return NextResponse.json({
+    pesan,
+    reply: pesan.map(g => g.text).join(' '),
+    interviewDone: selesai,
+    interviewOutcome: outcome,
+  })
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,9 +110,12 @@ export async function POST(req: NextRequest) {
       experience: capStr(rawCtx.experience, 600),
       motivation: capStr(rawCtx.motivation, 600),
       step: Number.isFinite(Number(rawCtx.step)) ? Number(rawCtx.step) : undefined,
+      catatanInterview: capStr(rawCtx.catatanInterview, 300),
     }
 
     const position = POSITIONS[positionId]
+    if (npcId === 'panel') return await jawabPanel(user.id, messages, userContext, positionId)
+
     let systemPrompt = ''
 
     switch (npcId) {
