@@ -121,19 +121,48 @@ export default function SqlEditor({ userId, onCoins }: {
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [schema, setSchema] = useState<{ table: string; columns: string[] }[]>([])
-  const [query, setQuery] = useState(STARTER_QUERY)
+  const [view, setView] = useState<'latihan' | 'bebas'>('latihan')
+  const [idx, setIdx] = useState(0)
+  // Satu editor per soal: tiap soal menyimpan query-nya sendiri; 'bebas' = tab eksplorasi.
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [result, setResult] = useState<QueryResult | null>(null)
   const [queryError, setQueryError] = useState('')
   const [rowCount, setRowCount] = useState(0)
   const [done, setDone] = useState<Record<string, boolean>>({})
-  const [challengeMsg, setChallengeMsg] = useState<Record<string, string>>({})
+  const [msg, setMsg] = useState('')
 
   const doneKey = `kantoran_sql_done_${userId}`
+  const draftKey = `kantoran_sql_draft_${userId}`
+
+  const ch = CHALLENGES[idx]
+  const key = view === 'bebas' ? 'bebas' : ch.id
+  const query = drafts[key] ?? (view === 'bebas' ? STARTER_QUERY : '')
+  const setQuery = (v: string) => setDrafts(d => ({ ...d, [key]: v }))
 
   useEffect(() => {
-    try { setDone(JSON.parse(localStorage.getItem(doneKey) || '{}')) } catch { /* abaikan */ }
+    let sudah: Record<string, boolean> = {}
+    try { sudah = JSON.parse(localStorage.getItem(doneKey) || '{}'); setDone(sudah) } catch { /* abaikan */ }
+    try {
+      const d = JSON.parse(localStorage.getItem(draftKey) || '{}') as { q?: Record<string, string>; i?: number }
+      if (d.q) setDrafts(d.q)
+      // Buka di soal terakhir yang dikerjakan; kalau belum ada, soal pertama yang belum selesai.
+      const awal = typeof d.i === 'number' && d.i >= 0 && d.i < CHALLENGES.length
+        ? d.i
+        : Math.max(0, CHALLENGES.findIndex(c => !sudah[c.id]))
+      setIdx(awal)
+    } catch { /* abaikan */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Simpan draft + posisi soal supaya tidak hilang saat pindah ruangan.
+  useEffect(() => {
+    try { localStorage.setItem(draftKey, JSON.stringify({ q: drafts, i: idx })) } catch { /* abaikan */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drafts, idx])
+
+  const pindah = (v: 'latihan' | 'bebas', i = idx) => {
+    setView(v); setIdx(i); setResult(null); setQueryError(''); setMsg(''); setRowCount(0)
+  }
 
   // Muat engine + database di browser — sekali per mount
   useEffect(() => {
@@ -203,7 +232,7 @@ export default function SqlEditor({ userId, onCoins }: {
   }
 
   const handleRun = () => {
-    setChallengeMsg({})
+    setMsg('')
     const out = runQuery(query)
     if ('error' in out) {
       setQueryError(out.error)
@@ -219,9 +248,13 @@ export default function SqlEditor({ userId, onCoins }: {
   const handleCheck = (ch: Challenge) => {
     const userOut = runQuery(query)
     if ('error' in userOut) {
-      setChallengeMsg({ [ch.id]: `Query-mu error: ${userOut.error}` })
+      setMsg(`Query-mu error: ${userOut.error}`)
       return
     }
+    // Tampilkan hasilnya juga, supaya "Cek Jawaban" tidak perlu didahului "Jalankan Query".
+    setQueryError('')
+    setRowCount(userOut.values.length)
+    setResult({ columns: userOut.columns, values: userOut.values.slice(0, MAX_DISPLAY_ROWS) })
     const refOut = runQuery(ch.ref)
     if ('error' in refOut) return
     if (resultsMatch(userOut, refOut)) {
@@ -232,9 +265,14 @@ export default function SqlEditor({ userId, onCoins }: {
         onCoins(ch.reward)
         track('sql_challenge_done', { challenge: ch.id })
       }
-      setChallengeMsg({ [ch.id]: `Benar! +${ch.reward} coin.` })
+      setMsg(`Benar! +${ch.reward} coin.`)
     } else {
-      setChallengeMsg({ [ch.id]: 'Belum cocok. Pastikan filternya sesuai soal (bulan/tahun/region yang diminta), grouping, dan kolomnya benar. Klik Jalankan Query dulu untuk melihat hasil query-mu.' })
+      // Tanggal teks dibandingkan huruf demi huruf: '2026-01-1' lebih besar dari '2026-01-09'.
+      const tanggalPendek = [...query.matchAll(/'\d{4}-(\d{1,2})-(\d{1,2})'/g)].some(m => m[1].length < 2 || m[2].length < 2)
+      setMsg(
+        (tanggalPendek ? "Tanggal di querymu tidak dua digit. Di database ini tanggal berupa teks, jadi tulis '2026-01-01', bukan '2026-01-1'. " : '') +
+        'Belum cocok. Pastikan filternya sesuai soal (bulan/tahun/region yang diminta), grouping, dan kolomnya benar.'
+      )
     }
   }
 
@@ -257,24 +295,40 @@ export default function SqlEditor({ userId, onCoins }: {
     </div>
   )
 
+  const jumlahSelesai = Object.values(done).filter(Boolean).length
+
   return (
     <div className="flex flex-col gap-4 pb-4">
+      {/* Pindah antara latihan satu-soal-satu-editor dan eksplorasi bebas */}
+      <div className="flex gap-1 bg-[#F1EFE8] rounded-lg p-1 self-start">
+        {([['latihan', `Latihan (${jumlahSelesai}/${CHALLENGES.length})`], ['bebas', 'Eksplorasi bebas']] as const).map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => pindah(v)}
+            style={{ cursor: 'pointer' }}
+            className={`text-xs font-semibold px-3.5 py-1.5 rounded-md ${view === v ? 'bg-white text-[#0F6E56] shadow-sm' : 'text-[#6B6A64]'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-xl px-4 py-3">
         <p className="text-xs text-[#085041] leading-relaxed mb-1.5">
           Akses <strong>read-only</strong> ke database penjualan internal Vantara. Semua query berjalan di komputermu, bebas bereksperimen.
         </p>
         <p className="text-[11px] text-[#085041]/85 leading-relaxed">
-          Database ini <strong>SQLite</strong>. Tanggal (order_date) berformat &lsquo;YYYY-MM-DD&rsquo;. Untuk saring tahun/bulan bisa pakai{' '}
+          Database ini <strong>SQLite</strong>. Tanggal (order_date) berupa teks &lsquo;YYYY-MM-DD&rsquo; dengan <strong>dua digit</strong> untuk bulan dan hari. Untuk saring tahun/bulan bisa pakai{' '}
           <code className="bg-white/70 px-1 rounded">YEAR(order_date)=2026</code>,{' '}
           <code className="bg-white/70 px-1 rounded">order_date LIKE &lsquo;2026-01%&rsquo;</code>, atau{' '}
           <code className="bg-white/70 px-1 rounded">strftime(&lsquo;%Y&rsquo;,order_date)</code>. Fungsi <code className="bg-white/70 px-1 rounded">EXTRACT</code> tidak didukung SQLite.
         </p>
       </div>
 
-      {/* Schema browser */}
-      <div className="bg-white border border-[#E5E3DC] rounded-xl p-3">
-        <p className="text-[11px] font-bold text-[#6B6A64] mb-2">Tabel yang tersedia</p>
-        <div className="flex flex-col gap-1.5">
+      {/* Schema browser, dilipat supaya halaman soal tetap ringkas */}
+      <details className="bg-white border border-[#E5E3DC] rounded-xl p-3">
+        <summary className="text-[11px] font-bold text-[#6B6A64]" style={{ cursor: 'pointer' }}>Tabel yang tersedia</summary>
+        <div className="flex flex-col gap-1.5 mt-2">
           {schema.map(t => (
             <div key={t.table} className="text-xs">
               <span className="font-semibold text-[#0F6E56]">{t.table}</span>
@@ -282,11 +336,32 @@ export default function SqlEditor({ userId, onCoins }: {
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
-      {/* Editor */}
+      {/* Kartu soal: hanya di mode latihan */}
+      {view === 'latihan' && (
+        <div className={`border rounded-xl p-4 ${done[ch.id] ? 'border-[#0F6E56]/30 bg-[#E1F5EE]/40' : 'border-[#E5E3DC] bg-white'}`}>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[11px] font-bold text-[#0F6E56]">{LEVEL_GROUP[ch.level]}</p>
+            <span className="text-[11px] font-semibold text-[#854F0B] bg-[#FAEEDA] px-2 py-0.5 rounded-full flex-shrink-0">
+              +{ch.reward} coin
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-[#111111] mb-1">
+            {done[ch.id] ? '✓ ' : ''}Soal {idx + 1} dari {CHALLENGES.length}. {ch.title}
+          </p>
+          <p className="text-xs text-[#444441] leading-relaxed mb-2">{ch.brief}</p>
+          <details>
+            <summary className="text-[11px] text-[#0F6E56] font-medium" style={{ cursor: 'pointer' }}>Lihat petunjuk</summary>
+            <p className="text-[11px] text-[#6B6A64] mt-1 font-mono">{ch.hint}</p>
+          </details>
+        </div>
+      )}
+
+      {/* Editor milik soal ini */}
       <div className="bg-white border border-[#E5E3DC] rounded-xl p-3">
         <textarea
+          key={key}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleRun() } }}
@@ -294,14 +369,33 @@ export default function SqlEditor({ userId, onCoins }: {
           spellCheck={false}
           style={{ cursor: 'text', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' }}
           className="w-full resize-y px-3 py-2.5 border border-[#E5E3DC] rounded-lg text-xs text-[#111111] bg-[#FAFAF7] outline-none focus:border-[#0F6E56] min-h-[90px]"
-          placeholder="SELECT * FROM sales LIMIT 10"
+          placeholder={view === 'latihan' ? 'Tulis query jawabanmu di sini' : 'SELECT * FROM sales LIMIT 10'}
         />
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
           <p className="text-[11px] text-[#6B6A64]">Ctrl+Enter untuk menjalankan</p>
-          <button onClick={handleRun} style={{ cursor: 'pointer' }} className="btn-teal text-xs px-4 py-2">
-            Jalankan Query
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleRun} style={{ cursor: 'pointer' }} className="text-xs font-semibold text-[#0F6E56] border border-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-[#E1F5EE]">
+              Jalankan Query
+            </button>
+            {view === 'latihan' && (
+              <button
+                onClick={() => handleCheck(ch)}
+                style={{ cursor: 'pointer' }}
+                className="text-xs font-semibold text-white bg-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-[#085041]"
+              >
+                Cek Jawaban
+              </button>
+            )}
+          </div>
         </div>
+        {view === 'latihan' && (
+          <div className="mt-2" aria-live="polite">
+            {msg && (
+              <p className={`text-[11px] leading-relaxed ${msg.startsWith('Benar') ? 'text-[#0F6E56] font-medium' : 'text-[#854F0B]'}`}>{msg}</p>
+            )}
+            {!msg && done[ch.id] && <p className="text-[11px] text-[#0F6E56] font-medium">Sudah kamu selesaikan.</p>}
+          </div>
+        )}
       </div>
 
       {/* Error / hasil */}
@@ -338,60 +432,45 @@ export default function SqlEditor({ userId, onCoins }: {
         </div>
       )}
 
-      {/* Tantangan dari supervisor — dinilai otomatis, tanpa AI */}
-      <div className="bg-white border border-[#E5E3DC] rounded-xl p-3">
-        <p className="text-[11px] font-bold text-[#6B6A64] mb-2">
-          Latihan dari supervisormu ({Object.values(done).filter(Boolean).length}/{CHALLENGES.length} selesai)
-        </p>
-        <div className="bg-[#FAFAF7] border border-[#E5E3DC] rounded-lg px-3 py-2.5 mb-3">
-          <p className="text-[11px] text-[#444441] leading-relaxed">
-            <strong>Cara mengerjakan:</strong> baca soal di bawah, tulis query jawabanmu di <strong>editor di atas</strong>,
-            klik <strong>Jalankan Query</strong> untuk lihat hasilnya, lalu klik <strong>Cek Jawaban</strong> di soal yang kamu
-            kerjakan. Tombol Cek menilai query yang sedang ada di editor.
-          </p>
+      {/* Navigasi antar soal */}
+      {view === 'latihan' && (
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => pindah('latihan', idx - 1)}
+            disabled={idx === 0}
+            style={{ cursor: idx === 0 ? 'default' : 'pointer' }}
+            className="text-xs font-semibold text-[#444441] border border-[#E5E3DC] rounded-lg px-3.5 py-1.5 disabled:opacity-40"
+          >
+            Sebelumnya
+          </button>
+          <div className="flex items-center gap-1.5" aria-label="Pilih soal">
+            {CHALLENGES.map((c, i) => (
+              <button
+                key={c.id}
+                onClick={() => pindah('latihan', i)}
+                aria-label={`Soal ${i + 1}${done[c.id] ? ' (selesai)' : ''}`}
+                aria-current={i === idx ? 'step' : undefined}
+                style={{ cursor: 'pointer' }}
+                className={`w-6 h-6 rounded-full text-[11px] font-semibold border ${
+                  i === idx ? 'bg-[#0F6E56] text-white border-[#0F6E56]'
+                  : done[c.id] ? 'bg-[#E1F5EE] text-[#0F6E56] border-[#0F6E56]/40'
+                  : 'bg-white text-[#6B6A64] border-[#E5E3DC]'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => pindah('latihan', idx + 1)}
+            disabled={idx === CHALLENGES.length - 1}
+            style={{ cursor: idx === CHALLENGES.length - 1 ? 'default' : 'pointer' }}
+            className="text-xs font-semibold text-[#444441] border border-[#E5E3DC] rounded-lg px-3.5 py-1.5 disabled:opacity-40"
+          >
+            Berikutnya
+          </button>
         </div>
-        <div className="flex flex-col gap-3">
-          {CHALLENGES.map((ch, idx) => (
-            <Fragment key={ch.id}>
-            {(idx === 0 || CHALLENGES[idx - 1].level !== ch.level) && (
-              <p className="text-[11px] font-bold text-[#0F6E56] mt-1">{LEVEL_GROUP[ch.level]}</p>
-            )}
-            <div className={`border rounded-xl p-3 ${done[ch.id] ? 'border-[#0F6E56]/30 bg-[#E1F5EE]/40' : 'border-[#E5E3DC]'}`}>
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="text-xs font-semibold text-[#111111]">
-                  {done[ch.id] ? '✓ ' : `Soal ${idx + 1}. `}{ch.title}
-                </p>
-                <span className="text-[11px] font-semibold text-[#854F0B] bg-[#FAEEDA] px-2 py-0.5 rounded-full flex-shrink-0">
-                  +{ch.reward} coin
-                </span>
-              </div>
-              <p className="text-xs text-[#444441] leading-relaxed mb-1.5">{ch.brief}</p>
-              <details className="mb-2">
-                <summary className="text-[11px] text-[#0F6E56] font-medium" style={{ cursor: 'pointer' }}>Lihat petunjuk</summary>
-                <p className="text-[11px] text-[#6B6A64] mt-1 font-mono">{ch.hint}</p>
-              </details>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => handleCheck(ch)}
-                  style={{ cursor: 'pointer' }}
-                  className="text-xs font-semibold text-white bg-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-[#085041]"
-                >
-                  Cek Jawaban
-                </button>
-                {done[ch.id] && !challengeMsg[ch.id] && (
-                  <p className="text-[11px] text-[#0F6E56] font-medium">Sudah kamu selesaikan.</p>
-                )}
-                {challengeMsg[ch.id] && (
-                  <p className={`text-[11px] ${challengeMsg[ch.id].startsWith('Benar') ? 'text-[#0F6E56] font-medium' : 'text-[#854F0B]'}`}>
-                    {challengeMsg[ch.id]}
-                  </p>
-                )}
-              </div>
-            </div>
-            </Fragment>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
