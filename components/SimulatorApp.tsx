@@ -384,7 +384,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     }
   }, [state.chatHistory['slack']])
 
-  // Auto-trigger supervisor DM after 90 seconds in Slack (if user doesn't chat)
+  // Auto-trigger supervisor DM after 30 seconds in Slack (if user doesn't chat)
   useEffect(() => {
     if (state.step !== 3) return
     // Kalau DM supervisor sudah ada di history (mis. habis reload), jangan kirim ulang
@@ -406,7 +406,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         ...prev,
         unreadCounts: { ...prev.unreadCounts, sup_chat: (prev.unreadCounts['sup_chat'] || 0) + 1 }
       }))
-    }, 90000)
+    }, 30000)
     return () => clearTimeout(timer)
   }, [state.step])
 
@@ -1291,6 +1291,7 @@ PT Vantara Nusantara`
             })
             setTimeout(() => {
               addMsg('slack', { role: 'npc', npcId: 'jnr', text: `Heyy welcome!! Saya ${pos?.junior.name}, udah di sini beberapa bulan lebih awal. Kalau butuh apa-apa DM aku ya, santai aja!` })
+              addMsg('slack', { role: 'system', text: `Sapa timmu di sini, atau tunggu sebentar: ${callName(pos?.supervisor.name)} akan mengajakmu standup.` }, true)
               // After 90 seconds OR after user sends 1 message in slack → supervisor DM
               // Trigger is handled by useEffect watching slackMessageCount
             }, 1500)
@@ -1674,6 +1675,9 @@ PT Vantara Nusantara`
   ]
 
   const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack', 'jnr'].includes(view)
+  // Interview sudah ditutup (ditolak, atau selesai tetapi offering belum ditandatangani): input diganti
+  // petunjuk langkah berikutnya supaya tidak ada pesan yang menggantung tanpa balasan yang masuk akal.
+  const hrDitutup = view === 'hr_office' && (interviewRejected || (state.interviewDone && state.step < 3))
   const offerSalary = getOfferSalary(state.chatHistory)
 
   // Task yang sedang terbuka. Task-1 hari-1 dari POSITIONS; sesudahnya dari pipeline
@@ -1705,7 +1709,7 @@ PT Vantara Nusantara`
         <button
           type="button"
           role="status"
-          className="w-full bg-[#0F6E56] text-white text-sm px-4 py-2.5 flex items-center justify-between gap-3 animate-fadeUp text-left"
+          className="fixed z-50 top-[62px] left-3 right-3 sm:left-auto sm:w-[380px] bg-[#0F6E56] text-white text-sm px-4 py-3 rounded-lg shadow-lg flex items-center justify-between gap-3 animate-fadeUp text-left"
           style={{ cursor: 'pointer' }}
           onClick={() => { setView(notification.room); setNotification(null) }}
         >
@@ -2110,8 +2114,28 @@ PT Vantara Nusantara`
             </div>
           )}
 
+          {/* Interview ditutup: tampilkan langkah berikutnya, bukan kotak input */}
+          {canChat && hrDitutup && (
+            <div className="border-t border-[#E5E3DC] bg-white px-4 py-3 flex items-center justify-between gap-3 flex-wrap flex-shrink-0" role="status">
+              <p className="text-sm text-[#4A4A45]">
+                {interviewRejected
+                  ? 'Interview ini sudah ditutup. Pilih salah satu tombol di atas untuk lanjut.'
+                  : 'Interview selesai. Offering letter sudah ada di Inbox.'}
+              </p>
+              {!interviewRejected && (
+                <button
+                  onClick={() => setView('inbox')}
+                  style={{ cursor: 'pointer' }}
+                  className="text-[13px] font-medium text-white bg-[#0F6E56] hover:bg-[#085041] px-3.5 py-2 rounded-md flex-shrink-0"
+                >
+                  Buka Inbox
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Input */}
-          {canChat && (
+          {canChat && !hrDitutup && (
             <div className="border-t border-[#E5E3DC] bg-white px-3 pt-3 pb-3 flex-shrink-0">
               <div className="flex gap-2 items-end">
                 <textarea
@@ -2196,10 +2220,14 @@ function SidebarNPC({ initials, avClass, name, role, statusDot, active, locked, 
 }
 
 function ChatHeader({ view, state, pos, onOfferingClick }: { view: string; state: SimState; pos?: typeof POSITIONS[string]; onOfferingClick?: () => void }) {
+  // Interview ditargetkan sekitar 9 jawaban; penghitung membantu pengguna tahu seberapa jauh lagi.
+  const jawabanHr = (state.chatHistory['hr_office'] || []).filter(m => m.role === 'user').length
+  const hrDitolak = (state.chatHistory['hr_office'] || []).some(m => m.role === 'action' && m.data?.type === 'interview_rejected')
+  const progresHr = jawabanHr === 0 ? 'sekitar 9 pertanyaan' : jawabanHr <= 9 ? `jawaban ${jawabanHr} dari ±9` : `jawaban ke-${jawabanHr}`
   const npc: Record<string, { initials: string; avClass: string; name: string; status: string }> = {
     hr_office: {
       initials: 'SM', avClass: 'av-teal', name: 'Sinta Maharani',
-      status: state.step < 2 && !state.interviewDone ? `Interview ${pos?.title || ''} · sekitar 15 menit` : 'HR Business Partner',
+      status: state.step < 2 && !state.interviewDone ? (hrDitolak ? `Interview ${pos?.title || ''} · ditutup` : `Interview ${pos?.title || ''} · sekitar 10 menit · ${progresHr}`) : 'HR Business Partner',
     },
     sup_chat: { initials: NPC_INITIALS[state.position]?.sup || '??', avClass: pos?.supervisor.avClass || 'av-blue', name: pos?.supervisor.name || 'Supervisor', status: `${pos?.supervisor.status || ''} · Supervisormu` },
     mgr_chat: { initials: NPC_INITIALS[state.position]?.mgr || '??', avClass: pos?.manager.avClass || 'av-purple', name: pos?.manager.name || 'Manager', status: `${pos?.manager.status || ''} · ${pos?.manager.role || ''}` },
@@ -2257,7 +2285,7 @@ function EmptyRoom({ view, state }: { view: string; state: SimState }) {
     hr_office: 'Sinta akan menyapamu di sini.',
     pantry: 'Belum ada obrolan. Mampir dan sapa rekan timmu.',
     slack: 'Channel tim aktif setelah kamu tanda tangan kontrak.',
-    sup_chat: state.step >= 3 ? 'Supervisormu akan mengirim pesan sebentar lagi.' : 'Terbuka setelah kamu tanda tangan kontrak.',
+    sup_chat: state.step >= 3 ? 'Supervisormu akan mengajakmu standup sebentar lagi. Sambil menunggu, sapa timmu di channel tim.' : 'Terbuka setelah kamu tanda tangan kontrak.',
     mgr_chat: 'Manager jarang chat duluan. Tidak apa-apa, itu normal.',
     jnr: 'Belum ada obrolan.',
     file_manager: 'File task muncul di sini setelah supervisor memberi task.',

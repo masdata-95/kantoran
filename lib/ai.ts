@@ -48,6 +48,12 @@ function markKeyFailed(key: string) {
   failedKeys.set(key, Date.now())
 }
 
+// Alasan kegagalan terakhir, untuk dicatat ke events oleh pemanggil (tanpa isi pesan atau kunci).
+let lastFailure = ''
+export function getLastAIFailure(): string {
+  return lastFailure
+}
+
 function getNextGroqKey(): string | null {
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     const key = GROQ_KEYS[groqIndex]
@@ -143,6 +149,7 @@ async function callGemini(
     if (!res.ok) {
       const err = await res.text()
       console.warn(`Gemini gagal (${res.status}):`, err.substring(0, 100))
+      lastFailure = `gemini:${res.status}`
       // Hanya kuota (429) dan otorisasi (401/403) yang membuat kunci layak diistirahatkan.
       if (res.status === 429 || res.status === 401 || res.status === 403) markKeyFailed(key)
       return null
@@ -152,6 +159,7 @@ async function callGemini(
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
     if (!reply) {
       console.warn('Gemini balasan kosong:', data.candidates?.[0]?.finishReason, data.promptFeedback?.blockReason)
+      lastFailure = `gemini:kosong:${data.candidates?.[0]?.finishReason ?? data.promptFeedback?.blockReason ?? '?'}`
       return null
     }
 
@@ -160,6 +168,7 @@ async function callGemini(
 
   } catch (err) {
     console.warn('Gemini error:', err)
+    lastFailure = err instanceof Error && err.name === 'TimeoutError' ? 'gemini:timeout' : 'gemini:error'
     return null
   }
 }
@@ -280,6 +289,7 @@ export async function callAI(
   const clean = json ? false : (opts.clean ?? true)
   const deadline = Date.now() + (opts.deadlineMs ?? 25000)
 
+  lastFailure = GEMINI_KEYS.length === 0 ? 'tanpa-kunci-gemini' : ''
   const cfg: CallConfig = { maxTokens, temperature, json }
   const finish = (text: string): string => (clean ? cleanResponse(text) : text)
   const timeLeft = () => deadline - Date.now()

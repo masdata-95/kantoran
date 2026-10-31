@@ -6,8 +6,10 @@ import type { NextRequest } from 'next/server'
 const callAI = vi.fn()
 const getAuthUser = vi.fn()
 const checkLimit = vi.fn()
+const catatEvent = vi.fn()
 
-vi.mock('@/lib/ai', () => ({ callAI: (...a: unknown[]) => callAI(...a) }))
+vi.mock('@/lib/ai', () => ({ callAI: (...a: unknown[]) => callAI(...a), getLastAIFailure: () => 'gemini:503' }))
+vi.mock('@/lib/events', () => ({ catatEvent: (...a: unknown[]) => catatEvent(...a) }))
 vi.mock('@/lib/serverAuth', () => ({ getAuthUser: (...a: unknown[]) => getAuthUser(...a) }))
 vi.mock('@/lib/rateLimit', () => ({
   checkLimit: (...a: unknown[]) => checkLimit(...a),
@@ -37,6 +39,7 @@ beforeEach(() => {
   callAI.mockReset()
   getAuthUser.mockReset().mockResolvedValue({ id: 'u1', email: 'a@b.c' })
   checkLimit.mockReset().mockResolvedValue(true)
+  catatEvent.mockReset()
 })
 
 describe('POST /api/chat, akses dan validasi', () => {
@@ -100,13 +103,29 @@ describe('POST /api/chat, hasil interview Sinta', () => {
     expect(String(r.data.reply)).not.toMatch(/\[TOLAK\]/)
   })
 
-  it('[TOLAK] sebelum 6 jawaban → tidak dihormati: tanpa outcome, token dibuang', async () => {
+  it('[TOLAK] sebelum 6 jawaban → diminta ulang; balasan lanjutan dipakai, teks penolakan tidak sampai', async () => {
+    callAI
+      .mockResolvedValueOnce({ text: 'Maaf, belum bisa lanjut. [TOLAK]', provider: 'gemini' })
+      .mockResolvedValueOnce({ text: 'Oke, coba ceritain satu contoh kecil dulu ya?', provider: 'gemini' })
+    const r = await kirim({ npcId: 'sinta', messages: userMsgs(5), userContext: ctx })
+    expect(callAI).toHaveBeenCalledTimes(2)
+    expect(callAI.mock.calls[1][1]).toContain('BELUM boleh ditolak')
+    expect(r.data.interviewOutcome).toBeUndefined()
+    expect(r.data.interviewDone).toBe(false)
+    expect(String(r.data.reply)).toBe('Oke, coba ceritain satu contoh kecil dulu ya?')
+  })
+
+  it('[TOLAK] dini yang bandel (ulang pun menolak) → token tetap dibuang dan interview tidak ditutup', async () => {
     callAI.mockResolvedValue({ text: 'Maaf, belum bisa lanjut. [TOLAK]', provider: 'gemini' })
     const r = await kirim({ npcId: 'sinta', messages: userMsgs(5), userContext: ctx })
     expect(r.data.interviewOutcome).toBeUndefined()
-    expect(r.data.interviewDone).toBe(false)
-    // Perilaku saat ini: teks penolakan tetap sampai ke pengguna walau interview tidak ditutup.
-    expect(String(r.data.reply)).toContain('belum bisa lanjut')
+    expect(String(r.data.reply)).not.toMatch(/\[TOLAK\]/)
+  })
+
+  it('[TOLAK] sesudah 6 jawaban tidak diminta ulang', async () => {
+    callAI.mockResolvedValue({ text: 'Maaf, aku akhiri. [TOLAK]', provider: 'gemini' })
+    await kirim({ npcId: 'sinta', messages: userMsgs(6), userContext: ctx })
+    expect(callAI).toHaveBeenCalledTimes(1)
   })
 
   it('token hanya berlaku untuk Sinta: NPC lain tidak menutup interview', async () => {
@@ -121,6 +140,8 @@ describe('POST /api/chat, hasil interview Sinta', () => {
     const r = await kirim({ npcId: 'sinta', messages: userMsgs(3), userContext: ctx })
     expect(r.status).toBe(200)
     expect(r.data.failed).toBe(true)
+    // Kegagalan dicatat ke events (tanpa isi pesan) supaya penyebabnya bisa dilacak.
+    expect(catatEvent).toHaveBeenCalledWith('u1', 'ai_error', { npc: 'sinta', alasan: 'gemini:503' })
   })
 
   it('error tak terduga → tetap 200 dengan failed:true', async () => {

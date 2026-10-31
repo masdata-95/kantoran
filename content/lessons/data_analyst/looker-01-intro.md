@@ -34,7 +34,7 @@ Setiap chart pada dasarnya kombinasi keduanya. Bar chart "penjualan per brand" =
 
 Looker Studio menyukai data berformat **tabel panjang (long format)**: satu baris = satu kejadian, header satu baris di paling atas, tanpa merge cell, tanpa baris total.
 
-| ✅ Bagus | ❌ Bikin masalah |
+| Bagus | Bikin masalah |
 |---|---|
 | Tanggal, Brand, Channel, Penjualan | Kolom terpisah per bulan (Jan, Feb, Mar...) |
 | Satu header di baris 1 | Header dobel, judul di atas tabel |

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { callAI, type ChatMessage } from '@/lib/ai'
+import { callAI, getLastAIFailure, type ChatMessage } from '@/lib/ai'
+import { catatEvent } from '@/lib/events'
 import { getSintaPrompt, getSupPrompt, getJnrPrompt, getMgrPrompt } from '@/lib/prompts'
 import { POSITIONS } from '@/lib/positions'
 import { getAuthUser } from '@/lib/serverAuth'
@@ -85,8 +86,22 @@ export async function POST(req: NextRequest) {
         systemPrompt = getSintaPrompt(userContext)
     }
 
-    const result = await callAI(messages, systemPrompt, { maxTokens: 250 })
+    let result = await callAI(messages, systemPrompt, { maxTokens: 250 })
+
+    // Sinta menolak sebelum 6 jawaban (melanggar aturan prompt): daripada menampilkan teks penolakan
+    // tanpa menutup interview, minta jawaban ulang yang melanjutkan interview.
+    const jawabanUser = messages.filter(m => m.role === 'user').length
+    if (npcId === 'sinta' && result?.text.includes('[TOLAK]') && jawabanUser < 6) {
+      const ulang = await callAI(
+        messages,
+        systemPrompt + '\n\nCATATAN SISTEM: Interview BELUM boleh ditolak atau ditutup sekarang. Jangan pakai token apa pun. Tanggapi jawaban terakhir kandidat dengan hangat dan ajukan SATU pertanyaan penggali yang lebih mudah dijawab.',
+        { maxTokens: 250 }
+      )
+      if (ulang && !ulang.text.includes('[TOLAK]')) result = ulang
+    }
+
     if (!result) {
+      await catatEvent(user.id, 'ai_error', { npc: npcId, alasan: getLastAIFailure() })
       // failed: true → client render sebagai banner error + tombol retry,
       // BUKAN bubble NPC (pesan palsu di history bikin AI lompat topik)
       return NextResponse.json({

@@ -178,11 +178,10 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
                   <div className="flex justify-between text-[12px] text-[#6B6A64] mt-1.5">
                     <span>Mengecewakan</span><span>Bagus sekali</span>
                   </div>
-                  {rating > 0 && (
-                    <p className="text-[13px] text-[#4A4A45] mt-3">
-                      {RATING_LABEL[rating]}. {rating <= 3 ? 'Bagian mana yang paling mengganggu?' : 'Bagian mana yang paling terasa nyata?'}
-                    </p>
-                  )}
+                  {/* Tinggi tetap: teks muncul setelah angka dipilih tanpa menggeser tombol di bawahnya */}
+                  <p className="text-[13px] text-[#4A4A45] mt-3 min-h-[20px]" aria-live="polite">
+                    {rating > 0 ? `${RATING_LABEL[rating]}. ${rating <= 3 ? 'Bagian mana yang paling mengganggu?' : 'Bagian mana yang paling terasa nyata?'}` : ''}
+                  </p>
 
                   <label htmlFor="wl-feedback" className="block text-[13px] font-medium text-[#1A1A18] mt-5 mb-1.5">
                     Ceritakan sedikit <span className="font-normal text-[#6B6A64]">(opsional)</span>
