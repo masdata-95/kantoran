@@ -6,6 +6,7 @@ type: video
 sort_order: 1
 xp: 15
 # youtube_video_id: isi di Supabase Studio nanti (video Looker Studio lama @masdata)
+video_code: looker-2-1-1
 ---
 
 ## Apa itu Looker Studio, dan kenapa tim kita pakai

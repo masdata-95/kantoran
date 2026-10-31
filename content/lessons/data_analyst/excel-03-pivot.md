@@ -6,6 +6,7 @@ type: video
 sort_order: 3
 xp: 15
 # youtube_video_id: isi di Supabase Studio nanti (video Excel lama @masdata)
+video_code: excel-t23-1
 ---
 
 ## Kenapa pivot adalah senjata utama

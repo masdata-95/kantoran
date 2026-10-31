@@ -6,6 +6,7 @@ type: video
 sort_order: 2
 xp: 15
 # youtube_video_id: isi di Supabase Studio nanti (video Looker Studio lama @masdata)
+video_code: looker-9-1-1
 ---
 
 ## Dashboard bagus menjawab pertanyaan, bukan memajang chart

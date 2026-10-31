@@ -6,6 +6,7 @@ type: video
 sort_order: 2
 xp: 15
 # youtube_video_id: isi di Supabase Studio nanti (video Excel lama @masdata)
+video_code: excel-t12-1
 ---
 
 ## Tiga formula yang menyelesaikan 70% kerjaan

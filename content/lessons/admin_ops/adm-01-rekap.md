@@ -6,6 +6,7 @@ type: video
 sort_order: 1
 xp: 15
 # youtube_video_id: isi di Supabase Studio nanti
+video_code: excel-t11-1
 ---
 
 ## Kerjaan admin = kerjaan kepercayaan
