@@ -28,7 +28,9 @@ const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
 let groqIndex = 0
 let geminiIndex = 0
 
-// Track failed keys with cooldown (60 seconds)
+// Kunci yang ditolak karena kuota/otorisasi diistirahatkan sebentar. Gangguan sesaat (5xx, timeout,
+// jawaban kosong) TIDAK mengistirahatkan kunci: dengan satu kunci saja, itu mengubah satu gangguan
+// kecil menjadi semenit penuh balasan gagal.
 const failedKeys = new Map<string, number>()
 const COOLDOWN_MS = 60 * 1000
 
@@ -61,7 +63,9 @@ function getNextGeminiKey(): string | null {
     geminiIndex = (geminiIndex + 1) % GEMINI_KEYS.length
     if (!isKeyFailed(key)) return key
   }
-  return null
+  if (GEMINI_KEYS.length === 0) return null
+  // Semua kunci sedang istirahat: tetap coba yang paling lama gagal, daripada menyerah tanpa mencoba.
+  return GEMINI_KEYS.reduce((a, b) => ((failedKeys.get(a) ?? 0) <= (failedKeys.get(b) ?? 0) ? a : b))
 }
 
 export interface ChatMessage {
@@ -138,15 +142,16 @@ async function callGemini(
 
     if (!res.ok) {
       const err = await res.text()
-      console.warn(`Gemini key failed (${res.status}):`, err.substring(0, 100))
-      markKeyFailed(key)
+      console.warn(`Gemini gagal (${res.status}):`, err.substring(0, 100))
+      // Hanya kuota (429) dan otorisasi (401/403) yang membuat kunci layak diistirahatkan.
+      if (res.status === 429 || res.status === 401 || res.status === 403) markKeyFailed(key)
       return null
     }
 
     const data = await res.json()
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
     if (!reply) {
-      markKeyFailed(key)
+      console.warn('Gemini balasan kosong:', data.candidates?.[0]?.finishReason, data.promptFeedback?.blockReason)
       return null
     }
 
@@ -154,8 +159,7 @@ async function callGemini(
     return reply
 
   } catch (err) {
-    console.warn(`Gemini error:`, err)
-    markKeyFailed(key)
+    console.warn('Gemini error:', err)
     return null
   }
 }
@@ -281,8 +285,10 @@ export async function callAI(
   const timeLeft = () => deadline - Date.now()
 
   // Gemini dulu (paid, primary)
-  for (let attempt = 0; attempt < Math.min(Math.max(GEMINI_KEYS.length, 1), 2); attempt++) {
+  // Minimal dua percobaan walau hanya ada satu kunci: gangguan sesaat Gemini sering hilang di percobaan kedua.
+  for (let attempt = 0; attempt < Math.max(2, Math.min(GEMINI_KEYS.length, 3)); attempt++) {
     if (timeLeft() < GEMINI_TIMEOUT_MS) break
+    if (attempt > 0) await new Promise(r => setTimeout(r, 300))
     const result = await callGemini(messages, systemPrompt, cfg)
     if (result) return { text: finish(result), provider: 'gemini' }
   }

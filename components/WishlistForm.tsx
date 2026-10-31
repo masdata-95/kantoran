@@ -133,7 +133,7 @@ export default function WishlistForm({ user, positionTried, firstName, coins, ta
 
           {step === 1 && (
             <>
-              <h1 className="text-[22px] font-semibold text-[#1A1A18] mb-1">Gimana rasanya, {firstName}?</h1>
+              <h1 className="text-[22px] font-semibold text-[#1A1A18] mb-1">Bagaimana hari pertamamu, {firstName}?</h1>
               <p className="text-sm text-[#4A4A45] mb-6">Jujur saja. Kami baca semua jawaban, dan ini yang menentukan apa yang kami perbaiki duluan.</p>
             </>
           )}
