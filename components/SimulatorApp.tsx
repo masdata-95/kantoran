@@ -205,6 +205,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [notification, setNotification] = useState<Notification | null>(null)
   const [suara, setSuara] = useState(true) // bunyi saat ada pesan baru (bisa dimatikan, tersimpan di browser)
   const suaraRef = useRef(true)
+  // Interview baru saja ditolak server: kunci input SEKETIKA, tanpa menunggu kartu aksi (jeda 1,5 dtk).
+  const [hrDitolakSegera, setHrDitolakSegera] = useState(false)
   const roomTerbaru = useRef<string | null>(null)
   const timerNotif = useRef<ReturnType<typeof setTimeout> | null>(null)
   const judulAsal = useRef('Kantoran')
@@ -419,6 +421,8 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     handleNextStep(4)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, state.step, state.chatHistory])
+
+  useEffect(() => { setHrDitolakSegera(false) }, [state.position])
 
   // Tutup drawer mobile tiap kali pindah ruangan
   useEffect(() => { setSidebarOpen(false) }, [view])
@@ -958,6 +962,7 @@ PT Vantara Nusantara`
     // Interview DITOLAK: bukan pintu keluar, tapi cabang cerita — Sinta sudah memberi
     // alasan spesifik; tawarkan belajar (Academy) + interview ulang
     if (npcId === 'sinta' && interviewOutcome === 'rejected' && !state.interviewDone) {
+      setHrDitolakSegera(true)
       track('interview_rejected', { position: state.position, level: state.level })
       setTimeout(() => {
         addMsg('hr_office', {
@@ -1027,6 +1032,7 @@ PT Vantara Nusantara`
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
+    if (view === 'hr_office' && (hrDitolakSegera || interviewRejected || (state.interviewDone && state.step < 3))) return
     const msg = input.trim()
     setInput('')
     focusInput()
@@ -1133,6 +1139,7 @@ PT Vantara Nusantara`
     // Special case: interview ulang setelah ditolak — percakapan HR direset bersih,
     // progress lain tidak tersentuh. Penolakan = momen belajar, bukan tembok.
     if (step === 98) {
+      setHrDitolakSegera(false)
       setState(prev => ({
         ...prev,
         interviewDone: false,
@@ -1677,7 +1684,7 @@ PT Vantara Nusantara`
   const canChat = ['hr_office', 'sup_chat', 'mgr_chat', 'pantry', 'slack', 'jnr'].includes(view)
   // Interview sudah ditutup (ditolak, atau selesai tetapi offering belum ditandatangani): input diganti
   // petunjuk langkah berikutnya supaya tidak ada pesan yang menggantung tanpa balasan yang masuk akal.
-  const hrDitutup = view === 'hr_office' && (interviewRejected || (state.interviewDone && state.step < 3))
+  const hrDitutup = view === 'hr_office' && (interviewRejected || hrDitolakSegera || (state.interviewDone && state.step < 3))
   const offerSalary = getOfferSalary(state.chatHistory)
 
   // Task yang sedang terbuka. Task-1 hari-1 dari POSITIONS; sesudahnya dari pipeline
@@ -2118,11 +2125,11 @@ PT Vantara Nusantara`
           {canChat && hrDitutup && (
             <div className="border-t border-[#E5E3DC] bg-white px-4 py-3 flex items-center justify-between gap-3 flex-wrap flex-shrink-0" role="status">
               <p className="text-sm text-[#4A4A45]">
-                {interviewRejected
+                {(interviewRejected || hrDitolakSegera)
                   ? 'Interview ini sudah ditutup. Pilih salah satu tombol di atas untuk lanjut.'
                   : 'Interview selesai. Offering letter sudah ada di Inbox.'}
               </p>
-              {!interviewRejected && (
+              {!(interviewRejected || hrDitolakSegera) && (
                 <button
                   onClick={() => setView('inbox')}
                   style={{ cursor: 'pointer' }}
