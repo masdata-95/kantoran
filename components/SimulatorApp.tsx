@@ -20,7 +20,9 @@ import { track } from '@/lib/track'
 import {
   Mail, Handshake, MessagesSquare, Monitor, GraduationCap, Folder, Database, ScrollText,
   Coffee, LogOut, RotateCcw, Briefcase, Menu, X, Coins, SendHorizontal, Lock, FileSpreadsheet, Download,
+  BellRing, Volume2, VolumeX,
 } from 'lucide-react'
+import { bunyiNotif, bacaPengaturanSuara, simpanPengaturanSuara } from '@/lib/notifikasi'
 
 // Tur pengenalan UI untuk user yang baru pertama kali masuk simulasi.
 // Selector menunjuk atribut data-tour di elemen bersangkutan.
@@ -201,6 +203,11 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
   const [progLoading, setProgLoading] = useState(true)
   const [showApp, setShowApp] = useState(false)
   const [notification, setNotification] = useState<Notification | null>(null)
+  const [suara, setSuara] = useState(true) // bunyi saat ada pesan baru (bisa dimatikan, tersimpan di browser)
+  const suaraRef = useRef(true)
+  const roomTerbaru = useRef<string | null>(null)
+  const timerNotif = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const judulAsal = useRef('Kantoran')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [extractedData, setExtractedData] = useState<string>('')
   const [reviewResult, setReviewResult] = useState<{ review: string; isApproved: boolean } | null>(null)
@@ -442,7 +449,7 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
     if (window.innerWidth < 768) setSidebarOpen(!!step.needsSidebar)
   }, [])
 
-  // Clear unread when viewing a room
+  // Clear unread when viewing a room (juga untuk pesan yang masuk saat ruangan itu terbuka)
   useEffect(() => {
     if (state.unreadCounts[view] > 0) {
       setState(prev => ({
@@ -450,14 +457,59 @@ export default function SimulatorApp({ user, userProfile, initialPosition, initi
         unreadCounts: { ...prev.unreadCounts, [view]: 0 }
       }))
     }
-  }, [view])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, state.unreadCounts[view]])
 
   // Show notification helper
   const showNotif = useCallback((room: string, roomLabel: string, text: string) => {
     const n: Notification = { id: Date.now().toString(), room, roomLabel, text }
+    roomTerbaru.current = room
     setNotification(n)
-    setTimeout(() => setNotification(null), 5000)
+    if (suaraRef.current) bunyiNotif()
+    if (timerNotif.current) clearTimeout(timerNotif.current)
+    timerNotif.current = setTimeout(() => setNotification(null), 9000)
   }, [])
+
+  // Pesan belum dibaca di ruangan lain: dasar dari penanda di topbar dan judul tab.
+  const totalUnread = Object.entries(state.unreadCounts).reduce((n, [room, c]) => (room === view ? n : n + (c || 0)), 0)
+
+  useEffect(() => {
+    judulAsal.current = document.title || 'Kantoran'
+    const s = bacaPengaturanSuara()
+    suaraRef.current = s
+    setSuara(s)
+  }, [])
+
+  // Judul tab: "(2) Kantoran"; saat tab tidak sedang dilihat, bergantian dengan "● Pesan baru".
+  useEffect(() => {
+    const asal = judulAsal.current
+    if (totalUnread === 0) { document.title = asal; return }
+    let balik = false
+    const terapkan = () => {
+      document.title = document.hidden && balik ? '● Pesan baru · Kantoran' : `(${totalUnread}) ${asal}`
+      balik = !balik
+    }
+    terapkan()
+    const id = setInterval(terapkan, 1500)
+    return () => { clearInterval(id); document.title = asal }
+  }, [totalUnread])
+
+  const ubahSuara = () => {
+    const baru = !suara
+    setSuara(baru)
+    suaraRef.current = baru
+    simpanPengaturanSuara(baru)
+    if (baru) bunyiNotif() // contoh bunyinya
+  }
+
+  // Penanda di topbar: buka ruangan dengan pesan terbaru yang belum dibaca.
+  const bukaPesanBaru = () => {
+    const terbaru = roomTerbaru.current
+    const tujuan = terbaru && terbaru !== view && (state.unreadCounts[terbaru] || 0) > 0
+      ? terbaru
+      : Object.keys(state.unreadCounts).find(k => k !== view && (state.unreadCounts[k] || 0) > 0)
+    if (tujuan) { setView(tujuan); setNotification(null) }
+  }
 
   // Cek apakah modul training day-1 sudah selesai (termasuk misi praktiknya).
   // Bukan gate lagi — dipakai untuk apresiasi supervisor + baris surat referensi.
@@ -1652,6 +1704,7 @@ PT Vantara Nusantara`
       {notification && (
         <button
           type="button"
+          role="status"
           className="w-full bg-[#0F6E56] text-white text-sm px-4 py-2.5 flex items-center justify-between gap-3 animate-fadeUp text-left"
           style={{ cursor: 'pointer' }}
           onClick={() => { setView(notification.room); setNotification(null) }}
@@ -1682,9 +1735,30 @@ PT Vantara Nusantara`
         </div>
 
         <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+          {totalUnread > 0 && (
+            <button
+              onClick={bukaPesanBaru}
+              style={{ cursor: 'pointer' }}
+              title="Buka pesan yang belum dibaca"
+              aria-label={`${totalUnread} pesan belum dibaca, buka`}
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-[#C2410C] hover:bg-[#9A3412] px-2.5 py-1 rounded-md mr-1 tabular"
+            >
+              <BellRing size={14} aria-hidden className="animate-pulse" />{totalUnread}<span className="hidden sm:inline"> pesan baru</span>
+            </button>
+          )}
           <div data-tour="coins" title="Coin" className="flex items-center gap-1.5 text-[13px] font-medium text-[#854F0B] bg-[#FAEEDA]/70 px-2 py-1 rounded-md mr-1 tabular">
             <Coins size={14} aria-hidden />{state.coins}<span className="sr-only"> coin</span>
           </div>
+          <button
+            onClick={ubahSuara}
+            style={{ cursor: 'pointer' }}
+            title={suara ? 'Suara notifikasi nyala. Klik untuk mematikan.' : 'Suara notifikasi mati. Klik untuk menyalakan.'}
+            aria-label={suara ? 'Matikan suara notifikasi' : 'Nyalakan suara notifikasi'}
+            aria-pressed={suara}
+            className="flex items-center text-[#4A4A45] hover:text-[#1A1A18] hover:bg-[#F1EFE8] px-2 py-1.5 rounded-md"
+          >
+            {suara ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
+          </button>
           {onExit && (
             <button onClick={handleExit} style={{ cursor: 'pointer' }} title="Kembali ke daftar lowongan. Progress tersimpan." aria-label="Lowongan"
               className="flex items-center gap-1.5 text-[13px] text-[#4A4A45] hover:text-[#1A1A18] hover:bg-[#F1EFE8] px-2 py-1.5 rounded-md">
@@ -1944,7 +2018,7 @@ PT Vantara Nusantara`
 
               {/* Database Vantara: SQL editor in-browser, khusus Data Analyst */}
               {view === 'database' && state.position === 'data_analyst' && (
-                <SqlEditor userId={user.id} onCoins={addCoins} />
+                <SqlEditor userId={user.id} onCoins={addCoins} spvNama={callName(pos?.supervisor.name)} onKeChat={() => setView('sup_chat')} />
               )}
 
               {/* Surat referensi: aset yang terlihat sejak hari pertama, terisi mengikuti progress */}

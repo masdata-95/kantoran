@@ -113,11 +113,15 @@ const CHALLENGES: Challenge[] = [
 const MAX_DISPLAY_ROWS = 200
 const STARTER_QUERY = 'SELECT * FROM sales LIMIT 10'
 
-export default function SqlEditor({ userId, onCoins }: {
+export default function SqlEditor({ userId, onCoins, spvNama, onKeChat }: {
   userId: string
   onCoins: (n: number) => void
+  // Nama panggilan supervisor + aksi pindah ke chat-nya, untuk arahan setelah latihan selesai.
+  spvNama?: string
+  onKeChat?: () => void
 }) {
   const dbRef = useRef<Database | null>(null)
+  const atas = useRef<HTMLDivElement | null>(null)
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [schema, setSchema] = useState<{ table: string; columns: string[] }[]>([])
@@ -162,6 +166,8 @@ export default function SqlEditor({ userId, onCoins }: {
 
   const pindah = (v: 'latihan' | 'bebas', i = idx) => {
     setView(v); setIdx(i); setResult(null); setQueryError(''); setMsg(''); setRowCount(0)
+    // Area konten bisa sedang tergulir ke bawah (tabel hasil); mulai soal baru dari atas.
+    requestAnimationFrame(() => atas.current?.scrollIntoView({ block: 'start' }))
   }
 
   // Muat engine + database di browser — sekali per mount
@@ -300,7 +306,7 @@ export default function SqlEditor({ userId, onCoins }: {
   return (
     <div className="flex flex-col gap-4 pb-4">
       {/* Pindah antara latihan satu-soal-satu-editor dan eksplorasi bebas */}
-      <div className="flex gap-1 bg-[#F1EFE8] rounded-lg p-1 self-start">
+      <div ref={atas} className="flex gap-1 bg-[#F1EFE8] rounded-lg p-1 self-start scroll-mt-4">
         {([['latihan', `Latihan (${jumlahSelesai}/${CHALLENGES.length})`], ['bebas', 'Eksplorasi bebas']] as const).map(([v, label]) => (
           <button
             key={v}
@@ -396,6 +402,53 @@ export default function SqlEditor({ userId, onCoins }: {
             {!msg && done[ch.id] && <p className="text-[11px] text-[#0F6E56] font-medium">Sudah kamu selesaikan.</p>}
           </div>
         )}
+        {view === 'latihan' && done[ch.id] && (() => {
+          const berikutnya = CHALLENGES.findIndex((c, i) => i > idx && !done[c.id])
+          const pertamaBelum = CHALLENGES.findIndex(c => !done[c.id])
+          const tujuan = berikutnya >= 0 ? berikutnya : pertamaBelum
+          if (tujuan >= 0) {
+            return (
+              <div className="mt-3 flex items-center justify-between gap-3 flex-wrap bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-lg px-3 py-2.5">
+                <p className="text-xs text-[#085041]">
+                  Soal {idx + 1} selesai. {jumlahSelesai} dari {CHALLENGES.length} latihan sudah beres.
+                </p>
+                <button
+                  onClick={() => pindah('latihan', tujuan)}
+                  style={{ cursor: 'pointer' }}
+                  className="text-xs font-semibold text-white bg-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-[#085041]"
+                >
+                  {berikutnya >= 0 ? `Lanjut ke soal ${tujuan + 1}` : `Ke soal ${tujuan + 1} yang belum selesai`}
+                </button>
+              </div>
+            )
+          }
+          return (
+            <div className="mt-3 bg-[#E1F5EE] border border-[#0F6E56]/20 rounded-lg px-3 py-3">
+              <p className="text-xs font-semibold text-[#085041] mb-1">Semua {CHALLENGES.length} latihan selesai.</p>
+              <p className="text-xs text-[#085041]/90 leading-relaxed mb-2.5">
+                Latihan ini pemanasan. Langkah berikutnya: kembali ke {spvNama || 'supervisormu'} untuk lanjut ke task, atau lanjut bereksperimen dengan datanya di tab Eksplorasi bebas.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {onKeChat && (
+                  <button
+                    onClick={onKeChat}
+                    style={{ cursor: 'pointer' }}
+                    className="text-xs font-semibold text-white bg-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-[#085041]"
+                  >
+                    Kembali ke chat {spvNama || 'supervisor'}
+                  </button>
+                )}
+                <button
+                  onClick={() => pindah('bebas')}
+                  style={{ cursor: 'pointer' }}
+                  className="text-xs font-semibold text-[#0F6E56] border border-[#0F6E56] rounded-lg px-3.5 py-1.5 hover:bg-white"
+                >
+                  Eksplorasi bebas
+                </button>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Error / hasil */}
