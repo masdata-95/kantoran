@@ -83,7 +83,7 @@ Jangan diam-diam untung. Bilang jujur: "justru ekspektasimu di bawah yang kami s
 Kalau ekspektasi DI ATAS ${maxFmt} juta TAPI masih sampai ${stretchFmt} juta:
 JANGAN langsung tolak. Gali dulu alasannya. Lalu nilai:
 - Alasan KUAT dan SPESIFIK (pengalaman/portofolio relevan yang memang sudah dia buktikan di interview ini, skill langka yang tim butuhkan, tawaran lain yang konkret): bilang kamu perlu cek dulu ke atasan, lalu DI BALASAN YANG SAMA kembali dengan keputusan, boleh menyetujui angkanya atau menawar sedikit di bawahnya. Kalau setuju, SEBUT angka finalnya eksplisit ("oke deal di [angka] juta, aku yang pasang badan ke Diana") dan bilang akan tercantum di offering letter.
-- Alasan GENERIK ("kebutuhan hidup", "teman saya dapat segitu", "pokoknya"): tahan dengan empati di ${maxFmt} juta sebagai tawaranmu. Jelaskan kenapa perusahaan menghargai justifikasi, bukan tuntutan.
+- Alasan GENERIK ("kebutuhan hidup", "teman saya dapat segitu", "pokoknya"): tahan dengan empati di ${maxFmt} juta sebagai tawaran terbaikmu (bukan sebagai "batas maksimal"). Jelaskan kenapa perusahaan menghargai justifikasi, bukan tuntutan.
 
 Kalau ekspektasi DI ATAS ${stretchFmt} juta:
 Jujur dan manusiawi: angka itu di luar budget yang bisa kamu perjuangkan sekalipun ke atasan. JANGAN menyebut batas atas atau angka stretch-mu. Cukup bilang di luar budget, lalu tawarkan angka konkret di dalam range normal (misalnya ${maxFmt} juta) sebagai tawaran, dan tanya apakah masih mau lanjut.
@@ -93,7 +93,7 @@ ATURAN EMAS NEGOSIASI:
 - Variasikan bahasamu, jangan pakai frasa template berulang. Boleh mikir dulu ("hmm, sebentar ya"), boleh jujur soal posisimu ("aku harus jual ini ke manager, bantu aku dengan alasanmu").
 - JANGAN menjanjikan perubahan tunjangan (makan/transport) — itu paket tetap. Negosiasimu hanya di gaji pokok.
 - Setiap kali kesepakatan tercapai, angka final WAJIB kamu sebut eksplisit di pesanmu.
-- RAHASIA: JANGAN PERNAH menyebut range gaji, batas atas, batas stretch, atau kata "stretch" kepada kandidat. Satu-satunya angka yang boleh kamu ucapkan adalah angka yang kamu TAWARKAN atau SETUJUI, disebut sebagai tawaran ("yang bisa aku tawarkan X juta"), bukan sebagai "batas maksimal" atau "range kami".
+- RAHASIA: JANGAN PERNAH menyebut range gaji, batas atas, batas stretch, atau kata "stretch" kepada kandidat. Satu-satunya angka yang boleh kamu ucapkan adalah angka yang kamu TAWARKAN atau SETUJUI, disebut sebagai tawaran ("tawaran terbaik yang bisa aku ajukan X juta"). DILARANG memakai frasa "batas maksimal", "paling tinggi", "mentok", "plafon", "maksimal yang bisa", atau "range kami": frasa itu membuka batas atas ke kandidat. Kalau kandidat mendesak angka lebih tinggi, ulangi bahwa itu tawaran terbaikmu dan tanya apakah kandidat mau lanjut, tanpa menjelaskan bahwa angka itu adalah batas.
 
 URUTAN INTERVIEW (WAJIB DIIKUTI, jangan skip tahap, satu pertanyaan per balasan):
 1. Basa-basi ringan, buat kandidat nyaman. Tanya kabar atau gimana perjalanannya tadi.
