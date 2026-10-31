@@ -17,6 +17,10 @@ const VALID_NPC = new Set(['sinta', 'sup', 'jnr', 'mgr'])
 
 const capStr = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 
+// Dipakai bila model berkeras menolak sebelum 6 jawaban walau sudah diminta ulang: teks penolakannya
+// tidak boleh tampil karena interview belum resmi ditutup.
+const AJAKAN_TOLAK_DINI = 'Aku mau kasih kamu kesempatan sekali lagi. Coba ceritakan beberapa kalimat saja tentang dirimu, atau satu hal yang pernah kamu kerjakan, supaya aku bisa kenal kamu.'
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req)
@@ -97,7 +101,7 @@ export async function POST(req: NextRequest) {
         systemPrompt + '\n\nCATATAN SISTEM: Interview BELUM boleh ditolak atau ditutup sekarang. Jangan pakai token apa pun. Tanggapi jawaban terakhir kandidat dengan hangat dan ajukan SATU pertanyaan penggali yang lebih mudah dijawab.',
         { maxTokens: 250 }
       )
-      if (ulang && !ulang.text.includes('[TOLAK]')) result = ulang
+      result = ulang && !ulang.text.includes('[TOLAK]') ? ulang : { ...result, text: AJAKAN_TOLAK_DINI }
     }
 
     if (!result) {

@@ -115,11 +115,13 @@ describe('POST /api/chat, hasil interview Sinta', () => {
     expect(String(r.data.reply)).toBe('Oke, coba ceritain satu contoh kecil dulu ya?')
   })
 
-  it('[TOLAK] dini yang bandel (ulang pun menolak) → token tetap dibuang dan interview tidak ditutup', async () => {
-    callAI.mockResolvedValue({ text: 'Maaf, belum bisa lanjut. [TOLAK]', provider: 'gemini' })
+  it('[TOLAK] dini yang bandel (ulang pun menolak) → teks penolakan diganti ajakan, interview tidak ditutup', async () => {
+    callAI.mockResolvedValue({ text: 'Maaf, belum bisa lanjut. Sampai jumpa. [TOLAK]', provider: 'gemini' })
     const r = await kirim({ npcId: 'sinta', messages: userMsgs(5), userContext: ctx })
     expect(r.data.interviewOutcome).toBeUndefined()
-    expect(String(r.data.reply)).not.toMatch(/\[TOLAK\]/)
+    expect(r.data.interviewDone).toBe(false)
+    expect(String(r.data.reply)).toContain('kesempatan sekali lagi')
+    expect(String(r.data.reply)).not.toMatch(/\[TOLAK\]|Sampai jumpa/)
   })
 
   it('[TOLAK] sesudah 6 jawaban tidak diminta ulang', async () => {
