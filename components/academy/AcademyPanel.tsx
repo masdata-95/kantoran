@@ -5,6 +5,7 @@ import { authFetch } from '@/lib/authClient'
 import type { ModuleDTO } from '@/lib/lessons'
 import type { UserContext } from '@/lib/prompts'
 import LessonView from './LessonView'
+import PustakaPanel from './PustakaPanel'
 
 export default function AcademyPanel({ positionId, userContext, supervisorName, supervisorInitials, supervisorAvClass, onXP, onProgress }: {
   positionId: string
@@ -19,6 +20,7 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
   const [modules, setModules] = useState<ModuleDTO[] | null>(null)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [bagian, setBagian] = useState<'posisi' | 'pustaka'>('posisi')
 
   // Tiap modules berubah (load awal maupun lesson selesai), kabari parent
   useEffect(() => {
@@ -52,6 +54,36 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
     })) || null)
     if (xp > 0) onXP(xp)
   }
+
+  const tab = (
+    <div className="flex gap-1 bg-[#F1EFE8] rounded-lg p-1 self-start">
+      {([['posisi', 'Untuk posisimu'], ['pustaka', 'Pustaka Video']] as const).map(([k, label]) => (
+        <button
+          key={k}
+          onClick={() => setBagian(k)}
+          style={{ cursor: 'pointer' }}
+          className={`text-xs font-semibold px-3.5 py-1.5 rounded-md ${bagian === k ? 'bg-white text-[#0F6E56] shadow-sm' : 'text-[#6B6A64]'}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (bagian === 'pustaka') return (
+    <div className="flex flex-col gap-4 animate-fadeUp">
+      <h2 className="font-semibold text-[#1A1A18] text-lg">Vantara Academy</h2>
+      {tab}
+      <PustakaPanel
+        positionId={positionId}
+        userContext={userContext}
+        supervisorName={supervisorName}
+        supervisorInitials={supervisorInitials}
+        supervisorAvClass={supervisorAvClass}
+        onXP={onXP}
+      />
+    </div>
+  )
 
   if (error) return (
     <div className="bg-[#FEE2E2] border border-[#B91C1C]/20 text-[#B91C1C] text-sm rounded-xl px-4 py-3">{error}</div>
@@ -94,6 +126,7 @@ export default function AcademyPanel({ positionId, userContext, supervisorName, 
         <h2 className="font-semibold text-[#1A1A18] text-lg">Vantara Academy</h2>
         <p className="text-[13px] text-[#4A4A45] mt-0.5">Training dari {supervisorName.split(' ')[0]} untukmu. Tidak wajib, tapi materinya pas untuk task hari ini.</p>
       </div>
+      {tab}
 
       {modules.length === 0 && (
         <p className="text-sm text-[#6B6A64] py-8 text-center">Belum ada modul untuk posisimu. Cek lagi nanti ya.</p>

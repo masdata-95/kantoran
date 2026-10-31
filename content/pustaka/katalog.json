@@ -1,0 +1,730 @@
+[
+    {
+        "slug":  "pustaka-excel-t02",
+        "grup":  "Excel",
+        "title":  "Kenalan sama layar Excel",
+        "sort_order":  1,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t02-1",
+                            "title":  "Kenalan sama layar Excel",
+                            "video_code":  "excel-t02-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t03",
+        "grup":  "Excel",
+        "title":  "Gerakan dasar yang dipakai tiap hari",
+        "sort_order":  2,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t03-1",
+                            "title":  "Gerakan dasar yang dipakai tiap hari",
+                            "video_code":  "excel-t03-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t05",
+        "grup":  "Excel",
+        "title":  "Format angka dan tipe data",
+        "sort_order":  3,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t05-1",
+                            "title":  "Format angka dan tipe data",
+                            "video_code":  "excel-t05-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t07",
+        "grup":  "Excel",
+        "title":  "Cara menulis rumus",
+        "sort_order":  4,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t07-1",
+                            "title":  "Konsep absolute dan semi absolute",
+                            "video_code":  "excel-t07-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t07-2",
+                            "title":  "Praktik absolute dan semi absolute",
+                            "video_code":  "excel-t07-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t08",
+        "grup":  "Excel",
+        "title":  "Menghitung dasar",
+        "sort_order":  5,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t08-1",
+                            "title":  "SUM COUNT AVERAGE MAX MIN",
+                            "video_code":  "excel-t08-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t08-2",
+                            "title":  "Praktik tabel nilai ujian",
+                            "video_code":  "excel-t08-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t09",
+        "grup":  "Excel",
+        "title":  "Logika IF",
+        "sort_order":  6,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t09-1",
+                            "title":  "IF dan IF bertingkat",
+                            "video_code":  "excel-t09-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t09-2",
+                            "title":  "Pembahasan latihan IF",
+                            "video_code":  "excel-t09-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t10",
+        "grup":  "Excel",
+        "title":  "Hitung dengan satu syarat",
+        "sort_order":  7,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t10-1",
+                            "title":  "Hitung dengan satu syarat",
+                            "video_code":  "excel-t10-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t11",
+        "grup":  "Excel",
+        "title":  "Hitung dengan banyak syarat",
+        "sort_order":  8,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t11-1",
+                            "title":  "COUNTIFS dan SUMIFS",
+                            "video_code":  "excel-t11-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t11-2",
+                            "title":  "AVERAGEIFS dan tiga kriteria",
+                            "video_code":  "excel-t11-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t11-3",
+                            "title":  "Pembahasan latihan stok mobil",
+                            "video_code":  "excel-t11-3",
+                            "sort_order":  3
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t12",
+        "grup":  "Excel",
+        "title":  "Mencari data di tabel lain",
+        "sort_order":  9,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t12-1",
+                            "title":  "Konsep VLOOKUP",
+                            "video_code":  "excel-t12-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t12-2",
+                            "title":  "Praktik VLOOKUP",
+                            "video_code":  "excel-t12-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t12-3",
+                            "title":  "HLOOKUP",
+                            "video_code":  "excel-t12-3",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-excel-t12-4",
+                            "title":  "VLOOKUP pencarian rentang",
+                            "video_code":  "excel-t12-4",
+                            "sort_order":  4
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t14",
+        "grup":  "Excel",
+        "title":  "Tanggal dan logika gabungan",
+        "sort_order":  10,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t14-1",
+                            "title":  "AND dan OR",
+                            "video_code":  "excel-t14-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t15",
+        "grup":  "Excel",
+        "title":  "Merapikan teks",
+        "sort_order":  11,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t15-1",
+                            "title":  "Menggabung teks",
+                            "video_code":  "excel-t15-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t15-2",
+                            "title":  "LEFT RIGHT MID",
+                            "video_code":  "excel-t15-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t15-3",
+                            "title":  "FIND dan LEN untuk memisah nama",
+                            "video_code":  "excel-t15-3",
+                            "sort_order":  3
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t17",
+        "grup":  "Excel",
+        "title":  "Menjaga data tetap rapi",
+        "sort_order":  12,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t17-1",
+                            "title":  "Data Validation",
+                            "video_code":  "excel-t17-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t17-2",
+                            "title":  "Conditional Formatting",
+                            "video_code":  "excel-t17-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t18",
+        "grup":  "Excel",
+        "title":  "Pilih chart yang tepat",
+        "sort_order":  13,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t18-1",
+                            "title":  "Jenis chart dan langkah memilih",
+                            "video_code":  "excel-t18-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t18-2",
+                            "title":  "Kesalahan umum pada chart",
+                            "video_code":  "excel-t18-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t19",
+        "grup":  "Excel",
+        "title":  "Membuat dan merapikan chart",
+        "sort_order":  14,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t19-1",
+                            "title":  "Format angka sumbu dan label",
+                            "video_code":  "excel-t19-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t19-2",
+                            "title":  "Chart kolom dan pie",
+                            "video_code":  "excel-t19-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t19-3",
+                            "title":  "Bar chart Top 10",
+                            "video_code":  "excel-t19-3",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-excel-t19-4",
+                            "title":  "Combo chart",
+                            "video_code":  "excel-t19-4",
+                            "sort_order":  4
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t23",
+        "grup":  "Excel",
+        "title":  "Pivot Table dasar",
+        "sort_order":  15,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t23-1",
+                            "title":  "Konsep dan cara membuat",
+                            "video_code":  "excel-t23-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t23-2",
+                            "title":  "Praktik membuat Pivot Table",
+                            "video_code":  "excel-t23-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t24",
+        "grup":  "Excel",
+        "title":  "Merapikan hasil Pivot",
+        "sort_order":  16,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t24-1",
+                            "title":  "Layout dan subtotal",
+                            "video_code":  "excel-t24-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t24-2",
+                            "title":  "Filter dan sort",
+                            "video_code":  "excel-t24-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t24-3",
+                            "title":  "Data berubah dan refresh",
+                            "video_code":  "excel-t24-3",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-excel-t24-4",
+                            "title":  "Group angka",
+                            "video_code":  "excel-t24-4",
+                            "sort_order":  4
+                        },
+                        {
+                            "slug":  "pustaka-excel-t24-5",
+                            "title":  "Value Field dan persentase",
+                            "video_code":  "excel-t24-5",
+                            "sort_order":  5
+                        },
+                        {
+                            "slug":  "pustaka-excel-t24-6",
+                            "title":  "Difference From Running Total dan Rank",
+                            "video_code":  "excel-t24-6",
+                            "sort_order":  6
+                        },
+                        {
+                            "slug":  "pustaka-excel-t24-7",
+                            "title":  "Calculated Field",
+                            "video_code":  "excel-t24-7",
+                            "sort_order":  7
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t25",
+        "grup":  "Excel",
+        "title":  "Pivot Chart dan Slicer",
+        "sort_order":  17,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t25-1",
+                            "title":  "Pivot Chart",
+                            "video_code":  "excel-t25-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t25-2",
+                            "title":  "Slicer dan Report Connections",
+                            "video_code":  "excel-t25-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t25-3",
+                            "title":  "Timeline dan group tanggal",
+                            "video_code":  "excel-t25-3",
+                            "sort_order":  3
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-excel-t26",
+        "grup":  "Excel",
+        "title":  "Power Pivot dan DAX",
+        "sort_order":  18,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-excel-t26-1",
+                            "title":  "Konsep Power Pivot dan data model",
+                            "video_code":  "excel-t26-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-excel-t26-2",
+                            "title":  "Konsep DAX",
+                            "video_code":  "excel-t26-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-excel-t26-3",
+                            "title":  "Praktik relasi dan Pivot dari data model",
+                            "video_code":  "excel-t26-3",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-excel-t26-4",
+                            "title":  "Praktik measure DAX dan KPI",
+                            "video_code":  "excel-t26-4",
+                            "sort_order":  4
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b00",
+        "grup":  "Looker Studio",
+        "title":  "Perkenalan",
+        "sort_order":  19,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-0-1-1",
+                            "title":  "Perkenalan",
+                            "video_code":  "looker-0-1-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b01",
+        "grup":  "Looker Studio",
+        "title":  "Dasar-dasar visualisasi",
+        "sort_order":  20,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-1-1-1",
+                            "title":  "Dasar-dasar Visualisasi (bagian 1)",
+                            "video_code":  "looker-1-1-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-looker-1-1-2",
+                            "title":  "Dasar-dasar Visualisasi (bagian 2)",
+                            "video_code":  "looker-1-1-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b02",
+        "grup":  "Looker Studio",
+        "title":  "Mulai dengan Looker Studio",
+        "sort_order":  21,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-2-1-1",
+                            "title":  "Introduction",
+                            "video_code":  "looker-2-1-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-looker-2-2-1",
+                            "title":  "Login Looker Studio",
+                            "video_code":  "looker-2-2-1",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-looker-2-3-1",
+                            "title":  "Create Report",
+                            "video_code":  "looker-2-3-1",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-looker-2-4-1",
+                            "title":  "Connect Data",
+                            "video_code":  "looker-2-4-1",
+                            "sort_order":  4
+                        },
+                        {
+                            "slug":  "pustaka-looker-2-5-1",
+                            "title":  "Pengenalan Awal Interface Looker Studio",
+                            "video_code":  "looker-2-5-1",
+                            "sort_order":  5
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b03",
+        "grup":  "Looker Studio",
+        "title":  "Jenis chart",
+        "sort_order":  22,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-3-1-1",
+                            "title":  "Score Card (bagian 1)",
+                            "video_code":  "looker-3-1-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-1-2",
+                            "title":  "Score Card (bagian 2)",
+                            "video_code":  "looker-3-1-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-2-1",
+                            "title":  "Table (bagian 1)",
+                            "video_code":  "looker-3-2-1",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-2-2",
+                            "title":  "Table (bagian 2)",
+                            "video_code":  "looker-3-2-2",
+                            "sort_order":  4
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-3-1",
+                            "title":  "Pivot Table (bagian 1)",
+                            "video_code":  "looker-3-3-1",
+                            "sort_order":  5
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-3-2",
+                            "title":  "Pivot Table (bagian 2)",
+                            "video_code":  "looker-3-3-2",
+                            "sort_order":  6
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-4-1",
+                            "title":  "Time Series (bagian 1)",
+                            "video_code":  "looker-3-4-1",
+                            "sort_order":  7
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-4-2",
+                            "title":  "Time Series (bagian 2)",
+                            "video_code":  "looker-3-4-2",
+                            "sort_order":  8
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-5-1",
+                            "title":  "Area Chart",
+                            "video_code":  "looker-3-5-1",
+                            "sort_order":  9
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-6-1",
+                            "title":  "Line Chart",
+                            "video_code":  "looker-3-6-1",
+                            "sort_order":  10
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-7-1",
+                            "title":  "Combo Chart",
+                            "video_code":  "looker-3-7-1",
+                            "sort_order":  11
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-8-1",
+                            "title":  "Bar Chart",
+                            "video_code":  "looker-3-8-1",
+                            "sort_order":  12
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-9-1",
+                            "title":  "Geo Chart (bagian 1)",
+                            "video_code":  "looker-3-9-1",
+                            "sort_order":  13
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-9-2",
+                            "title":  "Geo Chart (bagian 2)",
+                            "video_code":  "looker-3-9-2",
+                            "sort_order":  14
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-10-1",
+                            "title":  "Pie Chart",
+                            "video_code":  "looker-3-10-1",
+                            "sort_order":  15
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-11-1",
+                            "title":  "Scatter Chart",
+                            "video_code":  "looker-3-11-1",
+                            "sort_order":  16
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-12-1",
+                            "title":  "Tree Map",
+                            "video_code":  "looker-3-12-1",
+                            "sort_order":  17
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-13-1",
+                            "title":  "Bullet dan Gauge (bagian 1)",
+                            "video_code":  "looker-3-13-1",
+                            "sort_order":  18
+                        },
+                        {
+                            "slug":  "pustaka-looker-3-13-2",
+                            "title":  "Bullet dan Gauge (bagian 2)",
+                            "video_code":  "looker-3-13-2",
+                            "sort_order":  19
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b04",
+        "grup":  "Looker Studio",
+        "title":  "Control dan filter",
+        "sort_order":  23,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-4-1-1",
+                            "title":  "Control (bagian 1)",
+                            "video_code":  "looker-4-1-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-looker-4-1-2",
+                            "title":  "Control (bagian 2)",
+                            "video_code":  "looker-4-1-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-looker-4-2-1",
+                            "title":  "Filter",
+                            "video_code":  "looker-4-2-1",
+                            "sort_order":  3
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b05",
+        "grup":  "Looker Studio",
+        "title":  "Calculated field",
+        "sort_order":  24,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-5-1-1",
+                            "title":  "Calculated Field (bagian 1)",
+                            "video_code":  "looker-5-1-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-looker-5-1-2",
+                            "title":  "Calculated Field (bagian 2)",
+                            "video_code":  "looker-5-1-2",
+                            "sort_order":  2
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b07",
+        "grup":  "Looker Studio",
+        "title":  "Conditional formatting",
+        "sort_order":  25,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-7-1-1",
+                            "title":  "Conditional Formatting",
+                            "video_code":  "looker-7-1-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b08",
+        "grup":  "Looker Studio",
+        "title":  "Blend data",
+        "sort_order":  26,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-8-1-1",
+                            "title":  "Blend Data",
+                            "video_code":  "looker-8-1-1",
+                            "sort_order":  1
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b09",
+        "grup":  "Looker Studio",
+        "title":  "Membangun dashboard",
+        "sort_order":  27,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-9-1-1",
+                            "title":  "Build Dashboard (bagian 1)",
+                            "video_code":  "looker-9-1-1",
+                            "sort_order":  1
+                        },
+                        {
+                            "slug":  "pustaka-looker-9-1-2",
+                            "title":  "Build Dashboard (bagian 2)",
+                            "video_code":  "looker-9-1-2",
+                            "sort_order":  2
+                        },
+                        {
+                            "slug":  "pustaka-looker-9-1-3",
+                            "title":  "Build Dashboard (bagian 3)",
+                            "video_code":  "looker-9-1-3",
+                            "sort_order":  3
+                        },
+                        {
+                            "slug":  "pustaka-looker-9-1-4",
+                            "title":  "Build Dashboard (bagian 4)",
+                            "video_code":  "looker-9-1-4",
+                            "sort_order":  4
+                        }
+                    ]
+    },
+    {
+        "slug":  "pustaka-looker-b10",
+        "grup":  "Looker Studio",
+        "title":  "Membagikan dashboard",
+        "sort_order":  28,
+        "lessons":  [
+                        {
+                            "slug":  "pustaka-looker-10-1-1",
+                            "title":  "Sharing Dashboard",
+                            "video_code":  "looker-10-1-1",
+                            "sort_order":  1
+                        }
+                    ]
+    }
+]

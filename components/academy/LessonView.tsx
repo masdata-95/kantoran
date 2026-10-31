@@ -10,7 +10,7 @@ import VideoPlayer from './VideoPlayer'
 
 const TYPE_LABEL: Record<string, string> = { text: 'Bacaan', video: 'Video', mission: 'Misi' }
 
-export default function LessonView({ module: mod, positionId, userContext, supervisorName, supervisorInitials, supervisorAvClass, onBack, onLessonComplete }: {
+export default function LessonView({ module: mod, positionId, userContext, supervisorName, supervisorInitials, supervisorAvClass, onBack, onLessonComplete, pustaka = false }: {
   module: ModuleDTO
   positionId: string
   userContext: UserContext
@@ -19,10 +19,12 @@ export default function LessonView({ module: mod, positionId, userContext, super
   supervisorAvClass: string
   onBack: () => void
   onLessonComplete: (lessonId: string, xp: number) => void
+  // Pustaka Video: boleh lompat antar video (tanpa urutan wajib); video terkunci menampilkan ajakan season.
+  pustaka?: boolean
 }) {
   const [openLessonId, setOpenLessonId] = useState<string | null>(() => {
     // Buka otomatis lesson pertama yang belum selesai
-    const next = mod.lessons.find(l => l.progress?.status !== 'completed')
+    const next = mod.lessons.find(l => l.progress?.status !== 'completed' && !l.locked)
     return next?.id || mod.lessons[0]?.id || null
   })
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -31,7 +33,7 @@ export default function LessonView({ module: mod, positionId, userContext, super
   const [errorMsg, setErrorMsg] = useState('')
 
   const isUnlocked = (idx: number) => {
-    if (idx === 0) return true
+    if (pustaka || idx === 0) return true
     // Unlock sekuensial: lesson terbuka setelah lesson sebelumnya selesai
     return mod.lessons[idx - 1]?.progress?.status === 'completed'
   }
@@ -77,11 +79,11 @@ export default function LessonView({ module: mod, positionId, userContext, super
   return (
     <div className="flex flex-col gap-3 animate-fadeUp">
       <button onClick={onBack} style={{ cursor: 'pointer' }} className="self-start text-xs text-[#6B6A64] hover:text-[#0F6E56] transition-colors">
-        ← Kembali ke Academy
+        ← Kembali ke {pustaka ? 'Pustaka Video' : 'Academy'}
       </button>
 
       <div>
-        <p className="text-[11px] font-bold text-[#6B6A64]">{mod.track === 'tools' ? 'Tools' : 'Bisnis dan domain'} · Hari {mod.day}</p>
+        <p className="text-[11px] font-bold text-[#6B6A64]">{pustaka ? `Pustaka Video · ${mod.grup ?? 'Tools'}` : `${mod.track === 'tools' ? 'Tools' : 'Bisnis dan domain'} · Hari ${mod.day}`}</p>
         <h2 className="font-serif font-bold text-[#111111] text-lg mt-0.5">{mod.title}</h2>
       </div>
 
@@ -119,13 +121,20 @@ export default function LessonView({ module: mod, positionId, userContext, super
               >
                 <span className={`w-5 h-5 rounded-full border text-[11px] flex items-center justify-center flex-shrink-0 tabular ${completed ? 'bg-[#0F6E56] border-[#0F6E56] text-white' : 'border-[#C8C6BE] text-[#6B6A64]'}`} aria-label={completed ? 'Selesai' : unlocked ? TYPE_LABEL[lesson.type] : 'Terkunci'}>{completed ? '✓' : idx + 1}</span>
                 <span className={`flex-1 text-sm truncate ${completed ? 'text-[#6B6A64]' : 'text-[#111111] font-medium'}`}>{lesson.title}</span>
-                {lesson.type !== 'text' && <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#F1EFE8] text-[#4A4A45] flex-shrink-0">{TYPE_LABEL[lesson.type]}</span>}
+                {lesson.locked && <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#FAEEDA] text-[#854F0B] flex-shrink-0">Season</span>}
+                {lesson.type !== 'text' && !lesson.locked && <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#F1EFE8] text-[#4A4A45] flex-shrink-0">{TYPE_LABEL[lesson.type]}</span>}
                 <span className="text-[12px] text-[#6B6A64] flex-shrink-0 tabular">+{lesson.xp} coin</span>
               </button>
 
               {open && (
                 <div className="border-t border-[#F1EFE8] px-3 sm:px-4 py-4 flex flex-col gap-3">
-                  {lesson.type === 'video' && (
+                  {lesson.locked && (
+                    <div className="bg-[#FAFAF7] border border-[#E5E3DC] rounded-lg p-3">
+                      <p className="text-sm text-[#444441] leading-relaxed">Video ini khusus pemilik season. Video pertama di setiap topik gratis, jadi kamu bisa mencoba dulu sebelum memutuskan.</p>
+                    </div>
+                  )}
+
+                  {!lesson.locked && lesson.type === 'video' && (
                     lesson.videoUrl
                       ? <VideoPlayer src={lesson.videoUrl} title={lesson.title} />
                       : <YouTubeEmbed videoId={lesson.youtubeVideoId} title={lesson.title} />
@@ -177,7 +186,7 @@ export default function LessonView({ module: mod, positionId, userContext, super
                       )}
                     </div>
                   ) : (
-                    !completed && (
+                    !completed && !lesson.locked && (
                       <button
                         onClick={() => markComplete(lesson)}
                         disabled={busyId === lesson.id}

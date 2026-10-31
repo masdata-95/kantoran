@@ -21,6 +21,8 @@ export interface LessonDTO {
   // sendiri tidak pernah dikirim ke client.
   videoUrl?: string | null
   missionBrief?: string       // rubric TIDAK pernah dikirim ke client
+  // Hanya Pustaka Video: true = butuh season; link video tidak dikirim.
+  locked?: boolean
   xp: number
   progress: { status: 'in_progress' | 'completed'; score: number | null } | null
 }
@@ -35,6 +37,8 @@ export interface ModuleDTO {
   storyIntro?: string
   teaser?: string
   locked: boolean
+  // Hanya Pustaka Video: kelompok modul (mis. 'Excel', 'Looker Studio').
+  grup?: string
   lessons: LessonDTO[]
 }
 
