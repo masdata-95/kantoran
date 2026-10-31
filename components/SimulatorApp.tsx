@@ -921,7 +921,11 @@ PT Vantara Nusantara`
     setLoading(true)
     try {
       const history = buildHistory(room, npcId)
-      const messages = [...history, { role: 'user' as const, content: userMsg }]
+      // Kirim ulang: pesan user sudah ada di riwayat, jangan digandakan (di panel, jawaban dihitung dari sini).
+      const terakhir = history[history.length - 1]
+      const messages = terakhir?.role === 'user' && terakhir.content === userMsg
+        ? history
+        : [...history, { role: 'user' as const, content: userMsg }]
       const res = await authFetch('/api/chat', {
         method: 'POST',
         body: JSON.stringify({
